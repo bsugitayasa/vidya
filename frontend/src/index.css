@@ -9,3 +9,9 @@
   --color-text: #2D3748;
   --color-muted: #718096;
 }
+
+@layer base {
+  body {
+    @apply bg-bg text-text;
+  }
+}

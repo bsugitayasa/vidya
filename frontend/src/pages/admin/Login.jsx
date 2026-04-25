@@ -22,7 +22,7 @@ export default function Login() {
 
     try {
       const response = await api.post('/auth/login', { email, password });
-      
+
       if (response.data.success) {
         const { user, token } = response.data.data;
         setAuth(user, token);
@@ -42,9 +42,15 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-bg font-sans p-4">
       <Card className="w-full max-w-sm border-t-4 border-t-primary shadow-lg">
-        <div className="bg-primary/5 pt-8 pb-4 text-center border-b border-muted/20">
+        <div className="bg-primary/5 pt-8 pb-4 text-center border-b border-muted/20 flex flex-col items-center">
+          <img
+            src="/logo.png"
+            alt="Logo"
+            style={{ width: '42px', height: '42px' }}
+            className="object-contain bg-white rounded-full p-1 shadow-md mb-4 flex-shrink-0"
+          />
           <h2 className="text-2xl font-bold font-heading text-primary">Login Admin</h2>
-          <p className="text-sm text-muted mt-1">Sistem Informasi Akademik</p>
+          <p className="text-sm text-muted mt-1">Visualisasi Data dan Sisya Administrasi Pesraman</p>
         </div>
         <CardContent className="p-8">
           {error && (
@@ -52,30 +58,30 @@ export default function Login() {
               {error}
             </div>
           )}
-          
+
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input 
-                id="email" 
-                type="email" 
-                required 
+              <Input
+                id="email"
+                type="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input 
-                id="password" 
-                type="password" 
-                required 
+              <Input
+                id="password"
+                type="password"
+                required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full font-bold mt-6"
               disabled={isLoading}
             >

@@ -1,6 +1,6 @@
 import { r as __toESM, t as __commonJSMin } from "./chunk-CYJPkc-J.js";
 import { t as require_react } from "./react.js";
-import { t as require_react_is } from "./react-is-Bquweg8R.js";
+import { t as require_react_is } from "./react-is-C4ydYnKr.js";
 //#region node_modules/object-assign/index.js
 /*
 object-assign
