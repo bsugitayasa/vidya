@@ -1,27 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Filter } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 
 export default function Laporan() {
   const [sisyas, setSisyas] = useState([]);
+  const [programs, setPrograms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState({
     status: 'SEMUA',
+    programId: 'SEMUA',
     startDate: '',
     endDate: ''
   });
 
   useEffect(() => {
+    fetchPrograms();
+  }, []);
+
+  useEffect(() => {
     fetchLaporan();
-  }, [filters.status, filters.startDate, filters.endDate]);
+  }, [filters.status, filters.programId, filters.startDate, filters.endDate]);
+
+  const fetchPrograms = async () => {
+    try {
+      const res = await api.get('/program-ajahan');
+      if (res.data.success) {
+        setPrograms(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching programs:', error);
+    }
+  };
 
   const fetchLaporan = async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
       if (filters.status !== 'SEMUA') params.append('status', filters.status);
+      if (filters.programId !== 'SEMUA') params.append('programId', filters.programId);
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
 
@@ -36,64 +55,55 @@ export default function Laporan() {
     }
   };
 
-  const exportToCSV = () => {
+  const exportToExcel = () => {
     if (sisyas.length === 0) return;
 
-    // Definisikan header
-    const headers = [
-      'No. Pendaftaran',
-      'Nama Lengkap',
-      'Tempat Lahir',
-      'Tanggal Lahir',
-      'Jenis Kelamin',
-      'Alamat',
-      'No. HP',
-      'Email',
-      'Griya',
-      'Desa',
-      'Program Terdaftar',
-      'Total Punia (Rp)',
-      'Status Pembayaran',
-      'Tanggal Daftar'
-    ];
-
-    // Format data
-    const csvData = sisyas.map(s => {
+    // Format data untuk Excel
+    const dataToExport = sisyas.map(s => {
       const programs = s.programSisyas.map(sp => 
         `${sp.programAjahan.nama}${sp.isPasangan ? ' (Pasangan)' : ''}`
       ).join(', ');
 
-      return [
-        s.nomorPendaftaran,
-        `"${s.namaLengkap}"`,
-        `"${s.tempatLahir}"`,
-        new Date(s.tanggalLahir).toLocaleDateString('id-ID'),
-        s.jenisKelamin,
-        `"${s.alamat}"`,
-        `'${s.noHp}`,
-        s.email || '-',
-        `"${s.namaGriya}"`,
-        `"${s.namaDesa}"`,
-        `"${programs}"`,
-        s.totalPunia,
-        s.statusPembayaran,
-        new Date(s.createdAt).toLocaleDateString('id-ID')
-      ].join(',');
+      const registrationNumbers = s.programSisyas.map(sp => 
+        `${sp.programAjahan.kode}: ${sp.nomorRegistrasi || '-'}`
+      ).join('; ');
+
+      return {
+        'No. Pendaftaran': s.nomorPendaftaran,
+        'Nama Lengkap': s.namaLengkap,
+        'Tempat Lahir': s.tempatLahir,
+        'Tanggal Lahir': new Date(s.tanggalLahir).toLocaleDateString('id-ID'),
+        'Jenis Kelamin': s.jenisKelamin,
+        'Alamat': s.alamat,
+        'No. HP': s.noHp,
+        'Email': s.email || '-',
+        'Griya': s.namaGriya,
+        'Desa': s.namaDesa,
+        'Program Terdaftar': programs,
+        'Nomor Registrasi Program': registrationNumbers,
+        'Total Punia (Rp)': s.totalPunia,
+        'Status Pembayaran': s.statusPembayaran,
+        'Tanggal Daftar': new Date(s.createdAt).toLocaleDateString('id-ID')
+      };
     });
 
-    // Gabungkan header dan data
-    const csv = [headers.join(','), ...csvData].join('\n');
+    // Buat worksheet
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    
+    // Atur lebar kolom agar rapi
+    const wscols = [
+      {wch: 18}, {wch: 25}, {wch: 15}, {wch: 15}, {wch: 12}, 
+      {wch: 35}, {wch: 15}, {wch: 20}, {wch: 18}, {wch: 18}, 
+      {wch: 35}, {wch: 45}, {wch: 15}, {wch: 18}, {wch: 15}
+    ];
+    worksheet['!cols'] = wscols;
 
-    // Buat Blob dan download
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Laporan_Sisya_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Buat workbook
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Sisya');
+    
+    // Download file
+    XLSX.writeFile(workbook, `Laporan_Sisya_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const getStatusBadgeColor = (status) => {
@@ -113,9 +123,9 @@ export default function Laporan() {
           <p className="text-sm text-muted mt-1">Unduh rekapitulasi data pendaftar dan punia</p>
         </div>
         
-        <Button onClick={exportToCSV} disabled={sisyas.length === 0} className="flex items-center gap-2">
+        <Button onClick={exportToExcel} disabled={sisyas.length === 0} className="flex items-center gap-2">
           <Download size={18} />
-          Export CSV
+          Export Excel (.xlsx)
         </Button>
       </div>
 
@@ -135,6 +145,20 @@ export default function Laporan() {
         </div>
         
         <div className="space-y-1 w-full md:w-auto">
+          <label className="text-sm font-medium text-text">Program Ajahan</label>
+          <select 
+            className="w-full h-10 px-3 py-2 rounded-md border border-input bg-transparent text-sm"
+            value={filters.programId}
+            onChange={(e) => setFilters(prev => ({ ...prev, programId: e.target.value }))}
+          >
+            <option value="SEMUA">Semua Program</option>
+            {programs.map(p => (
+              <option key={p.id} value={p.id}>{p.nama}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-1 w-full md:w-auto">
           <label className="text-sm font-medium text-text">Tanggal Mulai</label>
           <Input 
             type="date"
@@ -152,10 +176,10 @@ export default function Laporan() {
           />
         </div>
 
-        {(filters.status !== 'SEMUA' || filters.startDate || filters.endDate) && (
+        {(filters.status !== 'SEMUA' || filters.programId !== 'SEMUA' || filters.startDate || filters.endDate) && (
           <Button 
             variant="ghost" 
-            onClick={() => setFilters({ status: 'SEMUA', startDate: '', endDate: '' })}
+            onClick={() => setFilters({ status: 'SEMUA', programId: 'SEMUA', startDate: '', endDate: '' })}
             className="text-red-500 hover:text-red-700 hover:bg-red-50"
           >
             Reset Filter
