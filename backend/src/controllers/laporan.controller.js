@@ -3,12 +3,20 @@ const prisma = new PrismaClient();
 
 const getLaporanSisya = async (req, res) => {
   try {
-    const { status, startDate, endDate } = req.query;
+    const { status, startDate, endDate, programId } = req.query;
 
     const whereClause = {};
 
     if (status && status !== 'SEMUA') {
       whereClause.statusPembayaran = status;
+    }
+
+    if (programId && programId !== 'SEMUA') {
+      whereClause.programSisyas = {
+        some: {
+          programAjahanId: parseInt(programId)
+        }
+      };
     }
 
     if (startDate || endDate) {
