@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String   // bcrypt hash
+  nama      String
+  role      Role     @default(STAFF)
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+// ── Konfigurasi global aplikasi (rekening, info yayasan, dll) ──────────────
+model KonfigurasiAplikasi {
+  id        Int      @id @default(autoincrement())
+  kunci     String   @unique  // e.g. "rekening_bank", "nama_bank", "nama_rekening"
+  nilai     String            // e.g. "BCA", "1234567890", "PDPN"
+  label     String            // Label ramah admin: "Nomor Rekening"
+  updatedAt DateTime @updatedAt
+}
+
+// ── Program Ajahan — master data dengan tarif punia ─────────────────────────
+model ProgramAjahan {
+  id                  Int                @id @default(autoincrement())
+  kode                String             @unique  // "KAWIKON", "KAWELAKAAN", dll
+  nama                String             // "Kawikon", "Kawelakaan", "Usadha", "Serati"
+  deskripsi           String?
+  puniaNormal         Int                // Tarif standar dalam Rupiah (e.g. 1000000)
+  puniaPasangan       Int?               // Tarif khusus pasangan, null jika tidak berlaku
+  isPasanganTersedia  Boolean            @default(false)
+  isAktif             Boolean            @default(true)
+  urutan              Int                @default(0)  // Urutan tampil di form
+  sisyaPrograms       SisyaProgram[]
+  mataKuliahs         MataKuliah[]       // Release 2
+}
+
+// ── Junction table: Sisya ↔ ProgramAjahan (many-to-many) ────────────────────
+model SisyaProgram {
+  id              Int           @id @default(autoincrement())
+  sisyaId         Int
+  sisya           Sisya         @relation(fields: [sisyaId], references: [id])
+  programAjahanId Int
+  programAjahan   ProgramAjahan @relation(fields: [programAjahanId], references: [id])
+  isPasangan      Boolean       @default(false)  // True jika daftar opsi pasangan
+  puniaProgram    Int           // Snapshot tarif saat daftar (immutable — harga bisa berubah)
+  nomorRegistrasi String?       // e.g. 001/WLK.XVII-BD.SDM/PDPN/IV/2026
+  createdAt       DateTime      @default(now())
+
+  @@unique([sisyaId, programAjahanId])
+}
+
+// ── Model utama Sisya ────────────────────────────────────────────────────────
+model Sisya {
+  id                Int            @id @default(autoincrement())
+  nomorPendaftaran  String         @unique  // YF-2025-0001
+
+  // ── Data Pribadi ──────────────────────────────
+  namaLengkap       String
+  tempatLahir       String
+  tanggalLahir      DateTime
+  jenisKelamin      JenisKelamin
+  alamat            String
+  noHp              String
+  email             String?
+
+  // ── Data Ajahan ───────────────────────────────
+  namaGriya         String
+  namaDesa          String
+
+  // ── Relasi Program (multi) ────────────────────
+  programSisyas     SisyaProgram[]
+
+  // ── Kalkulasi Punia ───────────────────────────
+  totalPunia        Int            // Total yang harus dibayar (snapshot saat daftar)
+  statusPembayaran  StatusPembayaran @default(BELUM_BAYAR)
+
+  // ── Dokumen Upload (semua opsional) ───────────
+  fileIdentitasPath String?        // KTP/KK/Ijasah
+  fileFotoPath      String?        // Foto latar merah
+  filePuniaPath     String?        // Bukti transfer punia — boleh menyusul
+
+  // ── Status & Audit ────────────────────────────
+  status            StatusSisya    @default(PENDING)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  absensiSisyas     AbsensiSisya[] // Release 2
+}
+
+enum JenisKelamin {
+  LAKI_LAKI
+  PEREMPUAN
+}
+
+enum StatusSisya {
+  PENDING      // Baru mendaftar
+  AKTIF        // Pembayaran terverifikasi, sisya aktif
+  TIDAK_AKTIF  // Non-aktif
+}
+
+enum StatusPembayaran {
+  BELUM_BAYAR   // Belum upload bukti transfer
+  MENUNGGU      // Bukti sudah diupload, menunggu verifikasi admin
+  LUNAS         // Admin sudah verifikasi pembayaran
+}
+
+// ─── Release 2: Absensi ───────────────────────────
+
+model MataKuliah {
+  id              Int           @id @default(autoincrement())
+  kode            String        @unique
+  nama            String
+  sks             Int
+  semester        Int
+  programAjahanId Int
+  programAjahan   ProgramAjahan @relation(fields: [programAjahanId], references: [id])
+  sesiAbsensis    SesiAbsensi[]
+}
+
+model SesiAbsensi {
+  id           Int          @id @default(autoincrement())
+  mataKuliahId Int
+  mataKuliah   MataKuliah   @relation(fields: [mataKuliahId], references: [id])
+  tanggal      DateTime
+  pertemuan    Int           // Pertemuan ke-berapa
+  topik        String?
+  createdAt    DateTime     @default(now())
+  absensiSisyas     AbsensiSisya[]
+}
+
+model AbsensiSisya {
+  id            Int         @id @default(autoincrement())
+  sesiAbsensiId Int
+  sesiAbsensi   SesiAbsensi @relation(fields: [sesiAbsensiId], references: [id])
+  sisyaId       Int
+  sisya         Sisya       @relation(fields: [sisyaId], references: [id])
+  status        StatusAbsensi
+  keterangan    String?
+  createdAt     DateTime    @default(now())
+
+  @@unique([sesiAbsensiId, sisyaId])
+}
+
+enum StatusAbsensi {
+  HADIR
+  IZIN
+  SAKIT
+  ALPHA
+}
