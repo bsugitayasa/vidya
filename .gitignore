@@ -10,3 +10,7 @@ uploads/
 artifact/
 brain/
 scratch/
+.vite
+coverage
+.next
+.cache

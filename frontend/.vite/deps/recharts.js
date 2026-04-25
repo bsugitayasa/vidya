@@ -1,8 +1,8 @@
 import { n as __exportAll, r as __toESM, t as __commonJSMin } from "./chunk-CYJPkc-J.js";
 import { t as require_react } from "./react.js";
-import { t as require_react_dom } from "./react-dom-DnQuiull.js";
 import { clsx } from "./clsx.js";
-import { t as require_react_is } from "./react-is-Bquweg8R.js";
+import { t as require_react_dom } from "./react-dom-BZydYmzT.js";
+import { t as require_react_is } from "./react-is-C4ydYnKr.js";
 //#region node_modules/recharts/es6/util/excludeEventProps.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var EventKeys = [
@@ -10058,8 +10058,8 @@ function parseNumericalUserDomain(userDomain, dataDomain, allowDataOverflow) {
 	}
 }
 //#endregion
-//#region node_modules/recharts/es6/util/scale/util/arithmetic.js
-var import_decimal = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((exports, module) => {
+//#region node_modules/decimal.js-light/decimal.js
+var require_decimal = /* @__PURE__ */ __commonJSMin(((exports, module) => {
 	(function(globalScope) {
 		"use strict";
 		var MAX_DIGITS = 1e9, Decimal = {
@@ -10952,7 +10952,11 @@ var import_decimal = /* @__PURE__ */ __toESM((/* @__PURE__ */ __commonJSMin(((ex
 			globalScope.Decimal = Decimal;
 		}
 	})(exports);
-})))());
+}));
+//#endregion
+//#region node_modules/recharts/es6/util/scale/util/arithmetic.js
+var import_react_is = require_react_is();
+var import_decimal = /* @__PURE__ */ __toESM(require_decimal());
 /**
 * Get the digit count of a number.
 * If the absolute value is in the interval [0.1, 1), the result is 0.
@@ -20332,7 +20336,6 @@ var selectPieSectors = createSelector([
 });
 //#endregion
 //#region node_modules/recharts/es6/util/ReactUtils.js
-var import_react_is = require_react_is();
 /**
 * @deprecated instead find another approach that does not depend on displayName.
 * Get the display name of a component

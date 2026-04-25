@@ -1,6 +1,6 @@
 import { r as __toESM, t as __commonJSMin } from "./chunk-CYJPkc-J.js";
 import { t as require_react } from "./react.js";
-import { t as require_react_dom } from "./react-dom-DnQuiull.js";
+import { t as require_react_dom } from "./react-dom-BZydYmzT.js";
 //#region node_modules/react-router/dist/development/chunk-EVOBXE3Y.mjs
 var import_react = /* @__PURE__ */ __toESM(require_react(), 1);
 /**

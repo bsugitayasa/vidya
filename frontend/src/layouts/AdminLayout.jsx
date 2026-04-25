@@ -1,34 +1,111 @@
-import { Navigate, Outlet, Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
+import { 
+  LayoutDashboard, 
+  Users, 
+  FileText, 
+  Settings, 
+  LogOut, 
+  ChevronLeft, 
+  ChevronRight 
+} from 'lucide-react';
 import useAuthStore from '../store/authStore';
 
 export default function AdminLayout() {
   const { token, logout } = useAuthStore();
+  const [isMinimized, setIsMinimized] = useState(false);
+  const location = useLocation();
 
-  // Basic protected route
   if (!token) {
     return <Navigate to="/admin/login" replace />;
   }
 
+  const menuItems = [
+    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/admin/sisya', icon: Users, label: 'Data Sisya' },
+    { path: '/admin/laporan', icon: FileText, label: 'Laporan' },
+    { path: '/admin/pengaturan', icon: Settings, label: 'Pengaturan' },
+  ];
+
   return (
     <div className="flex min-h-screen bg-bg font-sans">
-      <aside className="w-64 bg-secondary text-white flex flex-col">
-        <div className="p-4 text-xl font-bold font-heading border-b border-primary">
-          Admin Panel
+      {/* Sidebar */}
+      <aside 
+        className={`${
+          isMinimized ? 'w-20' : 'w-64'
+        } bg-secondary text-white flex flex-col transition-all duration-300 ease-in-out relative shadow-xl`}
+      >
+        {/* Toggle Button */}
+        <button 
+          onClick={() => setIsMinimized(!isMinimized)}
+          className="absolute -right-3 top-20 bg-primary text-white rounded-full p-1 shadow-lg hover:scale-110 transition-transform"
+        >
+          {isMinimized ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+        </button>
+
+        {/* Logo Section */}
+        <div className={`p-4 flex items-center gap-3 border-b border-primary/30 ${isMinimized ? 'justify-center' : ''}`}>
+          <img 
+            src="/logo.png" 
+            alt="Logo" 
+            style={{ 
+              width: isMinimized ? '32px' : '42px', 
+              height: isMinimized ? '32px' : '42px',
+              minWidth: isMinimized ? '32px' : '42px'
+            }}
+            className="object-contain bg-white rounded-full p-1 transition-all duration-300 flex-shrink-0" 
+          />
+          {!isMinimized && (
+            <div className="overflow-hidden whitespace-nowrap">
+              <h2 className="font-bold font-heading text-lg">PDPN - VIDYA</h2>
+              <p className="text-[10px] opacity-70">Admin Panel</p>
+            </div>
+          )}
         </div>
-        <nav className="flex-1 p-4 space-y-2">
-          <Link to="/admin/dashboard" className="block p-2 rounded hover:bg-primary transition-colors">Dashboard</Link>
-          <Link to="/admin/sisya" className="block p-2 rounded hover:bg-primary transition-colors">Data Sisya</Link>
-          <Link to="/admin/laporan" className="block p-2 rounded hover:bg-primary transition-colors">Laporan</Link>
-          <Link to="/admin/pengaturan" className="block p-2 rounded hover:bg-primary transition-colors">Pengaturan</Link>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-3 space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link 
+                key={item.path}
+                to={item.path} 
+                className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                  isActive 
+                    ? 'bg-primary text-white shadow-md' 
+                    : 'hover:bg-primary/20 text-white/80 hover:text-white'
+                } ${isMinimized ? 'justify-center' : ''}`}
+                title={isMinimized ? item.label : ''}
+              >
+                <Icon size={20} />
+                {!isMinimized && <span className="font-medium">{item.label}</span>}
+              </Link>
+            );
+          })}
         </nav>
-        <div className="p-4 border-t border-primary">
-          <button onClick={logout} className="w-full bg-primary hover:bg-accent text-white p-2 rounded transition-colors">
-            Logout
+
+        {/* Footer Sidebar */}
+        <div className="p-3 border-t border-primary/30">
+          <button 
+            onClick={logout} 
+            className={`w-full flex items-center gap-3 p-3 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-100 hover:text-white transition-all ${
+              isMinimized ? 'justify-center' : ''
+            }`}
+            title={isMinimized ? 'Logout' : ''}
+          >
+            <LogOut size={20} />
+            {!isMinimized && <span className="font-medium">Logout</span>}
           </button>
         </div>
       </aside>
-      <main className="flex-1 p-8">
-        <Outlet />
+
+      {/* Main Content */}
+      <main className="flex-1 p-8 overflow-y-auto">
+        <div className="max-w-7xl mx-auto">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

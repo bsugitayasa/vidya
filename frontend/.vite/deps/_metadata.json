@@ -2,12 +2,12 @@
   "hash": "3fd37cc7",
   "configHash": "08d42a17",
   "lockfileHash": "a252657d",
-  "browserHash": "19e23da8",
+  "browserHash": "6532e94f",
   "optimized": {
     "@hookform/resolvers/zod": {
       "src": "../../node_modules/@hookform/resolvers/zod/dist/zod.mjs",
       "file": "@hookform_resolvers_zod.js",
-      "fileHash": "902e3229",
+      "fileHash": "afabe384",
       "needsInterop": false
     },
     "@tanstack/react-query": {
@@ -37,13 +37,13 @@
     "react-dom/client": {
       "src": "../../node_modules/react-dom/client.js",
       "file": "react-dom_client.js",
-      "fileHash": "ca5ebfc6",
+      "fileHash": "c9ab1f4e",
       "needsInterop": true
     },
     "react-dropzone": {
       "src": "../../node_modules/react-dropzone/dist/es/index.js",
       "file": "react-dropzone.js",
-      "fileHash": "32ae9455",
+      "fileHash": "ee29dec3",
       "needsInterop": false
     },
     "react-hook-form": {
@@ -55,7 +55,7 @@
     "react-router-dom": {
       "src": "../../node_modules/react-router-dom/dist/index.mjs",
       "file": "react-router-dom.js",
-      "fileHash": "f1445a65",
+      "fileHash": "654e2bb0",
       "needsInterop": false
     },
     "react": {
@@ -73,7 +73,7 @@
     "recharts": {
       "src": "../../node_modules/recharts/es6/index.js",
       "file": "recharts.js",
-      "fileHash": "b9def3bd",
+      "fileHash": "397e1854",
       "needsInterop": false
     },
     "tailwind-merge": {
@@ -82,10 +82,16 @@
       "fileHash": "592ca3b0",
       "needsInterop": false
     },
+    "xlsx": {
+      "src": "../../node_modules/xlsx/xlsx.mjs",
+      "file": "xlsx.js",
+      "fileHash": "3b581a97",
+      "needsInterop": false
+    },
     "zod": {
       "src": "../../node_modules/zod/index.js",
       "file": "zod.js",
-      "fileHash": "f41d085c",
+      "fileHash": "9377d98b",
       "needsInterop": false
     },
     "zustand": {
@@ -100,16 +106,16 @@
       "file": "chunk-CYJPkc-J.js",
       "isDynamicEntry": false
     },
-    "core-MSr48a_r": {
-      "file": "core-MSr48a_r.js",
+    "core-C12D3dis": {
+      "file": "core-C12D3dis.js",
       "isDynamicEntry": false
     },
-    "react-dom-DnQuiull": {
-      "file": "react-dom-DnQuiull.js",
+    "react-dom-BZydYmzT": {
+      "file": "react-dom-BZydYmzT.js",
       "isDynamicEntry": false
     },
-    "react-is-Bquweg8R": {
-      "file": "react-is-Bquweg8R.js",
+    "react-is-C4ydYnKr": {
+      "file": "react-is-C4ydYnKr.js",
       "isDynamicEntry": false
     }
   }
