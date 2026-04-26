@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Search, Loader2, CheckCircle2, Clock, XCircle, Upload, FileText, ArrowLeft, Info } from 'lucide-react';
+import { Search, Loader2, CheckCircle2, Clock, XCircle, Upload, FileText, ArrowLeft, Info, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -84,10 +84,12 @@ export default function CekStatus() {
     switch (status) {
       case 'LUNAS':
         return <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold flex items-center w-fit"><CheckCircle2 size={14} className="mr-1" /> LUNAS</span>;
-      case 'MENUNGGU':
+      case 'MENUNGGU_VERIFIKASI':
         return <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold flex items-center w-fit"><Clock size={14} className="mr-1" /> MENUNGGU VERIFIKASI</span>;
-      case 'BELUM_BAYAR':
+      case 'MENUNGGU_PEMBAYARAN':
         return <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-bold flex items-center w-fit"><Info size={14} className="mr-1" /> BELUM BAYAR</span>;
+      case 'BELUM_LUNAS':
+        return <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold flex items-center w-fit"><Clock size={14} className="mr-1" /> BELUM LUNAS</span>;
       case 'DITOLAK':
         return <span className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-xs font-bold flex items-center w-fit"><XCircle size={14} className="mr-1" /> DITOLAK</span>;
       default:
@@ -185,14 +187,20 @@ export default function CekStatus() {
                           <span>Total Punia</span>
                           <span className="text-primary text-lg">Rp {sisyaData.totalPunia.toLocaleString('id-ID')}</span>
                         </div>
+                        {sisyaData.statusPembayaran === 'BELUM_LUNAS' && (
+                          <div className="p-3 flex justify-between items-center text-sm text-red-600 font-bold border-t border-red-100 bg-red-50/50">
+                            <span>Sisa Pembayaran</span>
+                            <span>Rp {(sisyaData.totalPunia - sisyaData.totalTerbayar).toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    {/* Upload Section if needed */}
-                    {(sisyaData.statusPembayaran === 'BELUM_BAYAR' || sisyaData.statusPembayaran === 'MENUNGGU' || sisyaData.statusPembayaran === 'DITOLAK') && (
+                    {/* Upload Section if needed - Show if not LUNAS */}
+                    {sisyaData.statusPembayaran !== 'LUNAS' && (
                       <div className="mt-8 pt-6 border-t border-dashed">
                         <h4 className="text-sm font-semibold text-muted uppercase tracking-wider mb-4">
-                          {sisyaData.statusPembayaran === 'MENUNGGU' ? 'Perbarui Bukti Pembayaran' : 'Unggah Bukti Pembayaran'}
+                          {sisyaData.statusPembayaran === 'MENUNGGU_VERIFIKASI' ? 'Perbarui/Tambah Bukti Pembayaran' : 'Unggah Bukti Pembayaran'}
                         </h4>
                         
                         {uploadSuccess && (

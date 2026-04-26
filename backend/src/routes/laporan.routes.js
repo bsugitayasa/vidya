@@ -7,6 +7,6 @@ const { requireAuth, requireAdmin } = require('../middlewares/auth.middleware');
 router.get('/sisya', requireAuth, requireAdmin, laporanController.getLaporanSisya);
 
 // GET /api/laporan/export
-router.get('/export', requireAuth, requireAdmin, laporanController.getLaporanSisya);
+router.get('/export', requireAuth, requireAdmin, laporanController.exportSisya);
 
 module.exports = router;

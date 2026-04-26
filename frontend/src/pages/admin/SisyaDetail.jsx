@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2 } from 'lucide-react';
 import api from '../../lib/axios';
+import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import useFileUrl from '../../hooks/useFileUrl';
 
 export default function SisyaDetail() {
   const { id } = useParams();
@@ -10,6 +13,17 @@ export default function SisyaDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState('');
+  
+  // Modal state
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [selectedPembayaran, setSelectedPembayaran] = useState(null);
+  const [nominalVerifikasi, setNominalVerifikasi] = useState('');
+  const [keteranganVerifikasi, setKeteranganVerifikasi] = useState('');
+
+  // Protected file URLs
+  const fotoUrl = useFileUrl(sisya?.fileFotoPath);
+  const ktpUrl = useFileUrl(sisya?.fileIdentitasPath);
+  const rekomendasiUrl = useFileUrl(sisya?.fileRekomendasiPath);
 
   useEffect(() => {
     fetchSisyaDetail();
@@ -29,30 +43,66 @@ export default function SisyaDetail() {
     }
   };
 
-  const updateStatus = async (newStatus) => {
+  const handleOpenVerifyModal = (pembayaran) => {
+    setSelectedPembayaran(pembayaran);
+    setNominalVerifikasi(pembayaran.nominal || '');
+    setKeteranganVerifikasi(pembayaran.keterangan || '');
+    setShowVerifyModal(true);
+  };
+
+  const handleVerifikasi = async (status) => {
+    if (status === 'VERIFIKASI' && !nominalVerifikasi) {
+      toast.error('Masukkan nominal yang diverifikasi');
+      return;
+    }
+
     setIsUpdating(true);
     try {
-      const res = await api.patch(`/sisya/${id}/status`, { status: newStatus });
+      const res = await api.patch(`/pembayaran/${selectedPembayaran.id}/verifikasi`, {
+        nominal: nominalVerifikasi,
+        status,
+        keterangan: keteranganVerifikasi
+      });
+
       if (res.data.success) {
-        setSisya(res.data.data);
-        // re-fetch to get nested relations if needed
-        fetchSisyaDetail();
+        toast.success(`Pembayaran berhasil ${status === 'VERIFIKASI' ? 'diverifikasi' : 'ditolak'}`);
+        setShowVerifyModal(false);
+        fetchSisyaDetail(); // Refresh data
       }
     } catch (err) {
-      alert('Gagal memperbarui status');
+      toast.error(err.response?.data?.message || 'Gagal memproses verifikasi');
     } finally {
       setIsUpdating(false);
     }
   };
 
+  const handleDeletePembayaran = async (pembayaranId) => {
+    if (!confirm('Hapus bukti pembayaran ini?')) return;
+    
+    try {
+        await api.delete(`/pembayaran/${pembayaranId}`);
+        toast.success('Bukti pembayaran dihapus');
+        fetchSisyaDetail();
+    } catch (err) {
+        toast.error('Gagal menghapus pembayaran');
+    }
+  }
+
   const getStatusBadgeColor = (status) => {
     switch(status) {
       case 'LUNAS': return 'bg-green-100 text-green-800 border-green-200';
-      case 'MENUNGGU': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'BELUM_LUNAS': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'MENUNGGU_VERIFIKASI': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'MENUNGGU_PEMBAYARAN': return 'bg-gray-100 text-gray-600 border-gray-200';
       case 'DITOLAK': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
+
+  const formatStatus = (status) => {
+    if (!status) return '';
+    return status.replace(/_/g, ' ');
+  }
 
   const formatRupiah = (number) => {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
@@ -61,6 +111,8 @@ export default function SisyaDetail() {
   if (isLoading) return <div className="text-center py-12 text-muted">Memuat data...</div>;
   if (error) return <div className="text-center py-12 text-red-500">{error}</div>;
   if (!sisya) return <div className="text-center py-12">Data tidak ditemukan</div>;
+
+  const sisaTagihan = sisya.totalPunia - sisya.totalTerbayar;
 
   return (
     <div className="space-y-6 pb-12 font-sans">
@@ -78,101 +130,130 @@ export default function SisyaDetail() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Kolom Kiri: Profil & Status */}
+        {/* Kolom Kiri: Profil & Ringkasan */}
         <div className="space-y-6 md:col-span-1">
-          <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6 text-center">
-            <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/20 overflow-hidden">
-              {sisya.fileFotoPath ? (
-                <img src={`http://localhost:3001${sisya.fileFotoPath}`} alt="Foto Sisya" className="w-full h-full object-cover" />
-              ) : (
-                <User size={40} className="text-primary" />
-              )}
-            </div>
-            <h3 className="text-xl font-bold">{sisya.namaLengkap}</h3>
-            <p className="text-sm text-muted mb-4">{sisya.email}</p>
-            
-            <div className={`inline-block px-3 py-1 rounded-full border text-sm font-semibold mb-6 ${getStatusBadgeColor(sisya.statusPembayaran)}`}>
-              Status: {sisya.statusPembayaran}
-            </div>
+          <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6 text-center relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-16 bg-primary/5 -z-0"></div>
+            <div className="relative z-10">
+              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-primary/20 shadow-md overflow-hidden">
+                {fotoUrl ? (
+                  <img src={fotoUrl} alt="Foto Sisya" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="bg-primary/10 w-full h-full flex items-center justify-center">
+                    <User size={40} className="text-primary" />
+                  </div>
+                )}
+              </div>
+              <h3 className="text-xl font-bold">{sisya.namaLengkap}</h3>
+              <p className="text-sm text-muted mb-4">{sisya.email}</p>
+              
+              <div className={`inline-block px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider mb-6 ${getStatusBadgeColor(sisya.statusPembayaran)}`}>
+                {formatStatus(sisya.statusPembayaran)}
+              </div>
 
-            <div className="space-y-3">
-              {sisya.statusPembayaran !== 'LUNAS' && (
-                <Button 
-                  className="w-full bg-green-600 hover:bg-green-700 font-bold"
-                  onClick={() => updateStatus('LUNAS')}
-                  disabled={isUpdating}
-                >
-                  <CheckCircle className="mr-2" size={18} /> Verifikasi (Lunas)
-                </Button>
-              )}
-              {sisya.statusPembayaran !== 'MENUNGGU' && (
-                <Button 
-                  variant="outline"
-                  className="w-full text-yellow-600 border-yellow-200 hover:bg-yellow-50 font-bold"
-                  onClick={() => updateStatus('MENUNGGU')}
-                  disabled={isUpdating}
-                >
-                  <Clock className="mr-2" size={18} /> Set Menunggu
-                </Button>
-              )}
-              {sisya.statusPembayaran !== 'DITOLAK' && (
-                <Button 
-                  variant="outline"
-                  className="w-full text-red-600 border-red-200 hover:bg-red-50 font-bold"
-                  onClick={() => updateStatus('DITOLAK')}
-                  disabled={isUpdating}
-                >
-                  <XCircle className="mr-2" size={18} /> Tolak Pendaftaran
-                </Button>
-              )}
+              <div className="pt-4 border-t border-muted/10 space-y-4">
+                  <div className="text-left">
+                      <span className="text-xs text-muted block mb-1">Ringkasan Punia</span>
+                      <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                              <span>Total Tagihan</span>
+                              <span className="font-bold">{formatRupiah(sisya.totalPunia)}</span>
+                          </div>
+                          <div className="flex justify-between text-sm text-green-600">
+                              <span>Total Terbayar</span>
+                              <span className="font-bold">{formatRupiah(sisya.totalTerbayar)}</span>
+                          </div>
+                          <div className={`flex justify-between text-sm p-2 rounded ${sisaTagihan > 0 ? 'bg-red-50 text-red-700 font-bold' : 'bg-green-50 text-green-700 font-bold'}`}>
+                              <span>Sisa Tagihan</span>
+                              <span>{formatRupiah(sisaTagihan)}</span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
             </div>
           </div>
 
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
-            <h4 className="font-bold border-b border-muted/20 pb-2 mb-4 text-primary">Informasi Pembayaran</h4>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted">Total Estimasi Punia</span>
-                <span className="font-bold text-lg text-primary">{formatRupiah(sisya.totalPunia)}</span>
-              </div>
+            <h4 className="font-bold border-b border-muted/20 pb-2 mb-4 text-primary">Data Pribadi</h4>
+            <div className="space-y-4 text-sm">
+                <div>
+                    <span className="text-muted text-xs block">TTL</span>
+                    <span className="font-medium">{sisya.tempatLahir}, {new Date(sisya.tanggalLahir).toLocaleDateString('id-ID')}</span>
+                </div>
+                <div>
+                    <span className="text-muted text-xs block">Alamat</span>
+                    <span className="font-medium">{sisya.alamat}</span>
+                </div>
+                <div>
+                    <span className="text-muted text-xs block">Griya / Desa</span>
+                    <span className="font-medium">{sisya.namaGriya} / {sisya.namaDesa}</span>
+                </div>
             </div>
-            {sisya.fileBuktiPuniaPath && (
-              <div className="mt-4 pt-4 border-t border-muted/20">
-                <a href={`http://localhost:3001${sisya.fileBuktiPuniaPath}`} target="_blank" rel="noopener noreferrer">
-                  <Button variant="outline" className="w-full font-bold">
-                    <FileText size={16} className="mr-2 text-primary" /> Lihat Bukti Transfer
-                  </Button>
-                </a>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Kolom Kanan: Data Lengkap & Dokumen */}
+        {/* Kolom Kanan: Riwayat & Dokumen */}
         <div className="space-y-6 md:col-span-2">
+          
+          {/* Riwayat Pembayaran */}
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
-            <h4 className="font-bold text-lg border-b border-muted/20 pb-3 mb-4 text-primary">Data Pribadi</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-sm">
-              <div>
-                <span className="block text-muted text-xs mb-1">Tempat, Tanggal Lahir</span>
-                <span className="font-medium">{sisya.tempatLahir}, {new Date(sisya.tanggalLahir).toLocaleDateString('id-ID')}</span>
-              </div>
-              <div>
-                <span className="block text-muted text-xs mb-1">Jenis Kelamin</span>
-                <span className="font-medium">{sisya.jenisKelamin === 'LAKI_LAKI' ? 'Laki-Laki' : 'Perempuan'}</span>
-              </div>
-              <div>
-                <span className="block text-muted text-xs mb-1">Nomor HP/WA</span>
-                <span className="font-medium">{sisya.noHp}</span>
-              </div>
-              <div className="sm:col-span-2">
-                <span className="block text-muted text-xs mb-1">Alamat Lengkap</span>
-                <span className="font-medium">{sisya.alamat}</span>
-              </div>
-              <div className="sm:col-span-2">
-                <span className="block text-muted text-xs mb-1">Nama Griya & Desa/Kecamatan</span>
-                <span className="font-medium">{sisya.namaGriya} - {sisya.namaDesa}</span>
-              </div>
+            <h4 className="font-bold text-lg border-b border-muted/20 pb-3 mb-4 text-primary flex items-center gap-2">
+                <CreditCard size={20} /> Riwayat Pembayaran (Cicilan)
+            </h4>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                    <thead>
+                        <tr className="text-muted border-b border-muted/10">
+                            <th className="py-2">Tanggal</th>
+                            <th className="py-2">Keterangan</th>
+                            <th className="py-2 text-right">Nominal</th>
+                            <th className="py-2 text-center">Bukti</th>
+                            <th className="py-2 text-center">Status</th>
+                            <th className="py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted/5">
+                        {sisya.pembayarans.length === 0 ? (
+                            <tr>
+                                <td colSpan="6" className="py-8 text-center text-muted">Belum ada riwayat pembayaran.</td>
+                            </tr>
+                        ) : (
+                            sisya.pembayarans.map((p) => (
+                                <tr key={p.id} className="hover:bg-bg/50">
+                                    <td className="py-3">{new Date(p.createdAt).toLocaleDateString('id-ID')}</td>
+                                    <td className="py-3 font-medium">{p.keterangan || '-'}</td>
+                                    <td className="py-3 text-right font-mono font-bold">
+                                        {p.status === 'VERIFIKASI' ? formatRupiah(p.nominal) : '-'}
+                                    </td>
+                                    <td className="py-3 text-center">
+                                        <ProofLink path={p.buktiPath} />
+                                    </td>
+                                    <td className="py-3 text-center">
+                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${
+                                            p.status === 'VERIFIKASI' ? 'bg-green-100 text-green-700 border-green-200' :
+                                            p.status === 'MENUNGGU' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                                            'bg-red-100 text-red-700 border-red-200'
+                                        }`}>
+                                            {p.status}
+                                        </span>
+                                    </td>
+                                    <td className="py-3 text-right">
+                                        {p.status === 'MENUNGGU' && (
+                                            <div className="flex gap-2 justify-end">
+                                                <Button size="sm" className="h-7 text-xs" onClick={() => handleOpenVerifyModal(p)}>
+                                                    Verifikasi
+                                                </Button>
+                                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500" onClick={() => handleDeletePembayaran(p.id)}>
+                                                    <Trash2 size={14} />
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
             </div>
           </div>
 
@@ -192,25 +273,125 @@ export default function SisyaDetail() {
           </div>
 
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
-            <h4 className="font-bold text-lg border-b border-muted/20 pb-3 mb-4 text-primary">Dokumen Lampiran</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {sisya.fileKtpPath ? (
-                <a href={`http://localhost:3001${sisya.fileKtpPath}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-3 border border-muted/20 rounded hover:bg-bg transition-colors">
-                  <FileText className="text-primary mr-3" size={24} />
-                  <div>
-                    <span className="block font-medium text-sm">Dokumen Identitas (KTP)</span>
-                    <span className="text-xs text-muted">Klik untuk melihat</span>
+            <h4 className="font-bold text-lg border-b border-muted/20 pb-3 mb-4 text-primary">Dokumen Identitas</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <span className="block text-xs font-bold text-muted uppercase tracking-wider">KTP / KK</span>
+                {ktpUrl ? (
+                  <div className="group relative border border-muted/20 rounded-lg overflow-hidden bg-bg aspect-video flex items-center justify-center">
+                    <img src={ktpUrl} alt="KTP" className="max-w-full max-h-full object-contain" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <a href={ktpUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="secondary" size="sm" className="font-bold">
+                          <ExternalLink size={14} className="mr-1" /> Lihat Full
+                        </Button>
+                      </a>
+                    </div>
                   </div>
-                </a>
-              ) : (
-                <div className="p-3 border border-dashed border-muted rounded text-center text-sm text-muted">KTP tidak dilampirkan</div>
-              )}
+                ) : (
+                  <div className="h-32 border border-dashed border-muted rounded-lg flex items-center justify-center text-sm text-muted bg-bg/50">
+                    KTP tidak dilampirkan
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <span className="block text-xs font-bold text-muted uppercase tracking-wider">Surat Rekomendasi</span>
+                {rekomendasiUrl ? (
+                  <div className="group relative border border-muted/20 rounded-lg overflow-hidden bg-bg aspect-video flex items-center justify-center">
+                    <img src={rekomendasiUrl} alt="Surat Rekomendasi" className="max-w-full max-h-full object-contain" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <a href={rekomendasiUrl} target="_blank" rel="noopener noreferrer">
+                        <Button variant="secondary" size="sm" className="font-bold">
+                          <ExternalLink size={14} className="mr-1" /> Lihat Full
+                        </Button>
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-32 border border-dashed border-muted rounded-lg flex items-center justify-center text-sm text-muted bg-bg/50">
+                    Surat rekomendasi tidak dilampirkan
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
         </div>
 
       </div>
+
+      {/* Verification Modal */}
+      {showVerifyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+              <div className="bg-surface w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-muted/20">
+                  <div className="p-6 border-b border-muted/10 flex justify-between items-center bg-primary/5">
+                      <h3 className="font-bold text-lg text-primary">Verifikasi Pembayaran</h3>
+                      <button onClick={() => setShowVerifyModal(false)} className="text-muted hover:text-text">✕</button>
+                  </div>
+                  <div className="p-6 space-y-4">
+                      <div className="aspect-video border rounded-lg overflow-hidden bg-bg flex items-center justify-center">
+                         <ProofPreview path={selectedPembayaran.buktiPath} />
+                      </div>
+                      
+                      <div className="space-y-2">
+                          <label className="text-xs font-bold text-muted uppercase">Nominal Diterima (Rp)</label>
+                          <Input 
+                            type="number" 
+                            placeholder="Contoh: 1500000"
+                            value={nominalVerifikasi}
+                            onChange={(e) => setNominalVerifikasi(e.target.value)}
+                          />
+                      </div>
+
+                      <div className="space-y-2">
+                          <label className="text-xs font-bold text-muted uppercase">Catatan / Keterangan</label>
+                          <Input 
+                            placeholder="Catatan verifikasi..."
+                            value={keteranganVerifikasi}
+                            onChange={(e) => setKeteranganVerifikasi(e.target.value)}
+                          />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-4">
+                          <Button 
+                            variant="outline" 
+                            className="text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => handleVerifikasi('DITOLAK')}
+                            disabled={isUpdating}
+                          >
+                              <XCircle className="mr-2" size={18} /> Tolak
+                          </Button>
+                          <Button 
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={() => handleVerifikasi('VERIFIKASI')}
+                            disabled={isUpdating}
+                          >
+                              <CheckCircle className="mr-2" size={18} /> Verifikasi
+                          </Button>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
+}
+
+// Helper component for Proof Preview in Modal to avoid Hook Order Error
+function ProofPreview({ path }) {
+    const url = useFileUrl(path);
+    if (!url) return <div className="text-muted animate-pulse">Memuat bukti...</div>;
+    return <img src={url} alt="Bukti" className="max-w-full max-h-full object-contain" />;
+}
+
+// Helper component for Proof Link
+function ProofLink({ path }) {
+    const url = useFileUrl(path);
+    if (!url) return <span className="text-muted">-</span>;
+    return (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center justify-center gap-1">
+            <FileText size={14} /> View
+        </a>
+    );
 }

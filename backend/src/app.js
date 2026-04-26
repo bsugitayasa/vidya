@@ -11,8 +11,8 @@ app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files for uploads
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Public static files (if any)
+// app.use('/uploads', express.static(path.join(__dirname, '../uploads'))); // Disabled for protection
 
 // Basic health check route
 app.get('/api/health', (req, res) => {
@@ -25,6 +25,7 @@ const programAjahanRoutes = require('./routes/programAjahan.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const laporanRoutes = require('./routes/laporan.routes');
 const konfigurasiRoutes = require('./routes/konfigurasi.routes');
+const pembayaranRoutes = require('./routes/pembayaran.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/sisya', sisyaRoutes);
@@ -32,6 +33,7 @@ app.use('/api/program-ajahan', programAjahanRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/laporan', laporanRoutes);
 app.use('/api/konfigurasi', konfigurasiRoutes);
+app.use('/api/pembayaran', pembayaranRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

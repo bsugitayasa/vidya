@@ -35,7 +35,8 @@ export default function RegistrasiWizard() {
   const [files, setFiles] = useState({
     fileIdentitas: null,
     fileFoto: null,
-    filePunia: null
+    filePunia: null,
+    fileRekomendasi: null
   });
   const [rekeningInfo, setRekeningInfo] = useState({ bank: 'Bank BPD Bali', nomor: '0987654321', pemilik: 'PDPN DIKJAR POLEKSOSDA' });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -130,6 +131,7 @@ export default function RegistrasiWizard() {
       if (files.fileIdentitas) formData.append('fileIdentitas', files.fileIdentitas);
       if (files.fileFoto) formData.append('fileFoto', files.fileFoto);
       if (files.filePunia) formData.append('filePunia', files.filePunia);
+      if (files.fileRekomendasi) formData.append('fileRekomendasi', files.fileRekomendasi);
 
       const response = await api.post('/sisya/register', formData, {
         headers: {

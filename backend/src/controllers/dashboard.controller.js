@@ -10,7 +10,15 @@ const getStats = async (req, res) => {
     const totalSisya = await prisma.sisya.count();
     
     const menungguVerifikasi = await prisma.sisya.count({
-      where: { statusPembayaran: 'MENUNGGU' }
+      where: { statusPembayaran: 'MENUNGGU_VERIFIKASI' }
+    });
+
+    const belumLunas = await prisma.sisya.count({
+      where: { 
+        statusPembayaran: {
+          in: ['BELUM_LUNAS', 'MENUNGGU_PEMBAYARAN']
+        }
+      }
     });
     
     // Total Punia
@@ -95,6 +103,7 @@ const getStats = async (req, res) => {
       data: {
         totalSisya,
         menungguVerifikasi,
+        belumLunas,
         totalEstimasiPunia: totalPunia,
         chartData,
         genderStats: {

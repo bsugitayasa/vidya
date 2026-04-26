@@ -21,10 +21,10 @@ export default function AdminLayout() {
   }
 
   const menuItems = [
-    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { path: '/admin/sisya', icon: Users, label: 'Data Sisya' },
-    { path: '/admin/laporan', icon: FileText, label: 'Laporan' },
-    { path: '/admin/pengaturan', icon: Settings, label: 'Pengaturan' },
+    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
+    { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400' },
+    { path: '/admin/laporan', icon: FileText, label: 'Laporan', color: 'text-emerald-400' },
+    { path: '/admin/pengaturan', icon: Settings, label: 'Pengaturan', color: 'text-rose-400' },
   ];
 
   return (
@@ -49,11 +49,11 @@ export default function AdminLayout() {
             src="/logo.png" 
             alt="Logo" 
             style={{ 
-              width: isMinimized ? '32px' : '42px', 
-              height: isMinimized ? '32px' : '42px',
-              minWidth: isMinimized ? '32px' : '42px'
+              width: isMinimized ? '32px' : '48px', 
+              height: isMinimized ? '32px' : '48px',
+              minWidth: isMinimized ? '32px' : '48px'
             }}
-            className="object-contain bg-white rounded-full p-1 transition-all duration-300 flex-shrink-0" 
+            className="object-contain transition-all duration-300 flex-shrink-0" 
           />
           {!isMinimized && (
             <div className="overflow-hidden whitespace-nowrap">
@@ -74,12 +74,12 @@ export default function AdminLayout() {
                 to={item.path} 
                 className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
                   isActive 
-                    ? 'bg-primary text-white shadow-md' 
+                    ? 'bg-primary text-white shadow-lg' 
                     : 'hover:bg-primary/20 text-white/80 hover:text-white'
                 } ${isMinimized ? 'justify-center' : ''}`}
                 title={isMinimized ? item.label : ''}
               >
-                <Icon size={20} />
+                <Icon size={20} className={isActive ? 'text-white' : item.color} />
                 {!isMinimized && <span className="font-medium">{item.label}</span>}
               </Link>
             );

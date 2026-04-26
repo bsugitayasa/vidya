@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import api from '../../lib/axios';
-import { Users, UserCheck, CreditCard, Filter, UserRound, UserRoundSearch } from 'lucide-react';
+import { Users, UserCheck, CreditCard, Filter, UserRound, UserRoundSearch, AlertCircle } from 'lucide-react';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
     totalSisya: 0,
     menungguVerifikasi: 0,
+    belumLunas: 0,
     totalEstimasiPunia: 0,
     chartData: [],
     genderStats: { lakiLaki: 0, perempuan: 0 },
@@ -69,37 +70,68 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-surface p-6 rounded-xl shadow-sm border border-muted/10 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Users size={64} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Sisya Card */}
+        <div className="bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="bg-blue-500/10 w-12 h-12 rounded-xl flex items-center justify-center text-blue-600 shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
+              <Users size={22} />
+            </div>
+            <div>
+              <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Total Sisya</h3>
+              <p className="text-2xl font-black text-text">{stats.totalSisya}</p>
+            </div>
           </div>
-          <h3 className="text-xs font-bold text-muted uppercase tracking-widest">Total Sisya</h3>
-          <p className="text-4xl font-black mt-2 text-text">{stats.totalSisya}</p>
-          <div className="mt-4 w-full bg-muted/10 h-1 rounded-full overflow-hidden">
-            <div className="bg-primary h-full w-full"></div>
+          <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
+            <div className="bg-blue-500 h-full w-full"></div>
           </div>
         </div>
         
-        <div className="bg-surface p-6 rounded-xl shadow-sm border border-muted/10 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <UserCheck size={64} />
+        {/* Waiting Verification Card */}
+        <div className="bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="bg-amber-500/10 w-12 h-12 rounded-xl flex items-center justify-center text-amber-600 shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+              <UserCheck size={22} />
+            </div>
+            <div>
+              <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Menunggu Verifikasi</h3>
+              <p className="text-2xl font-black text-amber-600">{stats.menungguVerifikasi}</p>
+            </div>
           </div>
-          <h3 className="text-xs font-bold text-muted uppercase tracking-widest">Menunggu Verifikasi</h3>
-          <p className="text-4xl font-black mt-2 text-accent">{stats.menungguVerifikasi}</p>
-          <div className="mt-4 w-full bg-muted/10 h-1 rounded-full overflow-hidden">
-            <div className="bg-accent h-full" style={{ width: `${(stats.menungguVerifikasi / (stats.totalSisya || 1)) * 100}%` }}></div>
+          <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
+            <div className="bg-amber-500 h-full transition-all duration-1000" style={{ width: `${(stats.menungguVerifikasi / (stats.totalSisya || 1)) * 100}%` }}></div>
           </div>
         </div>
 
-        <div className="bg-surface p-6 rounded-xl shadow-sm border border-muted/10 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <CreditCard size={64} />
+        {/* Belum Lunas Card */}
+        <div className="bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="bg-rose-500/10 w-12 h-12 rounded-xl flex items-center justify-center text-rose-600 shrink-0 group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
+              <AlertCircle size={22} />
+            </div>
+            <div>
+              <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Belum Lunas</h3>
+              <p className="text-2xl font-black text-rose-600">{stats.belumLunas || 0}</p>
+            </div>
           </div>
-          <h3 className="text-xs font-bold text-muted uppercase tracking-widest">Estimasi Punia</h3>
-          <p className="text-3xl font-black mt-2 text-secondary">{formatRupiah(stats.totalEstimasiPunia)}</p>
-          <div className="mt-4 w-full bg-muted/10 h-1 rounded-full overflow-hidden">
-            <div className="bg-secondary h-full w-full"></div>
+          <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
+            <div className="bg-rose-500 h-full transition-all duration-1000" style={{ width: `${((stats.belumLunas || 0) / (stats.totalSisya || 1)) * 100}%` }}></div>
+          </div>
+        </div>
+
+        {/* Estimated Punia Card */}
+        <div className="bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="bg-emerald-500/10 w-12 h-12 rounded-xl flex items-center justify-center text-emerald-600 shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300">
+              <CreditCard size={22} />
+            </div>
+            <div>
+              <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Estimasi Punia</h3>
+              <p className="text-xl font-black text-emerald-600">{formatRupiah(stats.totalEstimasiPunia)}</p>
+            </div>
+          </div>
+          <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
+            <div className="bg-emerald-500 h-full w-full"></div>
           </div>
         </div>
       </div>
@@ -109,9 +141,24 @@ export default function Dashboard() {
         <div className="bg-surface p-6 rounded-xl shadow-sm border border-muted/10 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold font-heading text-primary">Jenis Kelamin</h3>
-            <span className="text-xs font-medium text-muted bg-muted/10 px-2 py-1 rounded">
-              {selectedProgram === 'all' ? 'Semua Program' : stats.programList.find(p => p.id == selectedProgram)?.nama}
-            </span>
+            {(() => {
+              const programName = selectedProgram === 'all' ? 'Semua Program' : stats.programList.find(p => p.id == selectedProgram)?.nama;
+              const getBadgeColor = (name) => {
+                if (!name || name === 'Semua Program') return 'bg-muted/10 text-muted';
+                const n = name.toLowerCase();
+                if (n.includes('kawikon')) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+                if (n.includes('kawelakaan')) return 'bg-orange-100 text-orange-700 border-orange-200';
+                if (n.includes('usadha')) return 'bg-green-100 text-green-700 border-green-200';
+                if (n.includes('serati')) return 'bg-purple-100 text-purple-700 border-purple-200';
+                return 'bg-muted/10 text-muted';
+              };
+              
+              return (
+                <span className={`text-[10px] font-bold px-2 py-1 rounded border transition-colors ${getBadgeColor(programName)}`}>
+                  {programName}
+                </span>
+              );
+            })()}
           </div>
           
           <div className="flex-1 flex flex-col justify-center space-y-8">
@@ -159,20 +206,31 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-surface p-6 rounded-xl shadow-sm border border-muted/10">
           <h3 className="text-lg font-bold font-heading text-primary mb-6">Pendaftar per Program</h3>
           <div className="space-y-4">
-            {stats.programStats.map((p, idx) => (
-              <div key={p.id} className="group">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-bold text-text group-hover:text-primary transition-colors">{p.nama}</span>
-                  <span className="text-sm font-black text-muted">{p.total} Sisya</span>
+            {stats.programStats.map((p, idx) => {
+              const getProgramColor = (name) => {
+                const n = name.toLowerCase();
+                if (n.includes('kawikon')) return 'bg-yellow-400';
+                if (n.includes('kawelakaan')) return 'bg-orange-300';
+                if (n.includes('usadha')) return 'bg-green-500';
+                if (n.includes('serati')) return 'bg-purple-500';
+                return idx % 2 === 0 ? 'bg-primary' : 'bg-secondary';
+              };
+              
+              return (
+                <div key={p.id} className="group">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-bold text-text group-hover:text-primary transition-colors">{p.nama}</span>
+                    <span className="text-sm font-black text-muted">{p.total} Sisya</span>
+                  </div>
+                  <div className="w-full bg-muted/5 h-3 rounded-full overflow-hidden border border-muted/5">
+                    <div 
+                      className={`h-full transition-all duration-1000 ease-out ${getProgramColor(p.nama)}`}
+                      style={{ width: `${(p.total / (stats.totalSisya || 1)) * 100}%` }}
+                    ></div>
+                  </div>
                 </div>
-                <div className="w-full bg-muted/5 h-3 rounded-full overflow-hidden border border-muted/5">
-                  <div 
-                    className={`h-full transition-all duration-1000 ease-out ${idx % 2 === 0 ? 'bg-primary' : 'bg-secondary'}`}
-                    style={{ width: `${(p.total / (stats.totalSisya || 1)) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {stats.programStats.length === 0 && (
               <div className="text-center py-12 text-muted italic">Belum ada data program ajahan.</div>
             )}

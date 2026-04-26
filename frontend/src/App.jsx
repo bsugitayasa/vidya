@@ -1,10 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'sonner';
 import PublicLayout from './layouts/PublicLayout';
 import AdminLayout from './layouts/AdminLayout';
 import Registrasi from './pages/public/Registrasi';
 import SuksesRegistrasi from './pages/public/SuksesRegistrasi';
 import CekStatus from './pages/public/CekStatus';
+import LengkapiBerkas from './pages/public/LengkapiBerkas';
 import Login from './pages/admin/Login';
 import Dashboard from './pages/admin/Dashboard';
 import SisyaList from './pages/admin/SisyaList';
@@ -17,6 +19,7 @@ const queryClient = new QueryClient();
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <Toaster position="top-center" richColors />
       <BrowserRouter>
         <Routes>
           {/* Public Routes */}
@@ -25,6 +28,7 @@ function App() {
             <Route path="daftar" element={<Registrasi />} />
             <Route path="daftar/sukses" element={<SuksesRegistrasi />} />
             <Route path="cek-status" element={<CekStatus />} />
+            <Route path="lengkapi-berkas" element={<LengkapiBerkas />} />
           </Route>
 
           {/* Admin Auth Route */}
