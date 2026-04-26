@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Filter } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { Download, Filter, Loader2 } from 'lucide-react';
 import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -9,6 +8,7 @@ export default function Laporan() {
   const [sisyas, setSisyas] = useState([]);
   const [programs, setPrograms] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [filters, setFilters] = useState({
     status: 'SEMUA',
     programId: 'SEMUA',
@@ -55,61 +55,50 @@ export default function Laporan() {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (sisyas.length === 0) return;
+    setIsExporting(true);
 
-    // Format data untuk Excel
-    const dataToExport = sisyas.map(s => {
-      const programs = s.programSisyas.map(sp => 
-        `${sp.programAjahan.nama}${sp.isPasangan ? ' (Pasangan)' : ''}`
-      ).join(', ');
+    try {
+      const params = new URLSearchParams();
+      if (filters.status !== 'SEMUA') params.append('status', filters.status);
+      if (filters.programId !== 'SEMUA') params.append('programId', filters.programId);
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
 
-      const registrationNumbers = s.programSisyas.map(sp => 
-        `${sp.programAjahan.kode}: ${sp.nomorRegistrasi || '-'}`
-      ).join('; ');
+      const response = await api.get(`/laporan/export?${params.toString()}`, {
+        responseType: 'blob',
+      });
 
-      return {
-        'No. Pendaftaran': s.nomorPendaftaran,
-        'Nama Lengkap': s.namaLengkap,
-        'Tempat Lahir': s.tempatLahir,
-        'Tanggal Lahir': new Date(s.tanggalLahir).toLocaleDateString('id-ID'),
-        'Jenis Kelamin': s.jenisKelamin,
-        'Alamat': s.alamat,
-        'No. HP': s.noHp,
-        'Email': s.email || '-',
-        'Griya': s.namaGriya,
-        'Desa': s.namaDesa,
-        'Program Terdaftar': programs,
-        'Nomor Registrasi Program': registrationNumbers,
-        'Total Punia (Rp)': s.totalPunia,
-        'Status Pembayaran': s.statusPembayaran,
-        'Tanggal Daftar': new Date(s.createdAt).toLocaleDateString('id-ID')
-      };
-    });
-
-    // Buat worksheet
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    
-    // Atur lebar kolom agar rapi
-    const wscols = [
-      {wch: 18}, {wch: 25}, {wch: 15}, {wch: 15}, {wch: 12}, 
-      {wch: 35}, {wch: 15}, {wch: 20}, {wch: 18}, {wch: 18}, 
-      {wch: 35}, {wch: 45}, {wch: 15}, {wch: 18}, {wch: 15}
-    ];
-    worksheet['!cols'] = wscols;
-
-    // Buat workbook
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Laporan Sisya');
-    
-    // Download file
-    XLSX.writeFile(workbook, `Laporan_Sisya_${new Date().toISOString().split('T')[0]}.xlsx`);
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Laporan-Sisya-${new Date().toISOString().split('T')[0]}.xlsx`);
+      
+      // Append to html link element page
+      document.body.appendChild(link);
+      
+      // Start download
+      link.click();
+      
+      // Clean up and remove the link
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting excel:', error);
+      alert('Gagal mengekspor data ke Excel');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getStatusBadgeColor = (status) => {
     switch(status) {
       case 'LUNAS': return 'bg-green-100 text-green-800 border-green-200';
-      case 'MENUNGGU': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'BELUM_LUNAS': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'MENUNGGU_VERIFIKASI': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'MENUNGGU_PEMBAYARAN': return 'bg-gray-100 text-gray-600 border-gray-200';
       case 'DITOLAK': return 'bg-red-100 text-red-800 border-red-200';
       default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -123,9 +112,13 @@ export default function Laporan() {
           <p className="text-sm text-muted mt-1">Unduh rekapitulasi data pendaftar dan punia</p>
         </div>
         
-        <Button onClick={exportToExcel} disabled={sisyas.length === 0} className="flex items-center gap-2">
-          <Download size={18} />
-          Export Excel (.xlsx)
+        <Button 
+          onClick={exportToExcel} 
+          disabled={sisyas.length === 0 || isExporting} 
+          className="flex items-center gap-2"
+        >
+          {isExporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
+          {isExporting ? 'Sedang Mengekspor...' : 'Export Excel (.xlsx)'}
         </Button>
       </div>
 
@@ -139,7 +132,9 @@ export default function Laporan() {
           >
             <option value="SEMUA">Semua Status</option>
             <option value="LUNAS">Lunas</option>
-            <option value="MENUNGGU">Menunggu Verifikasi</option>
+            <option value="BELUM_LUNAS">Belum Lunas (Cicil)</option>
+            <option value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi</option>
+            <option value="MENUNGGU_PEMBAYARAN">Menunggu Pembayaran</option>
             <option value="DITOLAK">Ditolak</option>
           </select>
         </div>

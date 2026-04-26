@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Eye, Filter } from 'lucide-react';
+import { Search, Eye, Filter, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, XCircle, Info, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -9,16 +9,59 @@ export default function SisyaList() {
   const [sisyas, setSisyas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [programs, setPrograms] = useState([]);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterProgram, setFilterProgram] = useState('');
+  const [sort, setSort] = useState({ sortBy: 'createdAt', sortOrder: 'desc' });
+  
+  // Pagination state
+  const [pagination, setPagination] = useState({
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0
+  });
+
+  useEffect(() => {
+    fetchPrograms();
+  }, []);
 
   useEffect(() => {
     fetchSisyas();
-  }, []);
+  }, [pagination.page, filterStatus, filterProgram, searchTerm, sort]);
+
+  const fetchPrograms = async () => {
+    try {
+      const res = await api.get('/program-ajahan');
+      if (res.data.success) {
+        setPrograms(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching programs:', error);
+    }
+  };
 
   const fetchSisyas = async () => {
+    setIsLoading(true);
     try {
-      const res = await api.get('/sisya');
+      const params = new URLSearchParams({
+        page: pagination.page,
+        limit: pagination.limit,
+        status: filterStatus,
+        programId: filterProgram,
+        search: searchTerm,
+        sortBy: sort.sortBy,
+        sortOrder: sort.sortOrder
+      });
+
+      const res = await api.get(`/sisya?${params.toString()}`);
       if (res.data.success) {
         setSisyas(res.data.data);
+        setPagination(prev => ({
+          ...prev,
+          total: res.data.pagination.total,
+          totalPages: res.data.pagination.totalPages
+        }));
       }
     } catch (error) {
       console.error('Error fetching sisya:', error);
@@ -27,18 +70,42 @@ export default function SisyaList() {
     }
   };
 
-  const filteredSisyas = sisyas.filter(s => 
-    s.namaLengkap.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    s.nomorPendaftaran.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getStatusBadgeColor = (status) => {
-    switch(status) {
-      case 'LUNAS': return 'bg-green-100 text-green-800 border-green-200';
-      case 'MENUNGGU': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'DITOLAK': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination(prev => ({ ...prev, page: newPage }));
     }
+  };
+
+  const getStatusBadge = (status) => {
+    const config = {
+      'LUNAS': { color: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: CheckCircle2 },
+      'BELUM_LUNAS': { color: 'bg-blue-100 text-blue-700 border-blue-200', icon: Info },
+      'MENUNGGU_VERIFIKASI': { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: Clock },
+      'MENUNGGU_PEMBAYARAN': { color: 'bg-slate-100 text-slate-600 border-slate-200', icon: AlertCircle },
+      'DITOLAK': { color: 'bg-rose-100 text-rose-700 border-rose-200', icon: XCircle },
+    };
+    
+    const { color, icon: Icon } = config[status] || { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: Info };
+    
+    return (
+      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border shadow-sm ${color}`}>
+        <Icon size={12} />
+        {status.replace(/_/g, ' ')}
+      </span>
+    );
+  };
+
+  const handleSort = (field) => {
+    setSort(prev => ({
+      sortBy: field,
+      sortOrder: prev.sortBy === field && prev.sortOrder === 'asc' ? 'desc' : 'asc'
+    }));
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const getSortIcon = (field) => {
+    if (sort.sortBy !== field) return <ArrowUpDown size={14} className="text-muted/50" />;
+    return sort.sortOrder === 'asc' ? <ArrowUp size={14} className="text-primary" /> : <ArrowDown size={14} className="text-primary" />;
   };
 
   return (
@@ -49,19 +116,49 @@ export default function SisyaList() {
           <p className="text-sm text-muted mt-1">Kelola data pendaftar dan status verifikasi</p>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={18} />
             <Input 
               placeholder="Cari nama atau nomor..." 
               className="pl-10 w-full md:w-64"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setPagination(prev => ({ ...prev, page: 1 }));
+              }}
             />
           </div>
-          <Button variant="outline" className="px-3">
-            <Filter size={18} />
-          </Button>
+          
+          <select 
+            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            value={filterStatus}
+            onChange={(e) => {
+              setFilterStatus(e.target.value);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
+          >
+            <option value="">Semua Status</option>
+            <option value="MENUNGGU_PEMBAYARAN">Menunggu Pembayaran</option>
+            <option value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi</option>
+            <option value="BELUM_LUNAS">Belum Lunas</option>
+            <option value="LUNAS">Lunas</option>
+            <option value="DITOLAK">Ditolak</option>
+          </select>
+
+          <select 
+            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            value={filterProgram}
+            onChange={(e) => {
+              setFilterProgram(e.target.value);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
+          >
+            <option value="">Semua Program</option>
+            {programs.map(p => (
+              <option key={p.id} value={p.id}>{p.nama}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -70,11 +167,39 @@ export default function SisyaList() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-primary/5 border-b border-muted/20">
-                <th className="p-4 font-semibold text-sm text-text">No. Pendaftaran</th>
-                <th className="p-4 font-semibold text-sm text-text">Nama Lengkap</th>
+                <th 
+                  className="p-4 font-semibold text-sm text-text cursor-pointer hover:bg-primary/10 transition-colors"
+                  onClick={() => handleSort('nomorPendaftaran')}
+                >
+                  <div className="flex items-center gap-1">
+                    No. Pendaftaran {getSortIcon('nomorPendaftaran')}
+                  </div>
+                </th>
+                <th 
+                  className="p-4 font-semibold text-sm text-text cursor-pointer hover:bg-primary/10 transition-colors"
+                  onClick={() => handleSort('namaLengkap')}
+                >
+                  <div className="flex items-center gap-1">
+                    Nama Lengkap {getSortIcon('namaLengkap')}
+                  </div>
+                </th>
                 <th className="p-4 font-semibold text-sm text-text">Program</th>
-                <th className="p-4 font-semibold text-sm text-text">Tgl Daftar</th>
-                <th className="p-4 font-semibold text-sm text-text">Status Pembayaran</th>
+                <th 
+                  className="p-4 font-semibold text-sm text-text cursor-pointer hover:bg-primary/10 transition-colors"
+                  onClick={() => handleSort('createdAt')}
+                >
+                  <div className="flex items-center gap-1">
+                    Tgl Daftar {getSortIcon('createdAt')}
+                  </div>
+                </th>
+                <th 
+                  className="p-4 font-semibold text-sm text-text cursor-pointer hover:bg-primary/10 transition-colors"
+                  onClick={() => handleSort('statusPembayaran')}
+                >
+                  <div className="flex items-center gap-1">
+                    Status {getSortIcon('statusPembayaran')}
+                  </div>
+                </th>
                 <th className="p-4 font-semibold text-sm text-text text-center">Aksi</th>
               </tr>
             </thead>
@@ -83,12 +208,12 @@ export default function SisyaList() {
                 <tr>
                   <td colSpan="6" className="p-8 text-center text-muted">Memuat data...</td>
                 </tr>
-              ) : filteredSisyas.length === 0 ? (
+              ) : sisyas.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="p-8 text-center text-muted">Belum ada data pendaftar.</td>
                 </tr>
               ) : (
-                filteredSisyas.map(sisya => (
+                sisyas.map(sisya => (
                   <tr key={sisya.id} className="hover:bg-bg/50 transition-colors">
                     <td className="p-4 text-sm font-mono font-medium text-primary">{sisya.nomorPendaftaran}</td>
                     <td className="p-4 text-sm font-medium">{sisya.namaLengkap}</td>
@@ -105,14 +230,12 @@ export default function SisyaList() {
                       {new Date(sisya.createdAt).toLocaleDateString('id-ID')}
                     </td>
                     <td className="p-4 text-sm">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${getStatusBadgeColor(sisya.statusPembayaran)}`}>
-                        {sisya.statusPembayaran}
-                      </span>
+                      {getStatusBadge(sisya.statusPembayaran)}
                     </td>
                     <td className="p-4 text-center">
                       <Link to={`/admin/sisya/${sisya.id}`}>
-                        <Button variant="ghost" className="h-8 w-8 p-0 text-muted hover:text-primary hover:bg-primary/10">
-                          <Eye size={18} />
+                        <Button variant="ghost" className="h-9 w-9 p-0 rounded-full text-muted hover:text-primary hover:bg-primary/10 transition-all active:scale-95">
+                          <Eye size={20} />
                         </Button>
                       </Link>
                     </td>
@@ -122,6 +245,62 @@ export default function SisyaList() {
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
+        {!isLoading && pagination.totalPages > 1 && (
+          <div className="p-4 border-t border-muted/20 flex items-center justify-between">
+            <p className="text-sm text-muted">
+              Menampilkan {sisyas.length} dari {pagination.total} data
+            </p>
+            <div className="flex items-center space-x-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page === 1}
+              >
+                <ChevronLeft size={16} />
+              </Button>
+              <div className="flex items-center space-x-1">
+                {[...Array(pagination.totalPages)].map((_, i) => {
+                  const pageNum = i + 1;
+                  // Only show current page, first, last, and pages around current
+                  if (
+                    pageNum === 1 || 
+                    pageNum === pagination.totalPages || 
+                    (pageNum >= pagination.page - 1 && pageNum <= pagination.page + 1)
+                  ) {
+                    return (
+                      <Button
+                        key={pageNum}
+                        variant={pagination.page === pageNum ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => handlePageChange(pageNum)}
+                      >
+                        {pageNum}
+                      </Button>
+                    );
+                  } else if (
+                    (pageNum === 2 && pagination.page > 3) ||
+                    (pageNum === pagination.totalPages - 1 && pagination.page < pagination.totalPages - 2)
+                  ) {
+                    return <span key={pageNum} className="px-1 text-muted">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page === pagination.totalPages}
+              >
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

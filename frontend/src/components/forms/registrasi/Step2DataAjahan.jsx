@@ -94,6 +94,13 @@ export default function Step2DataAjahan({
               helperText="Format: JPG, PNG | Maks: 3MB"
               onFileSelected={(file) => onFileSelected('fileFoto', file)}
             />
+            <FileDropzone 
+              label="Surat Rekomendasi"
+              accept={{ 'image/*': ['.png', '.jpg', '.jpeg'], 'application/pdf': ['.pdf'] }}
+              maxSize={5 * 1024 * 1024}
+              helperText="Format: JPG, PNG, PDF | Maks: 5MB"
+              onFileSelected={(file) => onFileSelected('fileRekomendasi', file)}
+            />
           </div>
           <div>
             <div className="h-full flex flex-col">

@@ -91,6 +91,7 @@ const register = async (req, res) => {
     let fileKtpPath = null;
     let fileFotoPath = null;
     let fileBuktiPuniaPath = null;
+    let fileRekomendasiPath = null;
 
     if (req.files) {
       if (req.files.fileIdentitas && req.files.fileIdentitas[0]) {
@@ -101,6 +102,9 @@ const register = async (req, res) => {
       }
       if (req.files.filePunia && req.files.filePunia[0]) {
         fileBuktiPuniaPath = `/uploads/${req.files.filePunia[0].filename}`;
+      }
+      if (req.files.fileRekomendasi && req.files.fileRekomendasi[0]) {
+        fileRekomendasiPath = `/uploads/${req.files.fileRekomendasi[0].filename}`;
       }
     }
 
@@ -122,13 +126,19 @@ const register = async (req, res) => {
           namaDesa: data.namaDesa,
           fileIdentitasPath: fileKtpPath,
           fileFotoPath,
-          filePuniaPath: fileBuktiPuniaPath,
+          fileRekomendasiPath,
           totalPunia,
-          // Jika ada bukti punia, otomatis MENUNGGU. Jika tidak ada, tetap MENUNGGU (menunggu pembayaran) atau bisa dibuat status BELUM_BAYAR jika ada fiturnya. Di schema defaultnya MENUNGGU
-          statusPembayaran: fileBuktiPuniaPath ? 'MENUNGGU' : 'MENUNGGU',
+          statusPembayaran: fileBuktiPuniaPath ? 'MENUNGGU_VERIFIKASI' : 'MENUNGGU_PEMBAYARAN',
           programSisyas: {
             create: sisyaProgramsData
-          }
+          },
+          pembayarans: fileBuktiPuniaPath ? {
+            create: {
+              buktiPath: fileBuktiPuniaPath,
+              status: 'MENUNGGU',
+              keterangan: 'Pembayaran awal pendaftaran'
+            }
+          } : undefined
         },
         include: {
           programSisyas: true
@@ -155,18 +165,74 @@ const register = async (req, res) => {
 
 const getAll = async (req, res) => {
   try {
-    const sisyas = await prisma.sisya.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        programSisyas: {
-          include: {
-            programAjahan: true
+    const { 
+      page = 1, 
+      limit = 10, 
+      programId, 
+      status, 
+      search, 
+      sortBy = 'createdAt', 
+      sortOrder = 'desc' 
+    } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    // Validasi field yang boleh di-sort untuk keamanan
+    const allowedSortFields = ['createdAt', 'namaLengkap', 'nomorPendaftaran', 'statusPembayaran'];
+    const finalSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const finalSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
+
+    const where = {};
+
+    if (status) {
+      where.statusPembayaran = status;
+    }
+
+    if (programId) {
+      where.programSisyas = {
+        some: {
+          programAjahanId: parseInt(programId)
+        }
+      };
+    }
+
+    if (search) {
+      where.OR = [
+        { namaLengkap: { contains: search, mode: 'insensitive' } },
+        { nomorPendaftaran: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    const [sisyas, total] = await prisma.$transaction([
+      prisma.sisya.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { [finalSortBy]: finalSortOrder },
+        include: {
+          programSisyas: {
+            include: {
+              programAjahan: true
+            }
+          },
+          pembayarans: {
+            orderBy: { createdAt: 'desc' }
           }
         }
+      }),
+      prisma.sisya.count({ where })
+    ]);
+    
+    res.json({ 
+      success: true, 
+      data: sisyas,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / take)
       }
     });
-    
-    res.json({ success: true, data: sisyas });
   } catch (error) {
     console.error('Get All Sisya Error:', error);
     res.status(500).json({ success: false, message: 'Terjadi kesalahan pada server' });
@@ -183,6 +249,9 @@ const getById = async (req, res) => {
           include: {
             programAjahan: true
           }
+        },
+        pembayarans: {
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
@@ -203,14 +272,21 @@ const updateStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    const validStatuses = ['MENUNGGU', 'LUNAS', 'DITOLAK'];
+    const validStatuses = ['MENUNGGU_PEMBAYARAN', 'MENUNGGU_VERIFIKASI', 'BELUM_LUNAS', 'LUNAS', 'DITOLAK'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ success: false, message: 'Status tidak valid' });
     }
 
     const updatedSisya = await prisma.sisya.update({
       where: { id: parseInt(id) },
-      data: { statusPembayaran: status }
+      data: { statusPembayaran: status },
+      include: {
+        programSisyas: {
+          include: {
+            programAjahan: true
+          }
+        }
+      }
     });
 
     res.json({ success: true, message: 'Status berhasil diperbarui', data: updatedSisya });
@@ -238,6 +314,10 @@ const findByNomor = async (req, res) => {
         namaLengkap: true,
         statusPembayaran: true,
         totalPunia: true,
+        totalTerbayar: true,
+        fileIdentitasPath: true,
+        fileFotoPath: true,
+        fileRekomendasiPath: true,
         programSisyas: {
           select: {
             puniaProgram: true,
@@ -262,48 +342,75 @@ const findByNomor = async (req, res) => {
   }
 };
 
-const uploadPunia = async (req, res) => {
+// uploadPunia is now handled by pembayaranController.uploadBuktiBayar
+
+const serveFile = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { filename } = req.params;
+    
+    // Keamanan: Cegah directory traversal
+    if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+      return res.status(400).json({ success: false, message: 'Nama file tidak valid' });
+    }
+
+    const filePath = path.join(__dirname, '../../uploads', filename);
+
+    // Cek apakah file ada
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'File tidak ditemukan' });
+    }
+
+    // Sajikan file
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Serve File Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal mengambil file' });
+  }
+};
+
+const lengkapiBerkas = async (req, res) => {
+  try {
     const { nomorPendaftaran } = req.body;
-
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'File bukti punia harus diunggah' });
+    if (!nomorPendaftaran) {
+      return res.status(400).json({ success: false, message: 'Nomor pendaftaran harus diisi' });
     }
 
-    // Verifikasi ID dan Nomor Pendaftaran cocok
     const sisya = await prisma.sisya.findUnique({
-      where: { id: parseInt(id) }
+      where: { nomorPendaftaran }
     });
 
-    if (!sisya || sisya.nomorPendaftaran !== nomorPendaftaran) {
-      // Hapus file jika verifikasi gagal agar tidak menumpuk sampah
-      if (req.file) fs.unlinkSync(req.file.path);
-      return res.status(403).json({ success: false, message: 'Verifikasi data gagal' });
+    if (!sisya) {
+      return res.status(404).json({ success: false, message: 'Data pendaftaran tidak ditemukan' });
     }
 
-    // Update path file punia dan status
-    const updatedSisya = await prisma.sisya.update({
-      where: { id: parseInt(id) },
-      data: {
-        filePuniaPath: `/uploads/${req.file.filename}`,
-        statusPembayaran: 'MENUNGGU' // Set ke menunggu verifikasi
+    const updateData = {};
+    
+    if (req.files) {
+      if (req.files.fileIdentitas && req.files.fileIdentitas[0]) {
+        updateData.fileIdentitasPath = `/uploads/${req.files.fileIdentitas[0].filename}`;
       }
+      if (req.files.fileFoto && req.files.fileFoto[0]) {
+        updateData.fileFotoPath = `/uploads/${req.files.fileFoto[0].filename}`;
+      }
+      if (req.files.fileRekomendasi && req.files.fileRekomendasi[0]) {
+        updateData.fileRekomendasiPath = `/uploads/${req.files.fileRekomendasi[0].filename}`;
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: 'Tidak ada berkas yang diunggah' });
+    }
+
+    await prisma.sisya.update({
+      where: { id: sisya.id },
+      data: updateData
     });
 
-    res.json({
-      success: true,
-      message: 'Bukti pembayaran berhasil diunggah',
-      data: {
-        nomorPendaftaran: updatedSisya.nomorPendaftaran,
-        statusPembayaran: updatedSisya.statusPembayaran
-      }
-    });
+    res.json({ success: true, message: 'Berkas berhasil diperbarui' });
 
   } catch (error) {
-    console.error('Upload Punia Error:', error);
-    if (req.file) fs.unlinkSync(req.file.path);
-    res.status(500).json({ success: false, message: 'Terjadi kesalahan saat mengunggah bukti pembayaran' });
+    console.error('Lengkapi Berkas Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal memperbarui berkas' });
   }
 };
 
@@ -313,5 +420,6 @@ module.exports = {
   getById,
   updateStatus,
   findByNomor,
-  uploadPunia
+  serveFile,
+  lengkapiBerkas
 };

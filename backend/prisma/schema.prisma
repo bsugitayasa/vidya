@@ -83,18 +83,41 @@ model Sisya {
 
   // ── Kalkulasi Punia ───────────────────────────
   totalPunia        Int            // Total yang harus dibayar (snapshot saat daftar)
-  statusPembayaran  StatusPembayaran @default(BELUM_BAYAR)
+  totalTerbayar     Int            @default(0)    // Akumulasi pembayaran terverifikasi
+  statusPembayaran  StatusPembayaran @default(MENUNGGU_PEMBAYARAN)
 
   // ── Dokumen Upload (semua opsional) ───────────
   fileIdentitasPath String?        // KTP/KK/Ijasah
   fileFotoPath      String?        // Foto latar merah
-  filePuniaPath     String?        // Bukti transfer punia — boleh menyusul
+  fileRekomendasiPath String?      // Surat Rekomendasi
+  
+  // filePuniaPath dipindah ke model Pembayaran untuk mendukung riwayat cicilan
 
   // ── Status & Audit ────────────────────────────
   status            StatusSisya    @default(PENDING)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+  pembayarans       Pembayaran[]
   absensiSisyas     AbsensiSisya[] // Release 2
+}
+
+model Pembayaran {
+  id              Int               @id @default(autoincrement())
+  sisyaId         Int
+  sisya           Sisya             @relation(fields: [sisyaId], references: [id])
+  nominal         Int               @default(0)    // Diinput admin saat verifikasi
+  buktiPath       String            // Path file bukti transfer
+  status          StatusVerifikasi  @default(MENUNGGU)
+  keterangan      String?           // Catatan cicilan (misal: "Bayar Kawikon")
+  tanggalBayar    DateTime          @default(now())
+  verifiedAt      DateTime?
+  createdAt       DateTime          @default(now())
+}
+
+enum StatusVerifikasi {
+  MENUNGGU
+  VERIFIKASI
+  DITOLAK
 }
 
 enum JenisKelamin {
@@ -109,9 +132,11 @@ enum StatusSisya {
 }
 
 enum StatusPembayaran {
-  BELUM_BAYAR   // Belum upload bukti transfer
-  MENUNGGU      // Bukti sudah diupload, menunggu verifikasi admin
-  LUNAS         // Admin sudah verifikasi pembayaran
+  MENUNGGU_PEMBAYARAN  // Belum upload bukti transfer sama sekali
+  MENUNGGU_VERIFIKASI   // Ada bukti yang belum diverifikasi admin
+  BELUM_LUNAS          // Sudah ada pembayaran terverifikasi tapi belum lunas
+  LUNAS                // Sudah lunas
+  DITOLAK              // Bukti transfer terakhir ditolak (opsional)
 }
 
 // ─── Release 2: Absensi ───────────────────────────
