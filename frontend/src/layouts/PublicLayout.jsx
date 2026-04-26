@@ -93,14 +93,18 @@ export default function PublicLayout() {
         <Outlet />
       </main>
 
-      <footer className="bg-white border-t border-primary/5 py-10 mt-12">
+      <footer className="bg-secondary text-white border-t border-white/10 py-12 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-text/80 font-bold text-sm tracking-tight">
+          <p className="font-bold text-sm tracking-tight">
             &copy; 2026 Perkumpulan Dharmopadesa Pusat Nusantara
           </p>
-          <p className="text-muted text-[10px] mt-2 uppercase tracking-[0.3em] font-black opacity-60">
-            Aplikasi Administrasi Pesraman
-          </p>
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <div className="h-px w-8 bg-primary/50"></div>
+            <p className="text-white/50 text-[10px] uppercase tracking-[0.4em] font-black">
+              Administrasi Pesraman
+            </p>
+            <div className="h-px w-8 bg-primary/50"></div>
+          </div>
         </div>
       </footer>
     </div>
