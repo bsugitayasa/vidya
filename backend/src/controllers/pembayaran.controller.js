@@ -113,6 +113,18 @@ const uploadBuktiBayar = async (req, res) => {
       return pembayaran;
     });
 
+    // Telegram Notification (Non-blocking)
+    try {
+      const telegramService = require('../services/telegram.service');
+      const sisya = await prisma.sisya.findUnique({
+        where: { id: parseInt(sisyaId) }
+      });
+      const pesan = telegramService.formatNotifikasiBuktiPunia(sisya);
+      telegramService.sendMessage(process.env.TELEGRAM_CHANNEL_ID, pesan).catch(err => console.error('Telegram Notif Error:', err));
+    } catch (e) {
+      console.error('Gagal menyiapkan notifikasi Telegram:', e);
+    }
+
     res.status(201).json({ success: true, message: 'Bukti berhasil diunggah', data: newPembayaran });
 
   } catch (error) {

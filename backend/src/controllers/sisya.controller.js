@@ -146,6 +146,19 @@ const register = async (req, res) => {
       });
       return sisya;
     });
+    
+    // Telegram Notification (Non-blocking)
+    try {
+      const telegramService = require('../services/telegram.service');
+      const sisyaForNotif = await prisma.sisya.findUnique({
+        where: { id: newSisya.id },
+        include: { programSisyas: { include: { programAjahan: true } } }
+      });
+      const pesan = telegramService.formatNotifikasiRegistrasi(sisyaForNotif);
+      telegramService.sendMessage(process.env.TELEGRAM_CHANNEL_ID, pesan).catch(err => console.error('Telegram Notif Error:', err));
+    } catch (e) {
+      console.error('Gagal menyiapkan notifikasi Telegram:', e);
+    }
 
     res.status(201).json({
       success: true,
