@@ -10,8 +10,8 @@ import { Card, CardContent } from '../../components/ui/card';
 export default function Login() {
   const { setAuth } = useAuthStore();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('admin@yayasan.com');
-  const [password, setPassword] = useState('admin123'); // Password dari seed database
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -46,11 +46,11 @@ export default function Login() {
           <img
             src="/logo.png"
             alt="Logo"
-            style={{ width: '42px', height: '42px' }}
-            className="object-contain bg-white rounded-full p-1 shadow-md mb-4 flex-shrink-0"
+            style={{ width: '56px', height: '56px' }}
+            className="object-contain mb-4 flex-shrink-0"
           />
           <h2 className="text-2xl font-bold font-heading text-primary">Login Admin</h2>
-          <p className="text-sm text-muted mt-1">Visualisasi Data dan Sisya Administrasi Pesraman</p>
+          <p className="text-sm text-muted mt-1 px-4">Visualisasi Data dan Sisya Administrasi Pesraman</p>
         </div>
         <CardContent className="p-8">
           {error && (
@@ -66,6 +66,7 @@ export default function Login() {
                 id="email"
                 type="email"
                 required
+                placeholder="admin.vidya@pdpn.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
@@ -76,6 +77,7 @@ export default function Login() {
                 id="password"
                 type="password"
                 required
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
