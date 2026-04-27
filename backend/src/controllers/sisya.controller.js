@@ -414,6 +414,38 @@ const lengkapiBerkas = async (req, res) => {
   }
 };
 
+const updateAcademicStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, tanggalDiksan } = req.body;
+
+    const validStatuses = ['PENDING', 'AKTIF', 'MEDIKSA', 'TIDAK_AKTIF'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, message: 'Status akademik tidak valid' });
+    }
+
+    const updateData = { status };
+    if (status === 'MEDIKSA' && tanggalDiksan) {
+      updateData.tanggalDiksan = new Date(tanggalDiksan);
+    } else if (status !== 'MEDIKSA') {
+      updateData.tanggalDiksan = null;
+    }
+
+    const updatedSisya = await prisma.sisya.update({
+      where: { id: parseInt(id) },
+      data: updateData
+    });
+
+    res.json({ success: true, message: 'Status akademik berhasil diperbarui', data: updatedSisya });
+  } catch (error) {
+    console.error('Update Academic Status Error:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Data Sisya tidak ditemukan' });
+    }
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan pada server' });
+  }
+};
+
 module.exports = {
   register,
   getAll,
@@ -421,5 +453,6 @@ module.exports = {
   updateStatus,
   findByNomor,
   serveFile,
-  lengkapiBerkas
+  lengkapiBerkas,
+  updateAcademicStatus
 };

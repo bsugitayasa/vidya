@@ -13,8 +13,8 @@ export default function PublicLayout() {
 
   return (
     <div className="min-h-screen bg-bg text-text font-sans">
-      {/* Premium Header - Matching Admin Panel */}
-      <nav className="sticky top-0 z-50 bg-secondary shadow-xl border-b border-white/10">
+      {/* Premium Header - Matching Primary Branding */}
+      <nav className="sticky top-0 z-50 bg-primary shadow-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20">
             <div className="flex items-center">
@@ -24,7 +24,7 @@ export default function PublicLayout() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xl font-black tracking-tight text-white leading-none">PDPN - VIDYA</span>
-                  <p className="text-white/60 text-[10px] mt-1.5 uppercase tracking-[0.15em] font-black">
+                  <p className="text-white/80 text-[10px] mt-1.5 uppercase tracking-[0.15em] font-black">
                     Visualisasi Data dan Sisya Administrasi Pesraman
                   </p>
                 </div>
@@ -39,9 +39,9 @@ export default function PublicLayout() {
                   to={item.path}
                   className={({ isActive }) => `
                     flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300
-                    ${isActive 
-                      ? 'bg-primary text-white shadow-lg' 
-                      : 'text-white/70 hover:bg-white/10 hover:text-white'}
+                    ${isActive
+                      ? 'bg-white text-primary shadow-lg scale-105'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'}
                   `}
                 >
                   <item.icon size={18} />
@@ -54,7 +54,7 @@ export default function PublicLayout() {
             <div className="md:hidden flex items-center">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                className="p-2 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-colors"
               >
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -63,7 +63,7 @@ export default function PublicLayout() {
         </div>
 
         {/* Mobile Navigation */}
-        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'max-h-64 border-t border-white/5 bg-secondary' : 'max-h-0'}`}>
+        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isMobileMenuOpen ? 'max-h-64 border-t border-white/10 bg-primary' : 'max-h-0'}`}>
           <div className="px-4 pt-2 pb-6 space-y-1">
             {navItems.map((item) => (
               <NavLink
@@ -72,14 +72,14 @@ export default function PublicLayout() {
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) => `
                   flex items-center gap-3 px-4 py-4 rounded-2xl text-base font-bold transition-all
-                  ${isActive 
-                    ? 'bg-primary text-white' 
-                    : 'text-white/70 hover:bg-white/5'}
+                  ${isActive
+                    ? 'bg-white text-primary'
+                    : 'text-white/80 hover:bg-white/5'}
                 `}
               >
                 {({ isActive }) => (
                   <>
-                    <item.icon size={20} className={isActive ? 'text-white' : 'text-white/40'} />
+                    <item.icon size={20} className={isActive ? 'text-primary' : 'text-white/40'} />
                     {item.name}
                   </>
                 )}
@@ -93,17 +93,17 @@ export default function PublicLayout() {
         <Outlet />
       </main>
 
-      <footer className="bg-secondary text-white border-t border-white/10 py-12 mt-12">
+      <footer className="bg-primary text-white border-t border-white/10 py-12 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="font-bold text-sm tracking-tight">
             &copy; 2026 Perkumpulan Dharmopadesa Pusat Nusantara
           </p>
           <div className="mt-3 flex items-center justify-center gap-2">
-            <div className="h-px w-8 bg-primary/50"></div>
-            <p className="text-white/50 text-[10px] uppercase tracking-[0.4em] font-black">
+            <div className="h-px w-8 bg-white/30"></div>
+            <p className="text-white/60 text-[10px] uppercase tracking-[0.4em] font-black">
               Administrasi Pesraman
             </p>
-            <div className="h-px w-8 bg-primary/50"></div>
+            <div className="h-px w-8 bg-white/30"></div>
           </div>
         </div>
       </footer>

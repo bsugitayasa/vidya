@@ -1,0 +1,50 @@
+[
+  {
+    "id": 1,
+    "filePuniaPath": "/uploads/filePunia-1777096475532-bf09f250.jpg",
+    "statusPembayaran": "MENUNGGU",
+    "totalPunia": 1000000
+  },
+  {
+    "id": 2,
+    "filePuniaPath": null,
+    "statusPembayaran": "LUNAS",
+    "totalPunia": 1500000
+  },
+  {
+    "id": 3,
+    "filePuniaPath": "/uploads/filePunia-1777116317756-234352e0.png",
+    "statusPembayaran": "MENUNGGU",
+    "totalPunia": 2000000
+  },
+  {
+    "id": 4,
+    "filePuniaPath": "/uploads/filePunia-1777118351946-05890e45.png",
+    "statusPembayaran": "LUNAS",
+    "totalPunia": 1500000
+  },
+  {
+    "id": 7,
+    "filePuniaPath": null,
+    "statusPembayaran": "DITOLAK",
+    "totalPunia": 3000000
+  },
+  {
+    "id": 5,
+    "filePuniaPath": "/uploads/filePunia-1777119851601-fbb2ca50.png",
+    "statusPembayaran": "LUNAS",
+    "totalPunia": 2000000
+  },
+  {
+    "id": 8,
+    "filePuniaPath": "/uploads/filePunia-1777174304967-51271008.png",
+    "statusPembayaran": "LUNAS",
+    "totalPunia": 1000000
+  },
+  {
+    "id": 6,
+    "filePuniaPath": null,
+    "statusPembayaran": "LUNAS",
+    "totalPunia": 2500000
+  }
+]

@@ -25,9 +25,22 @@ export default function SisyaDetail() {
   const ktpUrl = useFileUrl(sisya?.fileIdentitasPath);
   const rekomendasiUrl = useFileUrl(sisya?.fileRekomendasiPath);
 
+  // Academic status state
+  const [academicStatus, setAcademicStatus] = useState('');
+  const [tanggalDiksan, setTanggalDiksan] = useState('');
+
   useEffect(() => {
     fetchSisyaDetail();
   }, [id]);
+
+  useEffect(() => {
+    if (sisya) {
+      setAcademicStatus(sisya.status);
+      if (sisya.tanggalDiksan) {
+        setTanggalDiksan(new Date(sisya.tanggalDiksan).toISOString().split('T')[0]);
+      }
+    }
+  }, [sisya]);
 
   const fetchSisyaDetail = async () => {
     try {
@@ -86,7 +99,35 @@ export default function SisyaDetail() {
     } catch (err) {
         toast.error('Gagal menghapus pembayaran');
     }
-  }
+  };
+
+  const handleUpdateAcademicStatus = async () => {
+    setIsUpdating(true);
+    try {
+      const res = await api.patch(`/sisya/${id}/academic-status`, {
+        status: academicStatus,
+        tanggalDiksan: academicStatus === 'MEDIKSA' ? tanggalDiksan : null
+      });
+
+      if (res.data.success) {
+        toast.success('Status akademik berhasil diperbarui');
+        fetchSisyaDetail();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal memperbarui status akademik');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const getAcademicStatusBadgeColor = (status) => {
+    switch(status) {
+      case 'AKTIF': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      case 'MEDIKSA': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'TIDAK_AKTIF': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
 
   const getStatusBadgeColor = (status) => {
     switch(status) {
@@ -147,8 +188,56 @@ export default function SisyaDetail() {
               <h3 className="text-xl font-bold">{sisya.namaLengkap}</h3>
               <p className="text-sm text-muted mb-4">{sisya.email}</p>
               
-              <div className={`inline-block px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider mb-6 ${getStatusBadgeColor(sisya.statusPembayaran)}`}>
-                {formatStatus(sisya.statusPembayaran)}
+              <div className="flex flex-wrap justify-center gap-2 mb-6">
+                <div className={`inline-block px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${getStatusBadgeColor(sisya.statusPembayaran)}`}>
+                  {formatStatus(sisya.statusPembayaran)}
+                </div>
+                <div className={`inline-block px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${getAcademicStatusBadgeColor(sisya.status)}`}>
+                  {formatStatus(sisya.status)}
+                </div>
+              </div>
+
+              {sisya.status === 'MEDIKSA' && sisya.tanggalDiksan && (
+                <div className="mb-6 p-2 bg-purple-50 border border-purple-100 rounded-md">
+                  <p className="text-[10px] font-bold text-purple-700 uppercase">Tanggal Pediksaan</p>
+                  <p className="text-sm font-bold text-purple-900">{new Date(sisya.tanggalDiksan).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-muted/10 text-left mb-6">
+                <h4 className="text-xs font-bold text-muted uppercase mb-3">Update Status Akademik</h4>
+                <div className="space-y-3">
+                  <select 
+                    className="w-full text-sm border-muted/20 rounded-md bg-white p-2 outline-none focus:ring-1 focus:ring-primary"
+                    value={academicStatus}
+                    onChange={(e) => setAcademicStatus(e.target.value)}
+                  >
+                    <option value="PENDING">PENDING</option>
+                    <option value="AKTIF">AKTIF</option>
+                    <option value="MEDIKSA">MEDIKSA</option>
+                    <option value="TIDAK_AKTIF">TIDAK_AKTIF</option>
+                  </select>
+
+                  {academicStatus === 'MEDIKSA' && (
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-muted uppercase">Tanggal Diksan</label>
+                      <Input 
+                        type="date" 
+                        value={tanggalDiksan}
+                        onChange={(e) => setTanggalDiksan(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  <Button 
+                    size="sm" 
+                    className="w-full font-bold" 
+                    onClick={handleUpdateAcademicStatus}
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? 'Menyimpan...' : 'Update Status'}
+                  </Button>
+                </div>
               </div>
 
               <div className="pt-4 border-t border-muted/10 space-y-4">

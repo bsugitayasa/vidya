@@ -95,6 +95,23 @@ export default function SisyaList() {
     );
   };
 
+  const getAcademicStatusBadge = (status) => {
+    const config = {
+      'AKTIF': { color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+      'MEDIKSA': { color: 'bg-purple-100 text-purple-700 border-purple-200' },
+      'PENDING': { color: 'bg-slate-100 text-slate-600 border-slate-200' },
+      'TIDAK_AKTIF': { color: 'bg-rose-100 text-rose-700 border-rose-200' },
+    };
+    
+    const { color } = config[status] || { color: 'bg-gray-100 text-gray-800 border-gray-200' };
+    
+    return (
+      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase shadow-sm ${color}`}>
+        {status}
+      </span>
+    );
+  };
+
   const handleSort = (field) => {
     setSort(prev => ({
       sortBy: field,
@@ -192,14 +209,7 @@ export default function SisyaList() {
                     Tgl Daftar {getSortIcon('createdAt')}
                   </div>
                 </th>
-                <th 
-                  className="p-4 font-semibold text-sm text-text cursor-pointer hover:bg-primary/10 transition-colors"
-                  onClick={() => handleSort('statusPembayaran')}
-                >
-                  <div className="flex items-center gap-1">
-                    Status {getSortIcon('statusPembayaran')}
-                  </div>
-                </th>
+                <th className="p-4 font-semibold text-sm text-text">Status</th>
                 <th className="p-4 font-semibold text-sm text-text text-center">Aksi</th>
               </tr>
             </thead>
@@ -219,18 +229,32 @@ export default function SisyaList() {
                     <td className="p-4 text-sm font-medium">{sisya.namaLengkap}</td>
                     <td className="p-4 text-sm">
                       <div className="flex flex-col gap-1">
-                        {sisya.programSisyas.map(sp => (
-                          <span key={sp.id} className="inline-block px-2 py-1 bg-secondary/10 text-secondary text-xs rounded-md w-max">
-                            {sp.programAjahan.nama} {sp.isPasangan && '(+Pasangan)'}
-                          </span>
-                        ))}
+                        {sisya.programSisyas.map(sp => {
+                          const getProgramColor = (name) => {
+                            const n = name.toLowerCase();
+                            if (n.includes('kawikon')) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+                            if (n.includes('kawelakaan')) return 'bg-orange-100 text-orange-700 border-orange-200';
+                            if (n.includes('usadha')) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+                            if (n.includes('serati')) return 'bg-purple-100 text-purple-700 border-purple-200';
+                            return 'bg-secondary/10 text-secondary border-secondary/20';
+                          };
+                          
+                          return (
+                            <span key={sp.id} className={`inline-block px-2 py-1 text-[10px] font-bold rounded-md border w-max ${getProgramColor(sp.programAjahan.nama)}`}>
+                              {sp.programAjahan.nama} {sp.isPasangan && '(+Pasangan)'}
+                            </span>
+                          );
+                        })}
                       </div>
                     </td>
                     <td className="p-4 text-sm text-muted">
                       {new Date(sisya.createdAt).toLocaleDateString('id-ID')}
                     </td>
                     <td className="p-4 text-sm">
-                      {getStatusBadge(sisya.statusPembayaran)}
+                      <div className="flex flex-col gap-1.5">
+                        {getStatusBadge(sisya.statusPembayaran)}
+                        {getAcademicStatusBadge(sisya.status)}
+                      </div>
                     </td>
                     <td className="p-4 text-center">
                       <Link to={`/admin/sisya/${sisya.id}`}>

@@ -95,6 +95,7 @@ model Sisya {
 
   // ── Status & Audit ────────────────────────────
   status            StatusSisya    @default(PENDING)
+  tanggalDiksan     DateTime?      // Tanggal dilakukan pediksaan
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   pembayarans       Pembayaran[]
@@ -128,6 +129,7 @@ enum JenisKelamin {
 enum StatusSisya {
   PENDING      // Baru mendaftar
   AKTIF        // Pembayaran terverifikasi, sisya aktif
+  MEDIKSA      // Sudah melakukan pediksaan
   TIDAK_AKTIF  // Non-aktif
 }
 
