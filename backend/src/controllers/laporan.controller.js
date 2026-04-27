@@ -119,7 +119,9 @@ const exportSisya = async (req, res) => {
         { header: 'Total Punia', key: 'punia', width: 12 },
         { header: 'Terbayar', key: 'terbayar', width: 12 },
         { header: 'Sisa Punia', key: 'sisa', width: 12 },
-        { header: 'Status', key: 'status', width: 15 }
+        { header: 'Status Pembayaran', key: 'statusBayar', width: 15 },
+        { header: 'Status Akademik', key: 'statusAkademik', width: 15 },
+        { header: 'Tgl Pediksaan', key: 'tglDiksan', width: 15 }
       ];
 
       worksheet.getRow(1).eachCell((cell) => {
@@ -162,7 +164,9 @@ const exportSisya = async (req, res) => {
           punia: sisya.totalPunia,
           terbayar: sisya.totalTerbayar || 0,
           sisa: sisaPunia,
-          status: sisya.statusPembayaran.replace(/_/g, ' ')
+          statusBayar: sisya.statusPembayaran.replace(/_/g, ' '),
+          statusAkademik: sisya.status,
+          tglDiksan: sisya.tanggalDiksan ? new Date(sisya.tanggalDiksan).toLocaleDateString('id-ID') : '-'
         });
 
         row.eachCell((cell) => {

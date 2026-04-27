@@ -23,7 +23,7 @@ async function main() {
   // 2. Seed Program Ajahan
   const programs = [
     { kode: 'KAWIKON', nama: 'Kawikon', deskripsi: 'Program pendidikan disiapkan bagi para Sisya yang ingin melanjutkan perjalanan spiritual menuju jenjang Ratu Pedanda', puniaNormal: 1000000, puniaPasangan: 1500000, isPasanganTersedia: true },
-    { kode: 'KAWELAKAAN', nama: 'Kawelakaan', deskripsi: 'Program Pendidikan mendalami pengetahuan dan keterampilan sebagai Walaka', puniaNormal: 1000000, puniaPasangan: null, isPasanganTersedia: false },
+    { kode: 'KAWELAKAAN', nama: 'Kawelakaan', deskripsi: 'Program Pendidikan mendalami pengetahuan dan keterampilan sebagai Walaka', puniaNormal: 2000000, puniaPasangan: null, isPasanganTersedia: false },
     { kode: 'USADHA', nama: 'Usadha', deskripsi: 'Program Pendidikan mempelajari dan melestarikan ilmu pengobatan tradisional Bali', puniaNormal: 1500000, puniaPasangan: null, isPasanganTersedia: false },
     { kode: 'SERATI', nama: 'Serati', deskripsi: 'Program Pendidikan mendalami pengetahuan Panca Yadnya serta kemampuan praktis Keseratian', puniaNormal: 1000000, puniaPasangan: null, isPasanganTersedia: false },
   ]
