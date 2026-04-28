@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2, Download } from 'lucide-react';
 import api from '../../lib/axios';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -41,6 +41,24 @@ export default function SisyaDetail() {
       }
     }
   }, [sisya]);
+
+  const handleDownload = (blobUrl, label) => {
+    if (!blobUrl) return;
+    
+    const extension = blobUrl.includes('image/png') ? 'png' : 
+                    blobUrl.includes('image/jpeg') ? 'jpg' : 
+                    blobUrl.includes('application/pdf') ? 'pdf' : 'jpg';
+    
+    const fileName = `${label}_${sisya.namaLengkap.replace(/\s+/g, '_')}`;
+    
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success(`Mengunduh ${label}...`);
+  };
 
   const fetchSisyaDetail = async () => {
     try {
@@ -185,6 +203,17 @@ export default function SisyaDetail() {
                   </div>
                 )}
               </div>
+              
+              {fotoUrl && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mb-4 h-8 text-[10px] font-bold uppercase tracking-wider"
+                  onClick={() => handleDownload(fotoUrl, 'Foto')}
+                >
+                  <Download size={14} className="mr-1" /> Download Foto
+                </Button>
+              )}
               <h3 className="text-xl font-bold">{sisya.namaLengkap}</h3>
               <p className="text-sm text-muted mb-4">{sisya.email}</p>
               
@@ -369,12 +398,20 @@ export default function SisyaDetail() {
                 {ktpUrl ? (
                   <div className="group relative border border-muted/20 rounded-lg overflow-hidden bg-bg aspect-video flex items-center justify-center">
                     <img src={ktpUrl} alt="KTP" className="max-w-full max-h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                       <a href={ktpUrl} target="_blank" rel="noopener noreferrer">
                         <Button variant="secondary" size="sm" className="font-bold">
-                          <ExternalLink size={14} className="mr-1" /> Lihat Full
+                          <ExternalLink size={14} className="mr-1" /> Lihat
                         </Button>
                       </a>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        className="font-bold"
+                        onClick={() => handleDownload(ktpUrl, 'KTP')}
+                      >
+                        <Download size={14} className="mr-1" /> Download
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -389,12 +426,20 @@ export default function SisyaDetail() {
                 {rekomendasiUrl ? (
                   <div className="group relative border border-muted/20 rounded-lg overflow-hidden bg-bg aspect-video flex items-center justify-center">
                     <img src={rekomendasiUrl} alt="Surat Rekomendasi" className="max-w-full max-h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                       <a href={rekomendasiUrl} target="_blank" rel="noopener noreferrer">
                         <Button variant="secondary" size="sm" className="font-bold">
-                          <ExternalLink size={14} className="mr-1" /> Lihat Full
+                          <ExternalLink size={14} className="mr-1" /> Lihat
                         </Button>
                       </a>
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        className="font-bold"
+                        onClick={() => handleDownload(rekomendasiUrl, 'Rekomendasi')}
+                      >
+                        <Download size={14} className="mr-1" /> Download
+                      </Button>
                     </div>
                   </div>
                 ) : (
