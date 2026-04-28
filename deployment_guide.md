@@ -14,37 +14,36 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl git build-essential nginx
 ```
 
-### Install Node.js (Versi 20 LTS)
+### Install Docker & Docker Compose
+Ikuti langkah resmi untuk install Docker di Ubuntu:
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
-```
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
 
-### Install PM2 (Process Manager)
-```bash
-sudo npm install -g pm2
+# Tambahkan user ke group docker (opsional agar tidak perlu sudo)
+sudo usermod -aG docker $USER
+# Logout dan login kembali agar perubahan group berlaku
 ```
 
 ---
 
-## 2. Setup Database (PostgreSQL)
+## 2. Konfigurasi Environment & Keamanan
 
-### Install PostgreSQL
-```bash
-sudo apt install -y postgresql postgresql-contrib
+Sebelum menjalankan Docker, kita perlu menyiapkan variabel lingkungan agar database dan aplikasi bisa berkomunikasi.
+
+### Buat File `.env` Utama (di Root Folder)
+File ini akan digunakan oleh `docker-compose.yml`.
+```env
+# Database
+DB_USER=vidya_admin
+DB_PASSWORD=buat_password_kuat_disini
+DB_NAME=vidya_db
+
+# Backend
+JWT_SECRET=buat_secret_random_panjang_sekali
+VITE_API_URL=https://domain-anda.com/api
 ```
-
-### Konfigurasi Database
-1. Masuk ke prompt postgres: `sudo -i -u postgres psql`
-2. Buat database: `CREATE DATABASE vidya_db;`
-3. Buat user: `CREATE USER vidya_user WITH PASSWORD 'password_anda_disini';`
-4. Beri akses: `GRANT ALL PRIVILEGES ON DATABASE vidya_db TO vidya_user;`
-5. Berikan hak akses skema (untuk Prisma): 
-   ```sql
-   \c vidya_db
-   GRANT ALL ON SCHEMA public TO vidya_user;
-   ```
-6. Keluar: `\q`
 
 ---
 
@@ -58,8 +57,8 @@ git clone https://github.com/bsugitayasa/vidya.git
 cd vidya
 ```
 
-### Setup Folder Upload
-Pastikan folder upload tersedia dan bisa ditulis oleh sistem:
+### Setup Folder Upload & Data
+Pastikan folder upload dan volume database memiliki izin yang benar:
 ```bash
 mkdir -p backend/uploads
 chmod -R 775 backend/uploads
@@ -67,60 +66,35 @@ chmod -R 775 backend/uploads
 
 ---
 
-## 4. Setup Backend
+## 4. Menjalankan Aplikasi dengan Docker
 
-### Install Dependensi & Konfigurasi
+Dengan Docker, kita tidak perlu menginstall Node.js atau PostgreSQL secara manual di VPS. Semuanya sudah terbungkus dalam `docker-compose.yml`.
+
+### Jalankan Semua Layanan
 ```bash
-cd /var/www/vidya/backend
-npm install
+# Build dan jalankan di background
+docker compose up -d --build
 ```
 
-### Buat File `.env`
-Gunakan `nano .env` dan isi dengan konfigurasi berikut:
-```env
-PORT=5000
-DATABASE_URL="postgresql://vidya_user:password_anda_disini@localhost:5432/vidya_db?schema=public"
-JWT_SECRET="buat_secret_random_panjang"
-NODE_ENV=production
-```
+Langkah ini akan:
+1. Menjalankan container database PostgreSQL.
+2. Membangun image backend & menjalankan migrasi database.
+3. Membangun image frontend (React) dan menyajikannya via Nginx internal Docker.
 
-### Jalankan Prisma (Migrasi Database)
+### Cek Status Container
+Pastikan semua container dalam status `Up`:
 ```bash
-npx prisma generate
-npx prisma migrate deploy
-```
-
-### Jalankan Backend dengan PM2
-```bash
-pm2 start server.js --name "vidya-backend"
-pm2 save
+docker compose ps
 ```
 
 ---
 
-## 5. Setup Frontend
+## 5. Inisialisasi Database (Pertama Kali)
 
-### Build Production
+Setelah container backend berjalan, kita perlu menjalankan migrasi Prisma di dalam container:
 ```bash
-cd /var/www/vidya/frontend
-npm install
+docker compose exec backend npx prisma migrate deploy
 ```
-
-### Buat File `.env` Frontend
-Sesuaikan URL API dengan domain/IP server Anda:
-```bash
-nano .env
-```
-Isi dengan:
-```env
-VITE_API_URL="https://domain-anda.com/api"
-```
-
-### Build Aplikasi
-```bash
-npm run build
-```
-Hasil build akan berada di folder `/var/www/vidya/frontend/dist`.
 
 ---
 
@@ -137,14 +111,17 @@ server {
     listen 80;
     server_name domain-anda.com; # Ganti dengan domain atau IP
 
-    # Frontend (Static Files)
+    # Frontend (Proxy ke Container Frontend)
     location / {
-        root /var/www/vidya/frontend/dist;
-        index index.html;
-        try_files $uri $uri/ /index.html;
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
     }
 
-    # API Proxy ke Backend
+    # API Proxy ke Backend (Container Backend)
     location /api {
         proxy_pass http://localhost:5000;
         proxy_http_version 1.1;
@@ -154,12 +131,9 @@ server {
         proxy_cache_bypass $http_upgrade;
     }
 
-    # Proteksi Akses Langsung Uploads
+    # Akses Uploads (Langsung ke folder host)
     location /uploads {
         alias /var/www/vidya/backend/uploads;
-        # Hanya bisa diakses lewat aplikasi (opsional)
-        # allow 127.0.0.1;
-        # deny all;
     }
 }
 ```
@@ -185,14 +159,17 @@ sudo certbot --nginx -d domain-anda.com
 
 ## 8. Tips Maintenance untuk Junior Dev
 
-1. **Cek Log Backend**: `pm2 logs vidya-backend`
-2. **Restart App**: `pm2 restart vidya-backend`
+1. **Cek Log**: `docker compose logs -f` (atau `docker compose logs backend`)
+2. **Restart Layanan**: `docker compose restart`
 3. **Update Code Baru**:
    ```bash
    git pull origin main
-   # Di backend: npm install && npx prisma generate && pm2 restart vidya-backend
-   # Di frontend: npm install && npm run build
+   # Build ulang agar perubahan kode masuk ke image baru
+   docker compose up -d --build
+   # Jalankan migrasi jika ada perubahan schema DB
+   docker compose exec backend npx prisma migrate deploy
    ```
 4. **Status Nginx**: `sudo systemctl status nginx`
+5. **Bersihkan Image Lama**: `docker system prune -f` (untuk hemat disk space)
 
 ---
