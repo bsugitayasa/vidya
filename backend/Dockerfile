@@ -15,8 +15,8 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Generate Prisma client
-RUN npx prisma generate
+# Jalankan generate dengan dummy DATABASE_URL (hanya untuk build client)
+RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate --schema=./prisma/schema.prisma
 
 # Expose port
 EXPOSE 5000
