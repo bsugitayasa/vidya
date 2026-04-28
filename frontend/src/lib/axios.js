@@ -2,7 +2,7 @@ import axios from 'axios';
 import useAuthStore from '../store/authStore';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3001/api', // Disesuaikan dengan URL backend
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api', // Membaca dari .env atau fallback ke localhost
   headers: {
     'Content-Type': 'application/json',
   },
