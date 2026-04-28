@@ -5,14 +5,49 @@ services:
     image: postgres:15-alpine
     container_name: vidya_db
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgrespassword
-      POSTGRES_DB: akademis_hindu
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${DB_USER:-vidya_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password_anda}
+      POSTGRES_DB: ${DB_NAME:-vidya_db}
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
+    networks:
+      - vidya-network
+
+  backend:
+    build: ./backend
+    container_name: vidya_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-vidya_user}:${DB_PASSWORD:-password_anda}@db:5432/${DB_NAME:-vidya_db}?schema=public
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+    networks:
+      - vidya-network
+
+  frontend:
+    build: 
+      context: ./frontend
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: vidya_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - vidya-network
 
 volumes:
   pgdata:
+
+networks:
+  vidya-network:
+    driver: bridge
