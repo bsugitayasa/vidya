@@ -6,20 +6,20 @@ RUN apt-get update && apt-get install -y openssl python3 build-essential && rm -
 
 WORKDIR /app
 
-# Copy package files
-COPY backend/package*.json ./
+# Copy package files backend
+COPY backend/package*.json ./backend/
+RUN cd backend && npm install
 
-# Install dependencies
-RUN npm install
+# Copy source code backend
+COPY backend/ ./backend/
 
-# Copy source code
-COPY backend/ .
+# Copy shared folder
+COPY shared/ ./shared/
 
-# Copy shared folder (required for schemas)
-# Put it inside /app so it can find node_modules/zod
-COPY shared/ ./shared
+# Pindah ke folder backend untuk menjalankan aplikasi
+WORKDIR /app/backend
 
-# Jalankan generate dengan dummy DATABASE_URL (hanya untuk build client)
+# Jalankan generate dengan dummy DATABASE_URL
 RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate --schema=./prisma/schema.prisma
 
 # Expose port
