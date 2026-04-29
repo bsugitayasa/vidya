@@ -2,16 +2,24 @@
 FROM node:20-slim AS build
 ARG VITE_API_URL
 WORKDIR /app
-COPY frontend/package*.json ./
-RUN npm install
-COPY frontend/ .
-COPY shared/ ./shared
+
+# Copy package files frontend
+COPY frontend/package*.json ./frontend/
+RUN cd frontend && npm install
+
+# Copy source code frontend
+COPY frontend/ ./frontend/
+
+# Copy shared folder
+COPY shared/ ./shared/
+
+WORKDIR /app/frontend
 RUN echo "VITE_API_URL=$VITE_API_URL" > .env
 RUN npm run build
 
 # Stage 2: Serve
 FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/frontend/dist /usr/share/nginx/html
 
 # Add custom nginx config for SPA routing
 RUN echo "server { \
