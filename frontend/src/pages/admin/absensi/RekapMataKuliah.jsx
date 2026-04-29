@@ -150,22 +150,22 @@ export default function RekapMataKuliah() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap text-sm">
             <thead>
-              <tr className="bg-primary/5 border-b border-muted/20">
-                <th className="p-3 font-semibold text-text text-center sticky left-0 bg-primary/5 z-10 w-10">No</th>
-                <th className="p-3 font-semibold text-text sticky left-10 bg-primary/5 z-10 min-w-[180px]">Nama Sisya</th>
-                <th className="p-3 font-semibold text-text min-w-[120px]">Griya</th>
+              <tr className={`border-b border-muted/20 ${getProgramBadgeStyle(mataKuliah.programAjahan?.nama)}`}>
+                <th className={`p-3 font-bold text-center sticky left-0 z-20 w-10 border-b border-muted/20 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]`}>No</th>
+                <th className={`p-3 font-bold sticky left-10 z-20 min-w-[150px] max-w-[150px] md:max-w-none truncate border-b border-muted/20 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]`}>Nama Sisya</th>
+                <th className="p-3 font-bold min-w-[120px] border-b border-muted/20">Griya</th>
                 {sesiHeaders.map(sesi => (
-                  <th key={sesi.id} className="p-3 font-semibold text-text text-center min-w-[50px]" title={sesi.topik || `Pertemuan ${sesi.pertemuan}`}>
+                  <th key={sesi.id} className="p-3 font-bold text-center min-w-[50px] border-b border-muted/20" title={sesi.topik || `Pertemuan ${sesi.pertemuan}`}>
                     <div className="flex flex-col items-center gap-0.5">
                       <span className="text-xs font-bold">P{sesi.pertemuan}</span>
-                      <span className="text-[10px] text-muted font-normal">
+                      <span className="text-[10px] opacity-80 font-normal">
                         {new Date(sesi.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}
                       </span>
                     </div>
                   </th>
                 ))}
-                <th className="p-3 font-semibold text-text text-center min-w-[70px] bg-gray-50">Kehadiran</th>
-                <th className="p-3 font-semibold text-text text-center min-w-[90px] bg-gray-50">%</th>
+                <th className="p-3 font-bold text-center min-w-[70px] border-b border-muted/20">Kehadiran</th>
+                <th className="p-3 font-bold text-center min-w-[90px] border-b border-muted/20">%</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-muted/10">
@@ -179,14 +179,14 @@ export default function RekapMataKuliah() {
                 sisyaRows.map((row, index) => {
                   const style = getPersentaseStyle(row.persentase);
                   return (
-                    <tr key={row.sisyaId} className={index % 2 === 0 ? '' : 'bg-bg/30'}>
-                      <td className="p-3 text-center text-muted sticky left-0 bg-inherit z-10">{index + 1}</td>
-                      <td className="p-3 font-medium sticky left-10 bg-inherit z-10">{row.namaLengkap}</td>
-                      <td className="p-3 text-muted">{row.namaGriya}</td>
+                    <tr key={row.sisyaId} className={index % 2 === 0 ? 'bg-white' : 'bg-[#f9fafb]'}>
+                      <td className="p-3 text-center text-muted sticky left-0 z-10 border-b border-muted/10 bg-inherit">{index + 1}</td>
+                      <td className="p-3 font-medium sticky left-10 z-10 min-w-[150px] max-w-[150px] md:max-w-none truncate border-b border-muted/10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] bg-inherit">{row.namaLengkap}</td>
+                      <td className="p-3 text-muted border-b border-muted/10">{row.namaGriya}</td>
                       {sesiHeaders.map(sesi => {
                         const status = row.perSesi[sesi.id];
                         return (
-                          <td key={sesi.id} className="p-3 text-center">
+                          <td key={sesi.id} className="p-3 text-center border-b border-muted/10">
                             {status ? (
                               <span className={`inline-flex items-center justify-center w-7 h-7 rounded text-xs font-bold ${STATUS_COLORS[status]}`}>
                                 {STATUS_LABEL[status]}
@@ -197,11 +197,11 @@ export default function RekapMataKuliah() {
                           </td>
                         );
                       })}
-                      <td className="p-3 text-center bg-gray-50/50 font-medium">
+                      <td className="p-3 text-center font-medium border-b border-muted/10">
                         <span className="text-green-600">{row.hadir}</span>
                         <span className="text-muted">/{totalSesi}</span>
                       </td>
-                      <td className="p-3 text-center bg-gray-50/50">
+                      <td className="p-3 text-center border-b border-muted/10">
                         <div className="flex flex-col items-center gap-1">
                           <span className={`font-bold text-xs ${style.text}`}>{row.persentase}%</span>
                           <div className="w-14 h-1.5 bg-gray-200 rounded-full overflow-hidden">
