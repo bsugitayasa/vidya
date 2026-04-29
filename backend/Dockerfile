@@ -6,24 +6,21 @@ RUN apt-get update && apt-get install -y openssl python3 build-essential && rm -
 
 WORKDIR /app
 
-# Copy package files backend
+# 1. Install root dependencies (termasuk zod untuk shared schemas)
+COPY package*.json ./
+RUN npm install
+
+# 2. Install backend dependencies
 COPY backend/package*.json ./backend/
 RUN cd backend && npm install
 
-# Copy source code backend
+# 3. Copy source code
 COPY backend/ ./backend/
-
-# Copy shared folder
 COPY shared/ ./shared/
 
-# Pindah ke folder backend untuk menjalankan aplikasi
+# 4. Setup Prisma & Start
 WORKDIR /app/backend
-
-# Jalankan generate dengan dummy DATABASE_URL
 RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate --schema=./prisma/schema.prisma
 
-# Expose port
 EXPOSE 5000
-
-# Start the application
 CMD ["node", "server.js"]
