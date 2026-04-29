@@ -7,7 +7,8 @@ import {
   Settings, 
   LogOut, 
   ChevronLeft, 
-  ChevronRight 
+  ChevronRight,
+  ClipboardList 
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 
@@ -24,6 +25,7 @@ export default function AdminLayout() {
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
     { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400' },
     { path: '/admin/laporan', icon: FileText, label: 'Laporan', color: 'text-emerald-400' },
+    { path: '/admin/absensi', icon: ClipboardList, label: 'Absensi', color: 'text-violet-400' },
     { path: '/admin/pengaturan', icon: Settings, label: 'Pengaturan', color: 'text-rose-400' },
   ];
 

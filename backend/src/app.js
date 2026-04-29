@@ -27,6 +27,7 @@ const laporanRoutes = require('./routes/laporan.routes');
 const konfigurasiRoutes = require('./routes/konfigurasi.routes');
 const pembayaranRoutes = require('./routes/pembayaran.routes');
 const telegramRoutes = require('./routes/telegram.routes');
+const absensiRoutes = require('./routes/absensi.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/sisya', sisyaRoutes);
@@ -36,6 +37,7 @@ app.use('/api/laporan', laporanRoutes);
 app.use('/api/konfigurasi', konfigurasiRoutes);
 app.use('/api/pembayaran', pembayaranRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/absensi', absensiRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

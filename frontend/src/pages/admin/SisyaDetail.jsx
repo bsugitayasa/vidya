@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import useFileUrl from '../../hooks/useFileUrl';
+import { getProgramBadgeStyle } from '../../lib/utils';
 
 export default function SisyaDetail() {
   const { id } = useParams();
@@ -379,7 +380,7 @@ export default function SisyaDetail() {
             <h4 className="font-bold text-lg border-b border-muted/20 pb-3 mb-4 text-primary">Program Ajahan Dipilih</h4>
             <div className="space-y-3">
               {sisya.programSisyas.map(sp => (
-                <div key={sp.id} className="flex justify-between items-center p-3 border border-muted/20 rounded-md bg-bg/50">
+                <div key={sp.id} className={`flex justify-between items-center p-3 border rounded-md shadow-sm ${getProgramBadgeStyle(sp.programAjahan.nama)}`}>
                   <div>
                     <span className="font-bold block">{sp.programAjahan.nama}</span>
                     <span className="text-xs text-muted">{sp.isPasangan ? 'Termasuk Pasangan' : 'Individu'}</span>

@@ -135,11 +135,16 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
+        client_max_body_size 15M; # Perbesar batas upload (default 1MB terlalu kecil)
     }
 
-    # Akses Uploads (Langsung ke folder host)
-    location /uploads {
-        alias /var/www/vidya/backend/uploads;
+    # ⛔ BLOKIR akses langsung ke folder uploads
+    # File dokumen sisya (KTP, foto, bukti bayar) adalah data pribadi.
+    # Akses hanya boleh melalui endpoint API terproteksi JWT:
+    # GET /api/sisya/files/:filename [AUTH]
+    location /uploads/ {
+        deny all;
+        return 403;
     }
 }
 ```
