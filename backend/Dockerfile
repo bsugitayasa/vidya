@@ -16,7 +16,8 @@ RUN npm install
 COPY backend/ .
 
 # Copy shared folder (required for schemas)
-COPY shared/ /shared
+# Put it inside /app so it can find node_modules/zod
+COPY shared/ ./shared
 
 # Jalankan generate dengan dummy DATABASE_URL (hanya untuk build client)
 RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate --schema=./prisma/schema.prisma
