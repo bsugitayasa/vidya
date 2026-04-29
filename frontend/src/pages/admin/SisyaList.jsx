@@ -4,6 +4,7 @@ import { Search, Eye, Filter, ChevronLeft, ChevronRight, CheckCircle2, Clock, Al
 import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { getProgramBadgeStyle } from '../../lib/utils';
 
 export default function SisyaList() {
   const [sisyas, setSisyas] = useState([]);
@@ -229,22 +230,11 @@ export default function SisyaList() {
                     <td className="p-4 text-sm font-medium">{sisya.namaLengkap}</td>
                     <td className="p-4 text-sm">
                       <div className="flex flex-col gap-1">
-                        {sisya.programSisyas.map(sp => {
-                          const getProgramColor = (name) => {
-                            const n = name.toLowerCase();
-                            if (n.includes('kawikon')) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-                            if (n.includes('kawelakaan')) return 'bg-orange-100 text-orange-700 border-orange-200';
-                            if (n.includes('usadha')) return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-                            if (n.includes('serati')) return 'bg-purple-100 text-purple-700 border-purple-200';
-                            return 'bg-secondary/10 text-secondary border-secondary/20';
-                          };
-                          
-                          return (
-                            <span key={sp.id} className={`inline-block px-2 py-1 text-[10px] font-bold rounded-md border w-max ${getProgramColor(sp.programAjahan.nama)}`}>
-                              {sp.programAjahan.nama} {sp.isPasangan && '(+Pasangan)'}
-                            </span>
-                          );
-                        })}
+                        {sisya.programSisyas.map(sp => (
+                          <span key={sp.id} className={`inline-block px-2 py-1 text-[10px] font-bold rounded-md border w-max shadow-sm ${getProgramBadgeStyle(sp.programAjahan.nama)}`}>
+                            {sp.programAjahan.nama} {sp.isPasangan && '(+Pasangan)'}
+                          </span>
+                        ))}
                       </div>
                     </td>
                     <td className="p-4 text-sm text-muted">

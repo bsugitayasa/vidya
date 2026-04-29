@@ -13,6 +13,11 @@ import SisyaList from './pages/admin/SisyaList';
 import SisyaDetail from './pages/admin/SisyaDetail';
 import Pengaturan from './pages/admin/Pengaturan';
 import Laporan from './pages/admin/Laporan';
+import MataKuliahList from './pages/admin/absensi/MataKuliahList';
+import MataKuliahDetail from './pages/admin/absensi/MataKuliahDetail';
+import SesiAbsensi from './pages/admin/absensi/SesiAbsensi';
+import RekapAbsensiSisya from './pages/admin/absensi/RekapAbsensiSisya';
+import RekapMataKuliah from './pages/admin/absensi/RekapMataKuliah';
 
 const queryClient = new QueryClient();
 
@@ -41,6 +46,11 @@ function App() {
             <Route path="sisya" element={<SisyaList />} />
             <Route path="sisya/:id" element={<SisyaDetail />} />
             <Route path="laporan" element={<Laporan />} />
+            <Route path="absensi" element={<MataKuliahList />} />
+            <Route path="absensi/sesi/:sesiId" element={<SesiAbsensi />} />
+            <Route path="absensi/rekap/:sisyaId" element={<RekapAbsensiSisya />} />
+            <Route path="absensi/:mkId/rekap" element={<RekapMataKuliah />} />
+            <Route path="absensi/:mkId" element={<MataKuliahDetail />} />
             <Route path="pengaturan" element={<Pengaturan />} />
           </Route>
         </Routes>
