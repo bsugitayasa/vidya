@@ -2,9 +2,10 @@
 FROM node:20-slim AS build
 ARG VITE_API_URL
 WORKDIR /app
-COPY package*.json ./
+COPY frontend/package*.json ./
 RUN npm install
-COPY . .
+COPY frontend/ .
+COPY shared/ /shared
 RUN echo "VITE_API_URL=$VITE_API_URL" > .env
 RUN npm run build
 

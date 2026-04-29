@@ -1,0 +1,27 @@
+{
+  "name": "vidya",
+  "version": "1.0.0",
+  "description": "Sistem Informasi Akademik untuk pengelolaan pendaftaran dan statistik siswa (Sisya) di Yayasan Hindu / Perkumpulan Dharmopadesa Pusat Nusantara.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bsugitayasa/vidya.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/bsugitayasa/vidya/issues"
+  },
+  "homepage": "https://github.com/bsugitayasa/vidya#readme",
+  "dependencies": {
+    "zod": "^4.3.6"
+  }
+}
