@@ -7,13 +7,16 @@ RUN apt-get update && apt-get install -y openssl python3 build-essential && rm -
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY backend/package*.json ./
 
 # Install dependencies
 RUN npm install
 
 # Copy source code
-COPY . .
+COPY backend/ .
+
+# Copy shared folder (required for schemas)
+COPY shared/ /shared
 
 # Jalankan generate dengan dummy DATABASE_URL (hanya untuk build client)
 RUN DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy" npx prisma generate --schema=./prisma/schema.prisma

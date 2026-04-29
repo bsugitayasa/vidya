@@ -4,6 +4,8 @@ const sisyaController = require('../controllers/sisya.controller');
 const pembayaranController = require('../controllers/pembayaran.controller');
 const upload = require('../middlewares/upload.middleware');
 const { requireAuth, requireAdmin } = require('../middlewares/auth.middleware');
+const validate = require('../middlewares/validate.middleware');
+const { sisyaRegistrationSchema } = require('../../../shared/schemas/sisya.schema');
 
 const { registrationLimiter, statusCheckLimiter } = require('../middlewares/rateLimit.middleware');
 
@@ -19,7 +21,7 @@ router.post('/register', registrationLimiter, upload.fields([
   { name: 'fileFoto', maxCount: 1 },
   { name: 'filePunia', maxCount: 1 },
   { name: 'fileRekomendasi', maxCount: 1 }
-]), sisyaController.register);
+]), validate(sisyaRegistrationSchema), sisyaController.register);
 
 // GET /api/sisya/files/:filename (Protected - for viewing documents)
 router.get('/files/:filename', requireAuth, requireAdmin, sisyaController.serveFile);

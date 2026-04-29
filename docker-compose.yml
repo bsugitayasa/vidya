@@ -13,7 +13,9 @@ services:
       - vidya-network
 
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: vidya_backend
     restart: unless-stopped
     env_file:
@@ -31,7 +33,8 @@ services:
 
   frontend:
     build: 
-      context: ./frontend
+      context: .
+      dockerfile: frontend/Dockerfile
       args:
         - VITE_API_URL=${VITE_API_URL}
     container_name: vidya_frontend
