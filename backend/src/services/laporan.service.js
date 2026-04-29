@@ -57,7 +57,7 @@ const getSummaryForBot = async () => {
  */
 const getMenungguVerifikasi = async () => {
   return await prisma.sisya.findMany({
-    where: { statusPembayaran: 'MENUNGGU' },
+    where: { statusPembayaran: 'MENUNGGU_VERIFIKASI' },
     orderBy: { updatedAt: 'asc' },
     select: {
       namaLengkap: true,
