@@ -3,20 +3,22 @@ import { Download, Filter, Loader2, ChevronLeft, ChevronRight, ArrowUpDown, Arro
 import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { getProgramBadgeStyle } from '../../lib/utils';
+import { useSearchParams } from 'react-router-dom';
 
-export default function Laporan() {
-  const [sisyas, setSisyas] = useState([]);
-  const [programs, setPrograms] = useState([]);
+export default function LaporanPuniaRange() {
+  const [searchParams] = useSearchParams();
+  const initialStartDate = searchParams.get('startDate') || '';
+  const initialEndDate = searchParams.get('endDate') || '';
+
+  const [payments, setPayments] = useState([]);
+  const [summary, setSummary] = useState({ totalNominal: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [filters, setFilters] = useState({
-    status: 'SEMUA',
-    programId: 'SEMUA',
-    startDate: '',
-    endDate: ''
+    startDate: initialStartDate,
+    endDate: initialEndDate
   });
-  const [sort, setSort] = useState({ sortBy: 'createdAt', sortOrder: 'desc' });
+  const [sort, setSort] = useState({ sortBy: 'tanggalBayar', sortOrder: 'desc' });
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
@@ -25,23 +27,8 @@ export default function Laporan() {
   });
 
   useEffect(() => {
-    fetchPrograms();
-  }, []);
-
-  useEffect(() => {
     fetchLaporan();
-  }, [pagination.page, filters.status, filters.programId, filters.startDate, filters.endDate, sort]);
-
-  const fetchPrograms = async () => {
-    try {
-      const res = await api.get('/program-ajahan');
-      if (res.data.success) {
-        setPrograms(res.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching programs:', error);
-    }
-  };
+  }, [pagination.page, filters.startDate, filters.endDate, sort]);
 
   const fetchLaporan = async () => {
     setIsLoading(true);
@@ -49,17 +36,16 @@ export default function Laporan() {
       const params = new URLSearchParams({
         page: pagination.page,
         limit: pagination.limit,
-        status: filters.status,
-        programId: filters.programId,
         startDate: filters.startDate,
         endDate: filters.endDate,
         sortBy: sort.sortBy,
         sortOrder: sort.sortOrder
       });
 
-      const res = await api.get(`/laporan/sisya?${params.toString()}`);
+      const res = await api.get(`/laporan/punia/range?${params.toString()}`);
       if (res.data.success) {
-        setSisyas(res.data.data);
+        setPayments(res.data.data);
+        setSummary(res.data.summary);
         setPagination(prev => ({
           ...prev,
           total: res.data.pagination.total,
@@ -67,9 +53,38 @@ export default function Laporan() {
         }));
       }
     } catch (error) {
-      console.error('Error fetching laporan:', error);
+      console.error('Error fetching laporan punia:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const exportToExcel = async () => {
+    if (payments.length === 0) return;
+    setIsExporting(true);
+
+    try {
+      const params = new URLSearchParams();
+      if (filters.startDate) params.append('startDate', filters.startDate);
+      if (filters.endDate) params.append('endDate', filters.endDate);
+
+      const response = await api.get(`/laporan/punia/export?${params.toString()}`, {
+        responseType: 'blob',
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Laporan-Punia-${new Date().toISOString().split('T')[0]}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error exporting excel:', error);
+      alert('Gagal mengekspor data ke Excel');
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -92,59 +107,17 @@ export default function Laporan() {
     return sort.sortOrder === 'asc' ? <ArrowUp size={14} className="text-primary" /> : <ArrowDown size={14} className="text-primary" />;
   };
 
-  const exportToExcel = async () => {
-    if (sisyas.length === 0) return;
-    setIsExporting(true);
-
-    try {
-      const params = new URLSearchParams();
-      if (filters.status !== 'SEMUA') params.append('status', filters.status);
-      if (filters.programId !== 'SEMUA') params.append('programId', filters.programId);
-      if (filters.startDate) params.append('startDate', filters.startDate);
-      if (filters.endDate) params.append('endDate', filters.endDate);
-
-      const response = await api.get(`/laporan/export?${params.toString()}`, {
-        responseType: 'blob',
-      });
-
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `Laporan-Sisya-${new Date().toISOString().split('T')[0]}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Error exporting excel:', error);
-      alert('Gagal mengekspor data ke Excel');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const getStatusBadgeColor = (status) => {
-    switch(status) {
-      case 'LUNAS': return 'bg-green-100 text-green-800 border-green-200';
-      case 'BELUM_LUNAS': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'MENUNGGU_VERIFIKASI': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'MENUNGGU_PEMBAYARAN': return 'bg-gray-100 text-gray-600 border-gray-200';
-      case 'DITOLAK': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
         <div>
-          <h2 className="text-2xl font-bold font-heading text-primary">Laporan Pendaftaran</h2>
-          <p className="text-sm text-muted mt-1">Unduh rekapitulasi data pendaftar dan punia</p>
+          <h2 className="text-2xl font-bold font-heading text-primary">Laporan Punia (Range Tanggal)</h2>
+          <p className="text-sm text-muted mt-1">Rekapitulasi transaksi pembayaran yang sudah terverifikasi</p>
         </div>
         
         <Button 
           onClick={exportToExcel} 
-          disabled={sisyas.length === 0 || isExporting} 
+          disabled={payments.length === 0 || isExporting} 
           className="flex items-center gap-2"
         >
           {isExporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
@@ -153,42 +126,6 @@ export default function Laporan() {
       </div>
 
       <div className="bg-surface p-4 rounded-lg shadow-sm border border-muted/20 flex flex-wrap gap-4 items-end">
-        <div className="space-y-1 w-full md:w-auto">
-          <label className="text-sm font-medium text-text">Status</label>
-          <select 
-            className="w-full h-10 px-3 py-2 rounded-md border border-input bg-transparent text-sm"
-            value={filters.status}
-            onChange={(e) => {
-              setFilters(prev => ({ ...prev, status: e.target.value }));
-              setPagination(prev => ({ ...prev, page: 1 }));
-            }}
-          >
-            <option value="SEMUA">Semua Status</option>
-            <option value="LUNAS">Lunas</option>
-            <option value="BELUM_LUNAS">Belum Lunas (Cicil)</option>
-            <option value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi</option>
-            <option value="MENUNGGU_PEMBAYARAN">Menunggu Pembayaran</option>
-            <option value="DITOLAK">Ditolak</option>
-          </select>
-        </div>
-        
-        <div className="space-y-1 w-full md:w-auto">
-          <label className="text-sm font-medium text-text">Program Ajahan</label>
-          <select 
-            className="w-full h-10 px-3 py-2 rounded-md border border-input bg-transparent text-sm"
-            value={filters.programId}
-            onChange={(e) => {
-              setFilters(prev => ({ ...prev, programId: e.target.value }));
-              setPagination(prev => ({ ...prev, page: 1 }));
-            }}
-          >
-            <option value="SEMUA">Semua Program</option>
-            {programs.map(p => (
-              <option key={p.id} value={p.id}>{p.nama}</option>
-            ))}
-          </select>
-        </div>
-
         <div className="space-y-1 w-full md:w-auto">
           <label className="text-sm font-medium text-text">Tanggal Mulai</label>
           <Input 
@@ -212,6 +149,13 @@ export default function Laporan() {
             }}
           />
         </div>
+
+        <div className="flex-1"></div>
+
+        <div className="bg-primary/10 px-4 py-2 rounded-lg border border-primary/20">
+          <p className="text-[10px] text-primary font-bold uppercase tracking-wider">Total Nominal Terverifikasi</p>
+          <p className="text-xl font-mono font-bold text-primary">Rp {summary.totalNominal.toLocaleString('id-ID')}</p>
+        </div>
       </div>
 
       <div className="bg-surface rounded-lg shadow-sm border border-muted/20 overflow-hidden">
@@ -221,62 +165,47 @@ export default function Laporan() {
               <tr className="bg-primary/5 border-b border-muted/20">
                 <th 
                   className="p-4 font-semibold text-sm text-text cursor-pointer hover:bg-primary/10 transition-colors"
-                  onClick={() => handleSort('nomorPendaftaran')}
+                  onClick={() => handleSort('tanggalBayar')}
                 >
                   <div className="flex items-center gap-1">
-                    No. Pendaftaran {getSortIcon('nomorPendaftaran')}
+                    Tgl Bayar {getSortIcon('tanggalBayar')}
                   </div>
                 </th>
-                <th 
-                  className="p-4 font-semibold text-sm text-text cursor-pointer hover:bg-primary/10 transition-colors"
-                  onClick={() => handleSort('namaLengkap')}
-                >
-                  <div className="flex items-center gap-1">
-                    Nama Lengkap {getSortIcon('namaLengkap')}
-                  </div>
-                </th>
-                <th className="p-4 font-semibold text-sm text-text">Program</th>
+                <th className="p-4 font-semibold text-sm text-text">Nama Sisya</th>
+                <th className="p-4 font-semibold text-sm text-text">No. Pendaftaran</th>
                 <th 
                   className="p-4 font-semibold text-sm text-text text-right cursor-pointer hover:bg-primary/10 transition-colors"
-                  onClick={() => handleSort('totalPunia')}
+                  onClick={() => handleSort('nominal')}
                 >
                   <div className="flex items-center justify-end gap-1">
-                    Total Punia {getSortIcon('totalPunia')}
+                    Nominal {getSortIcon('nominal')}
                   </div>
                 </th>
-                <th className="p-4 font-semibold text-sm text-text text-center">Status</th>
+                <th className="p-4 font-semibold text-sm text-text">Keterangan</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-muted/10">
               {isLoading ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-muted">Memuat data laporan...</td>
+                  <td colSpan="5" className="p-8 text-center text-muted">Memuat data...</td>
                 </tr>
-              ) : sisyas.length === 0 ? (
+              ) : payments.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-muted">Tidak ada data yang sesuai filter.</td>
+                  <td colSpan="5" className="p-8 text-center text-muted">Tidak ada transaksi ditemukan.</td>
                 </tr>
               ) : (
-                sisyas.map(sisya => (
-                  <tr key={sisya.id} className="hover:bg-bg/50 transition-colors">
-                    <td className="p-4 text-sm font-mono font-medium text-primary">{sisya.nomorPendaftaran}</td>
-                    <td className="p-4 text-sm font-medium">{sisya.namaLengkap}</td>
+                payments.map(pay => (
+                  <tr key={pay.id} className="hover:bg-bg/50 transition-colors">
                     <td className="p-4 text-sm">
-                      <div className="flex gap-1 flex-wrap">
-                        {sisya.programSisyas.map(sp => (
-                          <span key={sp.id} className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-md border shadow-sm ${getProgramBadgeStyle(sp.programAjahan.nama)}`}>
-                            {sp.programAjahan.kode}
-                          </span>
-                        ))}
-                      </div>
+                      {new Date(pay.tanggalBayar).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
                     </td>
-                    <td className="p-4 text-sm font-mono text-right font-medium">
-                      Rp {sisya.totalPunia.toLocaleString('id-ID')}
+                    <td className="p-4 text-sm font-medium">{pay.sisya.namaLengkap}</td>
+                    <td className="p-4 text-sm font-mono text-primary">{pay.sisya.nomorPendaftaran}</td>
+                    <td className="p-4 text-sm font-mono text-right font-bold text-emerald-600">
+                      Rp {pay.nominal.toLocaleString('id-ID')}
                     </td>
-                    <td className="p-4 text-sm text-center">
-                      <span className={`px-2 py-1 text-[10px] font-bold rounded-full border uppercase tracking-wider ${getStatusBadgeColor(sisya.statusPembayaran)}`}>
-                        {sisya.statusPembayaran.replace(/_/g, ' ')}
-                      </span>
+                    <td className="p-4 text-sm text-muted max-w-xs truncate" title={pay.keterangan}>
+                      {pay.keterangan || '-'}
                     </td>
                   </tr>
                 ))
@@ -288,7 +217,7 @@ export default function Laporan() {
         {!isLoading && pagination.totalPages > 1 && (
           <div className="p-4 border-t border-muted/20 flex items-center justify-between">
             <p className="text-sm text-muted">
-              Menampilkan {sisyas.length} dari {pagination.total} data
+              Menampilkan {payments.length} dari {pagination.total} data
             </p>
             <div className="flex items-center space-x-2">
               <Button 

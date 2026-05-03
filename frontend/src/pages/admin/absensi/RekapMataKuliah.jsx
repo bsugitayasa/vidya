@@ -72,13 +72,13 @@ export default function RekapMataKuliah() {
 
   if (!data) return null;
 
-  const { mataKuliah, sesiHeaders, sisyaRows, totalSesi } = data;
+  const { mataKuliah, sesiHeaders = [], sisyaRows = [], totalSesi } = data || {};
 
   // Hitung total statistik
-  const totalHadir = sisyaRows.reduce((a, s) => a + s.hadir, 0);
-  const totalIzin = sisyaRows.reduce((a, s) => a + s.izin, 0);
-  const totalSakit = sisyaRows.reduce((a, s) => a + s.sakit, 0);
-  const totalAlpha = sisyaRows.reduce((a, s) => a + s.alpha, 0);
+  const totalHadir = (sisyaRows || []).reduce((a, s) => a + s.hadir, 0);
+  const totalIzin = (sisyaRows || []).reduce((a, s) => a + s.izin, 0);
+  const totalSakit = (sisyaRows || []).reduce((a, s) => a + s.sakit, 0);
+  const totalAlpha = (sisyaRows || []).reduce((a, s) => a + s.alpha, 0);
 
   return (
     <div className="space-y-6">
@@ -154,7 +154,7 @@ export default function RekapMataKuliah() {
                 <th className={`p-3 font-bold text-center sticky left-0 z-20 w-10 border-b border-muted/20 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]`}>No</th>
                 <th className={`p-3 font-bold sticky left-10 z-20 min-w-[150px] max-w-[150px] md:max-w-none truncate border-b border-muted/20 bg-inherit shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]`}>Nama Sisya</th>
                 <th className="p-3 font-bold min-w-[120px] border-b border-muted/20">Griya</th>
-                {sesiHeaders.map(sesi => (
+                {sesiHeaders?.map(sesi => (
                   <th key={sesi.id} className="p-3 font-bold text-center min-w-[50px] border-b border-muted/20" title={sesi.topik || `Pertemuan ${sesi.pertemuan}`}>
                     <div className="flex flex-col items-center gap-0.5">
                       <span className="text-xs font-bold">P{sesi.pertemuan}</span>
@@ -169,9 +169,9 @@ export default function RekapMataKuliah() {
               </tr>
             </thead>
             <tbody className="divide-y divide-muted/10">
-              {sisyaRows.length === 0 ? (
+              {!sisyaRows || sisyaRows.length === 0 ? (
                 <tr>
-                  <td colSpan={5 + sesiHeaders.length} className="p-8 text-center text-muted">
+                  <td colSpan={5 + (sesiHeaders?.length || 0)} className="p-8 text-center text-muted">
                     Belum ada data absensi.
                   </td>
                 </tr>
@@ -183,8 +183,8 @@ export default function RekapMataKuliah() {
                       <td className="p-3 text-center text-muted sticky left-0 z-10 border-b border-muted/10 bg-inherit">{index + 1}</td>
                       <td className="p-3 font-medium sticky left-10 z-10 min-w-[150px] max-w-[150px] md:max-w-none truncate border-b border-muted/10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] bg-inherit">{row.namaLengkap}</td>
                       <td className="p-3 text-muted border-b border-muted/10">{row.namaGriya}</td>
-                      {sesiHeaders.map(sesi => {
-                        const status = row.perSesi[sesi.id];
+                      {sesiHeaders?.map(sesi => {
+                        const status = row.perSesi?.[sesi.id];
                         return (
                           <td key={sesi.id} className="p-3 text-center border-b border-muted/10">
                             {status ? (
