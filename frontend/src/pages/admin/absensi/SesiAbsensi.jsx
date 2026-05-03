@@ -34,7 +34,7 @@ export default function SesiAbsensi() {
         setSesiData(res.data.data);
         // Inisialisasi state absensi
         const initialState = {};
-        res.data.data.daftarSisya.forEach(sisya => {
+        res.data.data.daftarSisya?.forEach(sisya => {
           initialState[sisya.sisyaId] = sisya.status || null;
         });
         setAbsensiState(initialState);
@@ -57,7 +57,7 @@ export default function SesiAbsensi() {
 
   const setAllStatus = (status) => {
     const newState = {};
-    sesiData.daftarSisya.forEach(sisya => {
+    sesiData?.daftarSisya?.forEach(sisya => {
       newState[sisya.sisyaId] = status;
     });
     setAbsensiState(newState);
@@ -191,7 +191,7 @@ export default function SesiAbsensi() {
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2">
         <span className="text-sm text-muted self-center mr-1">Set semua:</span>
-        {STATUS_OPTIONS.map(opt => (
+        {STATUS_OPTIONS?.map(opt => (
           <button
             key={opt.value}
             onClick={() => setAllStatus(opt.value)}
@@ -215,7 +215,7 @@ export default function SesiAbsensi() {
               </tr>
             </thead>
             <tbody className="divide-y divide-muted/10">
-              {sesiData.daftarSisya.length === 0 ? (
+              {!sesiData?.daftarSisya || sesiData.daftarSisya.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="p-8 text-center text-muted">
                     Tidak ada sisya aktif di program ini. Pastikan status sisya sudah diubah ke AKTIF atau MEDIKSA.
@@ -229,7 +229,7 @@ export default function SesiAbsensi() {
                     <td className="p-4 text-sm text-muted">{sisya.namaGriya}</td>
                     <td className="p-4">
                       <div className="flex items-center justify-center gap-2">
-                        {STATUS_OPTIONS.map(opt => {
+                        {STATUS_OPTIONS?.map(opt => {
                           const isActive = absensiState[sisya.sisyaId] === opt.value;
                           return (
                             <button

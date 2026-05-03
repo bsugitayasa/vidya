@@ -21,13 +21,32 @@ export default function AdminLayout() {
     return <Navigate to="/admin/login" replace />;
   }
 
+  const [expandedMenus, setExpandedMenus] = useState([]); // Default collapse all
+
   const menuItems = [
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
     { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400' },
-    { path: '/admin/laporan', icon: FileText, label: 'Laporan', color: 'text-emerald-400' },
     { path: '/admin/absensi', icon: ClipboardList, label: 'Absensi', color: 'text-violet-400' },
+    { 
+      path: '/admin/laporan', 
+      icon: FileText, 
+      label: 'Laporan', 
+      color: 'text-emerald-400',
+      subItems: [
+        { path: '/admin/laporan/pendaftaran', label: 'Pendaftaran' },
+        { path: '/admin/laporan/punia-range', label: 'Punia (Range)' },
+        { path: '/admin/laporan/punia-bulanan', label: 'Rekap Bulanan' },
+        { path: '/admin/laporan/absensi', label: 'Rekap Absensi' },
+      ]
+    },
     { path: '/admin/pengaturan', icon: Settings, label: 'Pengaturan', color: 'text-rose-400' },
   ];
+
+  const toggleExpand = (path) => {
+    setExpandedMenus(prev => 
+      prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]
+    );
+  };
 
   return (
     <div className="flex min-h-screen bg-bg font-sans">
@@ -40,7 +59,7 @@ export default function AdminLayout() {
         {/* Toggle Button */}
         <button 
           onClick={() => setIsMinimized(!isMinimized)}
-          className="absolute -right-3 top-20 bg-primary text-white rounded-full p-1 shadow-lg hover:scale-110 transition-transform"
+          className="absolute -right-3 top-20 bg-primary text-white rounded-full p-1 shadow-lg hover:scale-110 transition-transform z-10"
         >
           {isMinimized ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
@@ -59,29 +78,75 @@ export default function AdminLayout() {
           />
           {!isMinimized && (
             <div className="overflow-hidden whitespace-nowrap">
-              <h2 className="font-bold font-heading text-lg">PDPN - VIDYA</h2>
-              <p className="text-[10px] opacity-70">Admin Panel</p>
+              <h2 className="font-bold font-heading text-lg tracking-tight">PDPN - VIDYA</h2>
+              <p className="text-[10px] opacity-70">Sistem Akademik & Keuangan</p>
             </div>
           )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-3 space-y-2">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path;
+            const isParentActive = location.pathname.startsWith(item.path);
+            const isExpanded = expandedMenus.includes(item.path) || (isParentActive && !isMinimized);
+            
+            if (item.subItems) {
+              return (
+                <div key={item.path} className="space-y-1">
+                  <button
+                    onClick={() => toggleExpand(item.path)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
+                      isParentActive 
+                        ? 'bg-primary/20 text-white font-semibold' 
+                        : 'hover:bg-primary/20 text-white/80 hover:text-white'
+                    } ${isMinimized ? 'justify-center' : ''}`}
+                  >
+                    <Icon size={20} className={isParentActive ? 'text-primary' : item.color} />
+                    {!isMinimized && (
+                      <>
+                        <span className="flex-1 text-left">{item.label}</span>
+                        <ChevronRight size={14} className={`transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                      </>
+                    )}
+                  </button>
+                  
+                  {isExpanded && !isMinimized && (
+                    <div className="ml-9 space-y-1">
+                      {item.subItems.map((sub) => {
+                        const isSubActive = location.pathname === sub.path;
+                        return (
+                          <Link
+                            key={sub.path}
+                            to={sub.path}
+                            className={`block p-2 rounded-md text-sm transition-all ${
+                              isSubActive 
+                                ? 'text-white bg-primary font-medium' 
+                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                            }`}
+                          >
+                            {sub.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <Link 
                 key={item.path}
                 to={item.path} 
                 className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                  isActive 
-                    ? 'bg-primary text-white shadow-lg' 
+                  location.pathname === item.path 
+                    ? 'bg-primary text-white shadow-lg font-semibold' 
                     : 'hover:bg-primary/20 text-white/80 hover:text-white'
                 } ${isMinimized ? 'justify-center' : ''}`}
                 title={isMinimized ? item.label : ''}
               >
-                <Icon size={20} className={isActive ? 'text-white' : item.color} />
+                <Icon size={20} className={location.pathname === item.path ? 'text-white' : item.color} />
                 {!isMinimized && <span className="font-medium">{item.label}</span>}
               </Link>
             );

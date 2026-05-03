@@ -39,7 +39,7 @@ export default function MataKuliahDetail() {
   };
 
   const openAddSesi = () => {
-    const nextPertemuan = sesiList.length > 0 ? Math.max(...sesiList.map(s => s.pertemuan)) + 1 : 1;
+    const nextPertemuan = (sesiList && sesiList.length > 0) ? Math.max(...sesiList.map(s => s.pertemuan)) + 1 : 1;
     const today = new Date().toISOString().split('T')[0];
     setSesiForm({ tanggal: today, pertemuan: String(nextPertemuan), topik: '' });
     setShowModal(true);
@@ -174,7 +174,7 @@ export default function MataKuliahDetail() {
               </tr>
             </thead>
             <tbody className="divide-y divide-muted/10">
-              {sesiList.length === 0 ? (
+              {!sesiList || sesiList.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="p-8 text-center text-muted">
                     Belum ada sesi absensi. Klik "Buat Sesi Baru" untuk memulai.

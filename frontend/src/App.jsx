@@ -13,6 +13,9 @@ import SisyaList from './pages/admin/SisyaList';
 import SisyaDetail from './pages/admin/SisyaDetail';
 import Pengaturan from './pages/admin/Pengaturan';
 import Laporan from './pages/admin/Laporan';
+import LaporanPuniaRange from './pages/admin/LaporanPuniaRange';
+import LaporanPuniaBulanan from './pages/admin/LaporanPuniaBulanan';
+import LaporanAbsensi from './pages/admin/LaporanAbsensi';
 import MataKuliahList from './pages/admin/absensi/MataKuliahList';
 import MataKuliahDetail from './pages/admin/absensi/MataKuliahDetail';
 import SesiAbsensi from './pages/admin/absensi/SesiAbsensi';
@@ -45,7 +48,11 @@ function App() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="sisya" element={<SisyaList />} />
             <Route path="sisya/:id" element={<SisyaDetail />} />
-            <Route path="laporan" element={<Laporan />} />
+            <Route path="laporan" element={<Navigate to="/admin/laporan/pendaftaran" replace />} />
+            <Route path="laporan/pendaftaran" element={<Laporan />} />
+            <Route path="laporan/punia-range" element={<LaporanPuniaRange />} />
+            <Route path="laporan/punia-bulanan" element={<LaporanPuniaBulanan />} />
+            <Route path="laporan/absensi" element={<LaporanAbsensi />} />
             <Route path="absensi" element={<MataKuliahList />} />
             <Route path="absensi/sesi/:sesiId" element={<SesiAbsensi />} />
             <Route path="absensi/rekap/:sisyaId" element={<RekapAbsensiSisya />} />

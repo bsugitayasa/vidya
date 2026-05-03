@@ -50,7 +50,7 @@ export default function MataKuliahList() {
 
   const openAddModal = () => {
     setEditingId(null);
-    setForm({ kode: '', nama: '', sks: '', semester: '', programAjahanId: programs[0]?.id || '' });
+    setForm({ kode: '', nama: '', sks: '', semester: '', programAjahanId: '' });
     setShowModal(true);
   };
 
@@ -118,7 +118,7 @@ export default function MataKuliahList() {
           <p className="text-sm text-muted mt-1">Manajemen mata kuliah dan absensi per program ajahan</p>
         </div>
         <Button onClick={openAddModal} className="flex items-center gap-2">
-          <Plus size={18} /> Tambah Mata Kuliah
+          <Plus size={18} /> Tambah Program Ajahan
         </Button>
       </div>
 
@@ -140,7 +140,7 @@ export default function MataKuliahList() {
             onChange={(e) => setFilterProgram(e.target.value)}
           >
             <option value="all">Semua Program</option>
-            {programs.map(p => (
+            {programs?.map(p => (
               <option key={p.id} value={p.id}>{p.nama}</option>
             ))}
           </select>
@@ -170,7 +170,7 @@ export default function MataKuliahList() {
                     Memuat data mata kuliah...
                   </td>
                 </tr>
-              ) : mataKuliahs.length === 0 ? (
+              ) : !mataKuliahs || mataKuliahs.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="p-8 text-center text-muted">
                     Belum ada mata kuliah. Klik "Tambah Mata Kuliah" untuk memulai.
@@ -278,7 +278,7 @@ export default function MataKuliahList() {
                   onChange={(e) => setForm({ ...form, programAjahanId: e.target.value })}
                 >
                   <option value="">Pilih Program</option>
-                  {programs.map(p => (
+                  {programs?.map(p => (
                     <option key={p.id} value={p.id}>{p.nama}</option>
                   ))}
                 </select>
