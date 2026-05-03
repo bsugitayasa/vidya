@@ -24,7 +24,20 @@ const statusCheckLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limiter untuk login (sangat ketat untuk mencegah brute force)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 menit
+  max: 10, // Maksimal 10 upaya login per IP per 15 menit
+  message: {
+    success: false,
+    message: 'Terlalu banyak upaya login. Silakan coba lagi setelah 15 menit.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   registrationLimiter,
-  statusCheckLimiter
+  statusCheckLimiter,
+  authLimiter
 };

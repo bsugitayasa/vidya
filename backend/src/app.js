@@ -1,18 +1,19 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 require('dotenv').config();
 
+const { authLimiter, registrationLimiter, statusCheckLimiter } = require('./middlewares/rateLimit.middleware');
+
 const app = express();
 
-// Middleware
+// Security Middleware
+app.use(helmet()); // Sets various security-related HTTP headers
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*';
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Public static files (if any)
-// app.use('/uploads', express.static(path.join(__dirname, '../uploads'))); // Disabled for protection
 
 // Basic health check route
 app.get('/api/health', (req, res) => {
@@ -28,6 +29,11 @@ const konfigurasiRoutes = require('./routes/konfigurasi.routes');
 const pembayaranRoutes = require('./routes/pembayaran.routes');
 const telegramRoutes = require('./routes/telegram.routes');
 const absensiRoutes = require('./routes/absensi.routes');
+
+// Apply limiters to specific paths
+app.use('/api/auth/login', authLimiter);
+app.use('/api/sisya/register', registrationLimiter);
+app.use('/api/sisya/cek-status', statusCheckLimiter);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/sisya', sisyaRoutes);
@@ -45,7 +51,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({
     success: false,
     error: 'INTERNAL_SERVER_ERROR',
-    message: err.message || 'Terjadi kesalahan pada server'
+    message: 'Terjadi kesalahan pada server' // Don't leak error message in production
   });
 });
 
