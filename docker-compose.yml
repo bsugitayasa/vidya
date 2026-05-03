@@ -8,8 +8,6 @@ services:
       POSTGRES_DB: ${DB_NAME:-vidya_db}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     restart: unless-stopped
     logging:
       driver: "json-file"
