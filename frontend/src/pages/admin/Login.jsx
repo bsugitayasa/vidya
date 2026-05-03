@@ -66,7 +66,7 @@ export default function Login() {
                 id="email"
                 type="email"
                 required
-                placeholder="admin.vidya@pdpn.com"
+                placeholder="Masukkan email admin"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
