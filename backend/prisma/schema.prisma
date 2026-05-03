@@ -100,6 +100,12 @@ model Sisya {
   updatedAt         DateTime       @updatedAt
   pembayarans       Pembayaran[]
   absensiSisyas     AbsensiSisya[] // Release 2
+
+  @@index([status])
+  @@index([statusPembayaran])
+  @@index([namaLengkap])
+  @@index([namaGriya])
+  @@index([createdAt])
 }
 
 model Pembayaran {
@@ -113,6 +119,9 @@ model Pembayaran {
   tanggalBayar    DateTime          @default(now())
   verifiedAt      DateTime?
   createdAt       DateTime          @default(now())
+
+  @@index([status])
+  @@index([tanggalBayar])
 }
 
 enum StatusVerifikasi {
@@ -163,6 +172,8 @@ model SesiAbsensi {
   topik        String?
   createdAt    DateTime     @default(now())
   absensiSisyas     AbsensiSisya[]
+
+  @@index([tanggal])
 }
 
 model AbsensiSisya {
