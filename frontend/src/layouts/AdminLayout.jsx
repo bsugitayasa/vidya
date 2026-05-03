@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  Settings, 
-  LogOut, 
-  ChevronLeft, 
+import {
+  LayoutDashboard,
+  Users,
+  FileText,
+  Settings,
+  LogOut,
+  ChevronLeft,
   ChevronRight,
-  ClipboardList 
+  ClipboardList
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 
@@ -27,10 +27,10 @@ export default function AdminLayout() {
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
     { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400' },
     { path: '/admin/absensi', icon: ClipboardList, label: 'Absensi', color: 'text-violet-400' },
-    { 
-      path: '/admin/laporan', 
-      icon: FileText, 
-      label: 'Laporan', 
+    {
+      path: '/admin/laporan',
+      icon: FileText,
+      label: 'Laporan',
       color: 'text-emerald-400',
       subItems: [
         { path: '/admin/laporan/pendaftaran', label: 'Pendaftaran' },
@@ -43,26 +43,25 @@ export default function AdminLayout() {
   ];
 
   const toggleExpand = (path) => {
-    setExpandedMenus(prev => 
+    setExpandedMenus(prev =>
       prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]
     );
   };
 
   const handleLogout = () => {
-    logout();
+    localStorage.removeItem('token');
     window.location.href = '/admin/login';
   };
 
   return (
     <div className="flex min-h-screen bg-bg font-sans">
       {/* Sidebar */}
-      <aside 
-        className={`${
-          isMinimized ? 'w-20' : 'w-64'
-        } bg-secondary text-white flex flex-col transition-all duration-300 ease-in-out relative shadow-xl`}
+      <aside
+        className={`${isMinimized ? 'w-20' : 'w-64'
+          } bg-secondary text-white flex flex-col transition-all duration-300 ease-in-out relative shadow-xl`}
       >
         {/* Toggle Button */}
-        <button 
+        <button
           onClick={() => setIsMinimized(!isMinimized)}
           className="absolute -right-3 top-20 bg-primary text-white rounded-full p-1 shadow-lg hover:scale-110 transition-transform z-10"
         >
@@ -71,15 +70,15 @@ export default function AdminLayout() {
 
         {/* Logo Section */}
         <div className={`p-4 flex items-center gap-3 border-b border-primary/30 ${isMinimized ? 'justify-center' : ''}`}>
-          <img 
-            src="/logo.png" 
-            alt="Logo" 
-            style={{ 
-              width: isMinimized ? '32px' : '48px', 
+          <img
+            src="/logo.png"
+            alt="Logo"
+            style={{
+              width: isMinimized ? '32px' : '48px',
               height: isMinimized ? '32px' : '48px',
               minWidth: isMinimized ? '32px' : '48px'
             }}
-            className="object-contain transition-all duration-300 flex-shrink-0" 
+            className="object-contain transition-all duration-300 flex-shrink-0"
           />
           {!isMinimized && (
             <div className="overflow-hidden whitespace-nowrap">
@@ -95,17 +94,16 @@ export default function AdminLayout() {
             const Icon = item.icon;
             const isParentActive = location.pathname.startsWith(item.path);
             const isExpanded = expandedMenus.includes(item.path) || (isParentActive && !isMinimized);
-            
+
             if (item.subItems) {
               return (
                 <div key={item.path} className="space-y-1">
                   <button
                     onClick={() => toggleExpand(item.path)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
-                      isParentActive 
-                        ? 'bg-primary/20 text-white font-semibold' 
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${isParentActive
+                        ? 'bg-primary/20 text-white font-semibold'
                         : 'hover:bg-primary/20 text-white/80 hover:text-white'
-                    } ${isMinimized ? 'justify-center' : ''}`}
+                      } ${isMinimized ? 'justify-center' : ''}`}
                   >
                     <Icon size={20} className={isParentActive ? 'text-primary' : item.color} />
                     {!isMinimized && (
@@ -115,7 +113,7 @@ export default function AdminLayout() {
                       </>
                     )}
                   </button>
-                  
+
                   {isExpanded && !isMinimized && (
                     <div className="ml-9 space-y-1">
                       {item.subItems.map((sub) => {
@@ -124,11 +122,10 @@ export default function AdminLayout() {
                           <Link
                             key={sub.path}
                             to={sub.path}
-                            className={`block p-2 rounded-md text-sm transition-all ${
-                              isSubActive 
-                                ? 'text-white bg-primary font-medium' 
+                            className={`block p-2 rounded-md text-sm transition-all ${isSubActive
+                                ? 'text-white bg-primary font-medium'
                                 : 'text-white/60 hover:text-white hover:bg-white/5'
-                            }`}
+                              }`}
                           >
                             {sub.label}
                           </Link>
@@ -141,14 +138,13 @@ export default function AdminLayout() {
             }
 
             return (
-              <Link 
+              <Link
                 key={item.path}
-                to={item.path} 
-                className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
-                  location.pathname === item.path 
-                    ? 'bg-primary text-white shadow-lg font-semibold' 
+                to={item.path}
+                className={`flex items-center gap-3 p-3 rounded-lg transition-all ${location.pathname === item.path
+                    ? 'bg-primary text-white shadow-lg font-semibold'
                     : 'hover:bg-primary/20 text-white/80 hover:text-white'
-                } ${isMinimized ? 'justify-center' : ''}`}
+                  } ${isMinimized ? 'justify-center' : ''}`}
                 title={isMinimized ? item.label : ''}
               >
                 <Icon size={20} className={location.pathname === item.path ? 'text-white' : item.color} />
@@ -160,11 +156,10 @@ export default function AdminLayout() {
 
         {/* Footer Sidebar */}
         <div className="p-3 border-t border-primary/30">
-          <button 
-            onClick={handleLogout} 
-            className={`w-full flex items-center gap-3 p-3 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-100 hover:text-white transition-all ${
-              isMinimized ? 'justify-center' : ''
-            }`}
+          <button
+            onClick={handleLogout}
+            className={`w-full flex items-center gap-3 p-3 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-100 hover:text-white transition-all ${isMinimized ? 'justify-center' : ''
+              }`}
             title={isMinimized ? 'Logout' : ''}
           >
             <LogOut size={20} />
