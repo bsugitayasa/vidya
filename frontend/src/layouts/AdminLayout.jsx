@@ -48,6 +48,11 @@ export default function AdminLayout() {
     );
   };
 
+  const handleLogout = () => {
+    logout();
+    window.location.href = '/admin/login';
+  };
+
   return (
     <div className="flex min-h-screen bg-bg font-sans">
       {/* Sidebar */}
@@ -156,7 +161,7 @@ export default function AdminLayout() {
         {/* Footer Sidebar */}
         <div className="p-3 border-t border-primary/30">
           <button 
-            onClick={logout} 
+            onClick={handleLogout} 
             className={`w-full flex items-center gap-3 p-3 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-100 hover:text-white transition-all ${
               isMinimized ? 'justify-center' : ''
             }`}
