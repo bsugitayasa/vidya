@@ -45,13 +45,31 @@ app.use('/api/pembayaran', pembayaranRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/absensi', absensiRoutes);
 
+const multer = require('multer');
+
 // Global Error Handler
 app.use((err, req, res, next) => {
+  // Handle Multer Errors
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        success: false,
+        error: 'FILE_TOO_LARGE',
+        message: 'Ukuran file terlalu besar. Maksimal 20MB per file.'
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      error: 'UPLOAD_ERROR',
+      message: err.message
+    });
+  }
+
   console.error(err.stack);
   res.status(500).json({
     success: false,
     error: 'INTERNAL_SERVER_ERROR',
-    message: 'Terjadi kesalahan pada server' // Don't leak error message in production
+    message: 'Terjadi kesalahan pada server'
   });
 });
 

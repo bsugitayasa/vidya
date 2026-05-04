@@ -129,13 +129,13 @@ server {
 
     # API Proxy ke Backend (Container Backend)
     location /api {
-        proxy_pass http://localhost:5000;
+        proxy_pass http://localhost:3001; # Update port to match app.js
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_cache_bypass $http_upgrade;
-        client_max_body_size 15M; # Perbesar batas upload (default 1MB terlalu kecil)
+        client_max_body_size 25M; # Perbesar batas upload agar mendukung beberapa file > 5MB
     }
 
     # ⛔ BLOKIR akses langsung ke folder uploads

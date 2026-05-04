@@ -30,7 +30,7 @@ services:
     depends_on:
       - db
     ports:
-      - "5000:5000"
+      - "3001:3001"
     volumes:
       - ./backend/uploads:/app/backend/uploads
     logging:
