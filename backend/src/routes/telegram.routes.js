@@ -18,6 +18,12 @@ router.post('/hook', async (req, res) => {
   }
 
   const { message } = req.body;
+  
+  // Log incoming request for debugging
+  if (message) {
+    console.log(`Incoming Telegram message from ${message.chat.id}: ${message.text || '[Non-text]'}`);
+  }
+
   if (!message || !message.text) {
     return res.sendStatus(200);
   }

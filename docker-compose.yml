@@ -8,6 +8,8 @@ services:
       POSTGRES_DB: ${DB_NAME:-vidya_db}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -30,7 +32,7 @@ services:
     depends_on:
       - db
     ports:
-      - "5000:5000"
+      - "3001:3001"
     volumes:
       - ./backend/uploads:/app/backend/uploads
     logging:
