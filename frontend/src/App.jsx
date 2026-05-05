@@ -21,6 +21,11 @@ import MataKuliahDetail from './pages/admin/absensi/MataKuliahDetail';
 import SesiAbsensi from './pages/admin/absensi/SesiAbsensi';
 import RekapAbsensiSisya from './pages/admin/absensi/RekapAbsensiSisya';
 import RekapMataKuliah from './pages/admin/absensi/RekapMataKuliah';
+import SyaratKelulusan from './pages/admin/kelulusan/SyaratKelulusan';
+import AbsensiKelulusan from './pages/admin/kelulusan/AbsensiKelulusan';
+import PresentasiKelulusan from './pages/admin/kelulusan/PresentasiKelulusan';
+import SertifikatConfig from './pages/admin/SertifikatConfig';
+import TarifConfig from './pages/admin/TarifConfig';
 
 const queryClient = new QueryClient();
 
@@ -59,7 +64,14 @@ function App() {
             <Route path="absensi/:mkId/rekap" element={<RekapMataKuliah />} />
             <Route path="absensi/:mkId" element={<MataKuliahDetail />} />
             <Route path="pengaturan" element={<Pengaturan />} />
+            <Route path="pengaturan/sertifikat" element={<SertifikatConfig />} />
+            <Route path="pengaturan/tarif" element={<TarifConfig />} />
+            <Route path="kelulusan/syarat" element={<SyaratKelulusan />} />
+            <Route path="kelulusan/absensi" element={<AbsensiKelulusan />} />
           </Route>
+
+          {/* Presentasi Fullscreen without Sidebar */}
+          <Route path="/admin/kelulusan/presentasi" element={<PresentasiKelulusan />} />
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>

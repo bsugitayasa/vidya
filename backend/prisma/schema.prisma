@@ -34,6 +34,7 @@ model ProgramAjahan {
   isPasanganTersedia Boolean        @default(false)
   isAktif            Boolean        @default(true)
   urutan             Int            @default(0)
+  kodeSertifikat     String?
   mataKuliahs        MataKuliah[]
   sisyaPrograms      SisyaProgram[]
 }
@@ -77,6 +78,8 @@ model Sisya {
   absensiSisyas       AbsensiSisya[]
   pembayarans         Pembayaran[]
   programSisyas       SisyaProgram[]
+  statusKelulusan     OverrideKelulusan @default(AUTO)
+  prosesiKelulusan    ProsesiKelulusan?
 }
 
 model Pembayaran {
@@ -163,4 +166,19 @@ enum StatusAbsensi {
   IZIN
   SAKIT
   ALPHA
+}
+
+enum OverrideKelulusan {
+  AUTO
+  LULUS
+  TIDAK_LULUS
+}
+
+model ProsesiKelulusan {
+  id              Int      @id @default(autoincrement())
+  sisyaId         Int      @unique
+  waktuHadir      DateTime @default(now())
+  createdAt       DateTime @default(now())
+  
+  sisya           Sisya    @relation(fields: [sisyaId], references: [id])
 }

@@ -41,6 +41,11 @@ export default function SisyaDetail() {
   const [keteranganVerifikasi, setKeteranganVerifikasi] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  
+  // Registration Number Edit state
+  const [showEditRegModal, setShowEditRegModal] = useState(false);
+  const [selectedSp, setSelectedSp] = useState(null);
+  const [newNomorRegistrasi, setNewNomorRegistrasi] = useState('');
 
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
     resolver: zodResolver(sisyaUpdateSchema),
@@ -98,6 +103,31 @@ export default function SisyaDetail() {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Gagal memperbarui data');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleOpenEditRegModal = (sp) => {
+    setSelectedSp(sp);
+    setNewNomorRegistrasi(sp.nomorRegistrasi || '');
+    setShowEditRegModal(true);
+  };
+
+  const handleUpdateReg = async () => {
+    if (!newNomorRegistrasi) return;
+    setIsUpdating(true);
+    try {
+      const res = await api.patch(`/sisya/program/${selectedSp.id}`, {
+        nomorRegistrasi: newNomorRegistrasi
+      });
+      if (res.data.success) {
+        toast.success('Nomor registrasi berhasil diperbarui');
+        setShowEditRegModal(false);
+        fetchSisyaDetail();
+      }
+    } catch (err) {
+      toast.error('Gagal memperbarui nomor registrasi');
     } finally {
       setIsUpdating(false);
     }
@@ -467,12 +497,28 @@ export default function SisyaDetail() {
             <h4 className="font-bold text-lg border-b border-muted/20 pb-3 mb-4 text-primary">Program Ajahan Dipilih</h4>
             <div className="space-y-3">
               {sisya.programSisyas.map(sp => (
-                <div key={sp.id} className={`flex justify-between items-center p-3 border rounded-md shadow-sm ${getProgramBadgeStyle(sp.programAjahan.nama)}`}>
-                  <div>
-                    <span className="font-bold block">{sp.programAjahan.nama}</span>
-                    <span className="text-xs text-muted">{sp.isPasangan ? 'Termasuk Pasangan' : 'Individu'}</span>
+                <div key={sp.id} className={`p-3 border rounded-md shadow-sm ${getProgramBadgeStyle(sp.programAjahan.nama)}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="font-bold block">{sp.programAjahan.nama}</span>
+                      <span className="text-xs text-muted">{sp.isPasangan ? 'Termasuk Pasangan' : 'Individu'}</span>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="text-[10px] font-mono bg-white/50 px-1.5 py-0.5 rounded border border-black/5">
+                          {sp.nomorRegistrasi || 'No Registrasi Belum Ada'}
+                        </span>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-5 w-5 p-0 opacity-50 hover:opacity-100" 
+                          onClick={() => handleOpenEditRegModal(sp)}
+                          title="Edit Nomor Sertifikat"
+                        >
+                          <Edit2 size={10} />
+                        </Button>
+                      </div>
+                    </div>
+                    <span className="font-mono text-sm font-semibold">{formatRupiah(sp.puniaProgram)}</span>
                   </div>
-                  <span className="font-mono text-sm font-semibold">{formatRupiah(sp.puniaProgram)}</span>
                 </div>
               ))}
             </div>
@@ -709,6 +755,36 @@ export default function SisyaDetail() {
                   </Button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Registration Number Modal */}
+      {showEditRegModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-muted/20">
+            <div className="p-6 border-b border-muted/10 flex justify-between items-center bg-primary/5">
+              <h3 className="font-bold text-lg text-primary">Edit Nomor Sertifikat</h3>
+              <button onClick={() => setShowEditRegModal(false)} className="text-muted hover:text-text">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted uppercase">Program: {selectedSp?.programAjahan.nama}</label>
+                <Input 
+                  placeholder="Contoh: 001/WLK.XVIII-BD.SDM/PDPN/V/2026"
+                  value={newNomorRegistrasi}
+                  onChange={(e) => setNewNomorRegistrasi(e.target.value)}
+                />
+                <p className="text-[10px] text-muted italic">Perubahan ini hanya berlaku untuk sisya ini saja.</p>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 mt-2">
+                <Button variant="outline" onClick={() => setShowEditRegModal(false)}>Batal</Button>
+                <Button onClick={handleUpdateReg} disabled={isUpdating}>
+                  {isUpdating ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

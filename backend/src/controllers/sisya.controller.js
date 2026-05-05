@@ -10,12 +10,7 @@ const getRomanMonth = (monthIndex) => {
   return roman[monthIndex];
 };
 
-const PROGRAM_PREFIXES = {
-  'Kawelakaan': 'WLK.XVII-BD.SDM/PDPN',
-  'Kawikon': 'KWN.IX-BD.SDM/PDPN',
-  'Usadha': 'USH.III-BD.SDM/PDPN',
-  'Serati': 'SRT.IV-BD.SDM/PDPN'
-};
+// PROGRAM_PREFIXES dipindahkan ke konfigurasi database ProgramAjahan.kodeSertifikat
 
 // Utility function to generate Nomor Pendaftaran
 const generateNomorPendaftaran = async () => {
@@ -75,7 +70,7 @@ const register = async (req, res) => {
         });
         
         const sequence = String(programSequenceCount + 1).padStart(3, '0');
-        const prefix = PROGRAM_PREFIXES[dbProgram.nama] || 'GENERIC/PDPN';
+        const prefix = dbProgram.kodeSertifikat || 'GENERIC/PDPN';
         const nomorRegistrasi = `${sequence}/${prefix}/${romanMonth}/${year}`;
 
         sisyaProgramsData.push({
@@ -489,14 +484,32 @@ const updateSisya = async (req, res) => {
   }
 };
 
+const updateProgramRegistrasi = async (req, res) => {
+  try {
+    const { spId } = req.params;
+    const { nomorRegistrasi } = req.body;
+
+    const updated = await prisma.sisyaProgram.update({
+      where: { id: parseInt(spId) },
+      data: { nomorRegistrasi }
+    });
+
+    res.json({ success: true, message: 'Nomor registrasi berhasil diperbarui', data: updated });
+  } catch (error) {
+    console.error('Update Program Registrasi Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal memperbarui nomor registrasi' });
+  }
+};
+
 module.exports = {
   register,
   getAll,
   getById,
-  updateStatus,
   findByNomor,
   serveFile,
   lengkapiBerkas,
+  updateStatus,
   updateAcademicStatus,
-  updateSisya
+  updateSisya,
+  updateProgramRegistrasi
 };
