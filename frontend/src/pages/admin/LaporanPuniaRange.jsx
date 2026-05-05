@@ -4,6 +4,7 @@ import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useSearchParams } from 'react-router-dom';
+import { getProgramBadgeStyle } from '../../lib/utils';
 
 export default function LaporanPuniaRange() {
   const [searchParams] = useSearchParams();
