@@ -115,7 +115,16 @@ const getLaporanPuniaRange = async (req, res) => {
             select: {
               id: true,
               namaLengkap: true,
-              nomorPendaftaran: true
+              nomorPendaftaran: true,
+              programSisyas: {
+                include: {
+                  programAjahan: {
+                    select: {
+                      nama: true
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -397,7 +406,16 @@ const exportPuniaRange = async (req, res) => {
         sisya: {
           select: {
             namaLengkap: true,
-            nomorPendaftaran: true
+            nomorPendaftaran: true,
+            programSisyas: {
+              include: {
+                programAjahan: {
+                  select: {
+                    nama: true
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -423,6 +441,7 @@ const exportPuniaRange = async (req, res) => {
       { header: 'Tanggal Bayar', key: 'tanggal', width: 15 },
       { header: 'Nama Sisya', key: 'nama', width: 30 },
       { header: 'No. Pendaftaran', key: 'noDaftar', width: 20 },
+      { header: 'Program Ajahan', key: 'program', width: 30 },
       { header: 'Nominal', key: 'nominal', width: 15 },
       { header: 'Keterangan', key: 'keterangan', width: 40 }
     ];
@@ -439,6 +458,7 @@ const exportPuniaRange = async (req, res) => {
         tanggal: new Date(pay.tanggalBayar).toLocaleDateString('id-ID'),
         nama: pay.sisya.namaLengkap,
         noDaftar: pay.sisya.nomorPendaftaran,
+        program: pay.sisya.programSisyas?.map(p => p.programAjahan.nama).join(', ') || '-',
         nominal: pay.nominal,
         keterangan: pay.keterangan || '-'
       });
@@ -461,6 +481,7 @@ const exportPuniaRange = async (req, res) => {
       tanggal: '',
       nama: 'TOTAL',
       noDaftar: '',
+      program: '',
       nominal: totalNominal,
       keterangan: ''
     });
