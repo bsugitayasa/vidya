@@ -14,27 +14,57 @@ const getAll = async (req, res) => {
   }
 };
 
-const updateTarif = async (req, res) => {
+const updateProgram = async (req, res) => {
   try {
     const { id } = req.params;
-    const { puniaNormal, puniaPasangan } = req.body;
+    const { puniaNormal, puniaPasangan, kodeSertifikat, nama, urutan, isPasanganTersedia, isAktif } = req.body;
+
+    const oldProgram = await prisma.programAjahan.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!oldProgram) {
+      return res.status(404).json({ success: false, message: 'Program tidak ditemukan' });
+    }
 
     const updatedProgram = await prisma.programAjahan.update({
       where: { id: parseInt(id) },
       data: {
-        puniaNormal: parseInt(puniaNormal),
-        puniaPasangan: puniaPasangan ? parseInt(puniaPasangan) : null
+        nama: nama !== undefined ? nama : oldProgram.nama,
+        puniaNormal: puniaNormal !== undefined ? parseInt(puniaNormal) : oldProgram.puniaNormal,
+        puniaPasangan: puniaPasangan !== undefined ? (puniaPasangan ? parseInt(puniaPasangan) : null) : oldProgram.puniaPasangan,
+        kodeSertifikat: kodeSertifikat !== undefined ? kodeSertifikat : oldProgram.kodeSertifikat,
+        urutan: urutan !== undefined ? parseInt(urutan) : oldProgram.urutan,
+        isPasanganTersedia: isPasanganTersedia !== undefined ? isPasanganTersedia : oldProgram.isPasanganTersedia,
+        isAktif: isAktif !== undefined ? isAktif : oldProgram.isAktif
       }
     });
 
-    res.json({ success: true, message: 'Tarif program berhasil diperbarui', data: updatedProgram });
+    // Soft update logic for nomorRegistrasi in SisyaProgram
+    if (kodeSertifikat && oldProgram.kodeSertifikat && kodeSertifikat !== oldProgram.kodeSertifikat) {
+      const sisyaPrograms = await prisma.sisyaProgram.findMany({
+        where: { programAjahanId: parseInt(id) }
+      });
+
+      for (const sp of sisyaPrograms) {
+        if (sp.nomorRegistrasi && sp.nomorRegistrasi.includes(oldProgram.kodeSertifikat)) {
+          const newNomorRegistrasi = sp.nomorRegistrasi.replace(oldProgram.kodeSertifikat, kodeSertifikat);
+          await prisma.sisyaProgram.update({
+            where: { id: sp.id },
+            data: { nomorRegistrasi: newNomorRegistrasi }
+          });
+        }
+      }
+    }
+
+    res.json({ success: true, message: 'Program berhasil diperbarui', data: updatedProgram });
   } catch (error) {
-    console.error('Update Tarif Error:', error);
-    res.status(500).json({ success: false, message: 'Gagal memperbarui tarif program' });
+    console.error('Update Program Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal memperbarui program' });
   }
 };
 
 module.exports = {
   getAll,
-  updateTarif
+  updateProgram
 };

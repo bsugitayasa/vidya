@@ -48,4 +48,7 @@ router.patch('/:id/status', requireAuth, requireAdmin, sisyaController.updateSta
 // PATCH /api/sisya/:id/academic-status (Academic status: AKTIF, MEDIKSA, etc)
 router.patch('/:id/academic-status', requireAuth, requireAdmin, sisyaController.updateAcademicStatus);
 
+// PATCH /api/sisya/program/:spId (Update nomorRegistrasi for a SisyaProgram)
+router.patch('/program/:spId', requireAuth, requireAdmin, sisyaController.updateProgramRegistrasi);
+
 module.exports = router;

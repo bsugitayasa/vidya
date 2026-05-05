@@ -29,6 +29,7 @@ const konfigurasiRoutes = require('./routes/konfigurasi.routes');
 const pembayaranRoutes = require('./routes/pembayaran.routes');
 const telegramRoutes = require('./routes/telegram.routes');
 const absensiRoutes = require('./routes/absensi.routes');
+const kelulusanRoutes = require('./routes/kelulusan.routes');
 
 // Apply limiters to specific paths
 app.use('/api/auth/login', authLimiter);
@@ -44,6 +45,7 @@ app.use('/api/konfigurasi', konfigurasiRoutes);
 app.use('/api/pembayaran', pembayaranRoutes);
 app.use('/api/telegram', telegramRoutes);
 app.use('/api/absensi', absensiRoutes);
+app.use('/api/kelulusan', kelulusanRoutes);
 
 const multer = require('multer');
 

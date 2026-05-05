@@ -8,7 +8,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
-  ClipboardList
+  ClipboardList,
+  GraduationCap
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 
@@ -28,6 +29,17 @@ export default function AdminLayout() {
     { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400' },
     { path: '/admin/absensi', icon: ClipboardList, label: 'Absensi', color: 'text-violet-400' },
     {
+      path: '/admin/kelulusan',
+      icon: GraduationCap,
+      label: 'Kelulusan',
+      color: 'text-yellow-400',
+      subItems: [
+        { path: '/admin/kelulusan/syarat', label: 'Syarat Kelulusan' },
+        { path: '/admin/kelulusan/absensi', label: 'Absensi Hari H' },
+        { path: '/admin/kelulusan/presentasi', label: 'Presentasi Layar' },
+      ]
+    },
+    {
       path: '/admin/laporan',
       icon: FileText,
       label: 'Laporan',
@@ -39,7 +51,17 @@ export default function AdminLayout() {
         { path: '/admin/laporan/absensi', label: 'Rekap Absensi' },
       ]
     },
-    { path: '/admin/pengaturan', icon: Settings, label: 'Pengaturan', color: 'text-rose-400' },
+    {
+      path: '/admin/pengaturan',
+      icon: Settings,
+      label: 'Pengaturan',
+      color: 'text-rose-400',
+      subItems: [
+        { path: '/admin/pengaturan', label: 'Umum & Rekening' },
+        { path: '/admin/pengaturan/tarif', label: 'Tarif Program' },
+        { path: '/admin/pengaturan/sertifikat', label: 'Format Sertifikat' },
+      ]
+    },
   ];
 
   const toggleExpand = (path) => {

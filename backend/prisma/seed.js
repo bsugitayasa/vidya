@@ -22,10 +22,10 @@ async function main() {
 
   // 2. Seed Program Ajahan
   const programs = [
-    { kode: 'KAWIKON', nama: 'Kawikon', deskripsi: 'Program pendidikan disiapkan bagi para Sisya yang ingin melanjutkan perjalanan spiritual menuju jenjang Ratu Pedanda', puniaNormal: 1000000, puniaPasangan: 1500000, isPasanganTersedia: true },
-    { kode: 'KAWELAKAAN', nama: 'Kawelakaan', deskripsi: 'Program Pendidikan mendalami pengetahuan dan keterampilan sebagai Walaka', puniaNormal: 2000000, puniaPasangan: null, isPasanganTersedia: false },
-    { kode: 'USADHA', nama: 'Usadha', deskripsi: 'Program Pendidikan mempelajari dan melestarikan ilmu pengobatan tradisional Bali', puniaNormal: 1500000, puniaPasangan: null, isPasanganTersedia: false },
-    { kode: 'SERATI', nama: 'Serati', deskripsi: 'Program Pendidikan mendalami pengetahuan Panca Yadnya serta kemampuan praktis Keseratian', puniaNormal: 1000000, puniaPasangan: null, isPasanganTersedia: false },
+    { kode: 'KAWIKON', nama: 'Kawikon', deskripsi: 'Program pendidikan disiapkan bagi para Sisya yang ingin melanjutkan perjalanan spiritual menuju jenjang Ratu Pedanda', puniaNormal: 1000000, puniaPasangan: 1500000, isPasanganTersedia: true, kodeSertifikat: 'KWN.IX-BD.SDM/PDPN' },
+    { kode: 'KAWELAKAAN', nama: 'Kawelakaan', deskripsi: 'Program Pendidikan mendalami pengetahuan dan keterampilan sebagai Walaka', puniaNormal: 2000000, puniaPasangan: null, isPasanganTersedia: false, kodeSertifikat: 'WLK.XVIII-BD.SDM/PDPN' },
+    { kode: 'USADHA', nama: 'Usadha', deskripsi: 'Program Pendidikan mempelajari dan melestarikan ilmu pengobatan tradisional Bali', puniaNormal: 1500000, puniaPasangan: null, isPasanganTersedia: false, kodeSertifikat: 'USH.III-BD.SDM/PDPN' },
+    { kode: 'SERATI', nama: 'Serati', deskripsi: 'Program Pendidikan mendalami pengetahuan Panca Yadnya serta kemampuan praktis Keseratian', puniaNormal: 1000000, puniaPasangan: null, isPasanganTersedia: false, kodeSertifikat: 'SRT.IV-BD.SDM/PDPN' },
   ]
 
   for (const p of programs) {
@@ -36,7 +36,8 @@ async function main() {
         deskripsi: p.deskripsi,
         puniaNormal: p.puniaNormal,
         puniaPasangan: p.puniaPasangan,
-        isPasanganTersedia: p.isPasanganTersedia
+        isPasanganTersedia: p.isPasanganTersedia,
+        kodeSertifikat: p.kodeSertifikat
       },
       create: p,
     })
