@@ -173,6 +173,7 @@ export default function LaporanPuniaRange() {
                 </th>
                 <th className="p-4 font-semibold text-sm text-text">Nama Sisya</th>
                 <th className="p-4 font-semibold text-sm text-text">No. Pendaftaran</th>
+                <th className="p-4 font-semibold text-sm text-text">Program Ajahan</th>
                 <th 
                   className="p-4 font-semibold text-sm text-text text-right cursor-pointer hover:bg-primary/10 transition-colors"
                   onClick={() => handleSort('nominal')}
@@ -187,11 +188,11 @@ export default function LaporanPuniaRange() {
             <tbody className="divide-y divide-muted/10">
               {isLoading ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-muted">Memuat data...</td>
+                  <td colSpan="6" className="p-8 text-center text-muted">Memuat data...</td>
                 </tr>
               ) : payments.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-muted">Tidak ada transaksi ditemukan.</td>
+                  <td colSpan="6" className="p-8 text-center text-muted">Tidak ada transaksi ditemukan.</td>
                 </tr>
               ) : (
                 payments.map(pay => (
@@ -201,6 +202,9 @@ export default function LaporanPuniaRange() {
                     </td>
                     <td className="p-4 text-sm font-medium">{pay.sisya.namaLengkap}</td>
                     <td className="p-4 text-sm font-mono text-primary">{pay.sisya.nomorPendaftaran}</td>
+                    <td className="p-4 text-sm text-muted">
+                      {pay.sisya.programSisyas?.map(p => p.programAjahan.nama).join(', ') || '-'}
+                    </td>
                     <td className="p-4 text-sm font-mono text-right font-bold text-emerald-600">
                       Rp {pay.nominal.toLocaleString('id-ID')}
                     </td>
