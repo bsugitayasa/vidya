@@ -208,9 +208,9 @@ export default function LaporanPuniaRange() {
                           pay.sisya.programSisyas.map((p, idx) => (
                             <span 
                               key={idx}
-                              className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border ${getProgramBadgeStyle(p.programAjahan.nama)}`}
+                              className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border ${getProgramBadgeStyle(p.programAjahan?.nama || '')}`}
                             >
-                              {p.programAjahan.nama}
+                              {p.programAjahan?.nama || 'Unknown'}
                             </span>
                           ))
                         ) : (
