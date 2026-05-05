@@ -17,7 +17,7 @@ const step1Schema = z.object({
   tanggalLahir: z.string().min(1, "Tanggal lahir harus diisi"),
   jenisKelamin: z.enum(['LAKI_LAKI', 'PEREMPUAN'], { required_error: "Pilih jenis kelamin" }),
   alamat: z.string().min(10, "Alamat harus lengkap (min 10 karakter)"),
-  noHp: z.string().min(10, "Nomor HP tidak valid"),
+  noHp: z.string().regex(/^081\d+$/, "Nomor HP harus diawali dengan 081").min(10, "Nomor HP minimal 10 digit"),
   email: z.string().email("Format email tidak valid").optional().or(z.literal('')),
 });
 
@@ -43,7 +43,7 @@ export default function RegistrasiWizard() {
   const [submitError, setSubmitError] = useState(null);
   const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
 
-  const { register, handleSubmit, formState: { errors }, trigger, getValues } = useForm({
+  const { register, handleSubmit, formState: { errors }, trigger, getValues, setValue, watch } = useForm({
     resolver: zodResolver(step === 1 ? step1Schema : step2Schema),
     mode: 'onTouched',
     shouldUnregister: false,
@@ -195,7 +195,7 @@ export default function RegistrasiWizard() {
           <form onSubmit={handleSubmit(onSubmit)}>
 
             {step === 1 && (
-              <Step1DataPribadi register={register} errors={errors} />
+              <Step1DataPribadi register={register} errors={errors} setValue={setValue} watch={watch} />
             )}
 
             {step === 2 && (

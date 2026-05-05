@@ -5,7 +5,7 @@ const pembayaranController = require('../controllers/pembayaran.controller');
 const upload = require('../middlewares/upload.middleware');
 const { requireAuth, requireAdmin } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
-const { sisyaRegistrationSchema } = require('../../../shared/schemas/sisya.schema');
+const { sisyaRegistrationSchema, sisyaUpdateSchema } = require('../../../shared/schemas/sisya.schema');
 
 const { registrationLimiter, statusCheckLimiter } = require('../middlewares/rateLimit.middleware');
 
@@ -28,6 +28,9 @@ router.get('/files/:filename', requireAuth, requireAdmin, sisyaController.serveF
 
 // GET /api/sisya/:id
 router.get('/:id', requireAuth, requireAdmin, sisyaController.getById);
+
+// PUT /api/sisya/:id
+router.put('/:id', requireAuth, requireAdmin, validate(sisyaUpdateSchema), sisyaController.updateSisya);
 
 // POST /api/sisya/:sisyaId/upload-punia (Public - for late payment proof upload)
 router.post('/:sisyaId/upload-punia', statusCheckLimiter, upload.single('filePunia'), pembayaranController.uploadBuktiBayar);

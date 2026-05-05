@@ -459,6 +459,36 @@ const updateAcademicStatus = async (req, res) => {
   }
 };
 
+const updateSisya = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    const updatedSisya = await prisma.sisya.update({
+      where: { id: parseInt(id) },
+      data: {
+        namaLengkap: updateData.namaLengkap,
+        tempatLahir: updateData.tempatLahir,
+        tanggalLahir: updateData.tanggalLahir ? new Date(updateData.tanggalLahir) : undefined,
+        jenisKelamin: updateData.jenisKelamin,
+        alamat: updateData.alamat,
+        noHp: updateData.noHp,
+        email: updateData.email,
+        namaGriya: updateData.namaGriya,
+        namaDesa: updateData.namaDesa,
+      }
+    });
+
+    res.json({ success: true, message: 'Data Sisya berhasil diperbarui', data: updatedSisya });
+  } catch (error) {
+    console.error('Update Sisya Error:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Data Sisya tidak ditemukan' });
+    }
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan saat mengupdate data' });
+  }
+};
+
 module.exports = {
   register,
   getAll,
@@ -467,5 +497,6 @@ module.exports = {
   findByNomor,
   serveFile,
   lengkapiBerkas,
-  updateAcademicStatus
+  updateAcademicStatus,
+  updateSisya
 };

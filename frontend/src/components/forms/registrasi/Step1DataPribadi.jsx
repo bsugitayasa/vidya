@@ -1,8 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 
-export default function Step1DataPribadi({ register, errors }) {
+export default function Step1DataPribadi({ register, errors, setValue, watch }) {
+  const tanggalLahirVal = watch ? watch('tanggalLahir') : '';
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  // Initialize from existing value if present
+  useEffect(() => {
+    if (tanggalLahirVal && !selectedDate) {
+      const parts = tanggalLahirVal.split('-');
+      if (parts.length === 3) {
+        setSelectedDate(new Date(parts[0], parseInt(parts[1], 10) - 1, parts[2]));
+      }
+    }
+  }, [tanggalLahirVal]); // removed selectedDate from dependency to avoid loop, actually it's fine.
+
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    if (date && setValue) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      setValue('tanggalLahir', `${year}-${month}-${day}`, { shouldValidate: true });
+    } else if (!date && setValue) {
+      setValue('tanggalLahir', '', { shouldValidate: true });
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div>
@@ -32,11 +59,19 @@ export default function Step1DataPribadi({ register, errors }) {
 
         <div className="space-y-2">
           <Label htmlFor="tanggalLahir">Tanggal Lahir *</Label>
-          <Input 
-            id="tanggalLahir" 
-            type="date"
-            {...register('tanggalLahir')}
-          />
+          <div className="w-full relative z-50">
+            <DatePicker
+              selected={selectedDate}
+              onChange={handleDateChange}
+              dateFormat="dd/MM/yyyy"
+              showYearDropdown
+              scrollableYearDropdown
+              yearDropdownItemNumber={100}
+              placeholderText="Pilih atau ketik (DD/MM/YYYY)"
+              className="flex h-10 w-full rounded-md border border-muted bg-surface px-3 py-2 text-sm placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            />
+          </div>
+          <input type="hidden" {...register('tanggalLahir')} />
           {errors.tanggalLahir && <p className="text-sm text-red-500">{errors.tanggalLahir.message}</p>}
         </div>
 
@@ -70,8 +105,21 @@ export default function Step1DataPribadi({ register, errors }) {
           <Label htmlFor="noHp">No. HP / WhatsApp *</Label>
           <Input 
             id="noHp" 
-            placeholder="081234567890" 
+            placeholder="081xxxxxxxxx" 
             {...register('noHp')}
+            onChange={(e) => {
+              let val = e.target.value;
+              if (val.startsWith('+62')) {
+                val = '0' + val.slice(3);
+              } else if (val.startsWith('62')) {
+                val = '0' + val.slice(2);
+              }
+              // Normalization for UX
+              val = val.replace(/[^\d+]/g, '');
+              
+              e.target.value = val;
+              register('noHp').onChange(e);
+            }}
           />
           {errors.noHp && <p className="text-sm text-red-500">{errors.noHp.message}</p>}
         </div>
