@@ -1,12 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2, Download } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2, Download, Edit2 } from 'lucide-react';
 import api from '../../lib/axios';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import useFileUrl from '../../hooks/useFileUrl';
 import { getProgramBadgeStyle } from '../../lib/utils';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+
+const sisyaUpdateSchema = z.object({
+  namaLengkap: z.string().min(3, 'Nama lengkap minimal 3 karakter'),
+  tempatLahir: z.string().min(2, 'Tempat lahir wajib diisi'),
+  tanggalLahir: z.string().or(z.date()),
+  jenisKelamin: z.enum(['LAKI_LAKI', 'PEREMPUAN'], {
+    errorMap: () => ({ message: 'Jenis kelamin harus LAKI_LAKI atau PEREMPUAN' })
+  }),
+  alamat: z.string().min(5, 'Alamat minimal 5 karakter'),
+  noHp: z.string().regex(/^081\d+$/, "Nomor HP harus diawali dengan 081").min(10, "Nomor HP minimal 10 digit"),
+  email: z.string().email('Format email tidak valid').optional().or(z.literal('')),
+  namaGriya: z.string().min(2, 'Nama Griya wajib diisi'),
+  namaDesa: z.string().min(2, 'Nama Desa wajib diisi')
+});
 
 export default function SisyaDetail() {
   const { id } = useParams();
@@ -20,6 +39,69 @@ export default function SisyaDetail() {
   const [selectedPembayaran, setSelectedPembayaran] = useState(null);
   const [nominalVerifikasi, setNominalVerifikasi] = useState('');
   const [keteranganVerifikasi, setKeteranganVerifikasi] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
+    resolver: zodResolver(sisyaUpdateSchema),
+    mode: 'onTouched'
+  });
+
+  const tanggalLahirVal = watch('tanggalLahir');
+
+  useEffect(() => {
+    if (tanggalLahirVal && typeof tanggalLahirVal === 'string' && !selectedDate) {
+      const parts = tanggalLahirVal.split('-');
+      if (parts.length === 3) {
+        setSelectedDate(new Date(parts[0], parseInt(parts[1], 10) - 1, parts[2]));
+      }
+    }
+  }, [tanggalLahirVal]);
+
+  const handleDateChange = (date) => {
+    setSelectedDate(date);
+    if (date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      setValue('tanggalLahir', `${year}-${month}-${day}`, { shouldValidate: true });
+    } else {
+      setValue('tanggalLahir', '', { shouldValidate: true });
+    }
+  };
+
+  const handleOpenEditModal = () => {
+    reset({
+      namaLengkap: sisya.namaLengkap,
+      tempatLahir: sisya.tempatLahir,
+      tanggalLahir: new Date(sisya.tanggalLahir).toISOString().split('T')[0],
+      jenisKelamin: sisya.jenisKelamin,
+      alamat: sisya.alamat,
+      noHp: sisya.noHp,
+      email: sisya.email || '',
+      namaGriya: sisya.namaGriya,
+      namaDesa: sisya.namaDesa,
+    });
+    const d = new Date(sisya.tanggalLahir);
+    setSelectedDate(d);
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (data) => {
+    setIsUpdating(true);
+    try {
+      const res = await api.put(`/sisya/${id}`, data);
+      if (res.data.success) {
+        toast.success('Data sisya berhasil diperbarui');
+        setShowEditModal(false);
+        fetchSisyaDetail();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal memperbarui data');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   // Protected file URLs
   const fotoUrl = useFileUrl(sisya?.fileFotoPath);
@@ -293,7 +375,12 @@ export default function SisyaDetail() {
           </div>
 
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
-            <h4 className="font-bold border-b border-muted/20 pb-2 mb-4 text-primary">Data Pribadi</h4>
+            <div className="flex justify-between items-center border-b border-muted/20 pb-2 mb-4">
+              <h4 className="font-bold text-primary">Data Pribadi</h4>
+              <Button variant="ghost" size="sm" className="h-8 text-primary hover:bg-primary/10" onClick={handleOpenEditModal}>
+                <Edit2 size={14} className="mr-1" /> Edit
+              </Button>
+            </div>
             <div className="space-y-4 text-sm">
                 <div>
                     <span className="text-muted text-xs block">TTL</span>
@@ -508,6 +595,123 @@ export default function SisyaDetail() {
                   </div>
               </div>
           </div>
+      )}
+
+      {/* Edit Sisya Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-muted/20 my-8">
+            <div className="p-6 border-b border-muted/10 flex justify-between items-center bg-primary/5">
+              <h3 className="font-bold text-lg text-primary">Edit Data Pribadi</h3>
+              <button onClick={() => setShowEditModal(false)} className="text-muted hover:text-text">✕</button>
+            </div>
+            <div className="p-6">
+              <form onSubmit={handleSubmit(handleEditSubmit)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs font-bold text-muted uppercase">Nama Lengkap *</label>
+                    <Input placeholder="Nama lengkap" {...register('namaLengkap')} />
+                    {errors.namaLengkap && <p className="text-sm text-red-500">{errors.namaLengkap.message}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted uppercase">Tempat Lahir *</label>
+                    <Input placeholder="Tempat lahir" {...register('tempatLahir')} />
+                    {errors.tempatLahir && <p className="text-sm text-red-500">{errors.tempatLahir.message}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted uppercase">Tanggal Lahir *</label>
+                    <div className="w-full relative z-50">
+                      <DatePicker
+                        selected={selectedDate}
+                        onChange={handleDateChange}
+                        dateFormat="dd/MM/yyyy"
+                        showYearDropdown
+                        scrollableYearDropdown
+                        yearDropdownItemNumber={100}
+                        placeholderText="DD/MM/YYYY"
+                        className="flex h-10 w-full rounded-md border border-muted bg-surface px-3 py-2 text-sm placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      />
+                    </div>
+                    <input type="hidden" {...register('tanggalLahir')} />
+                    {errors.tanggalLahir && <p className="text-sm text-red-500">{errors.tanggalLahir.message}</p>}
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs font-bold text-muted uppercase">Jenis Kelamin *</label>
+                    <div className="flex space-x-6 mt-2">
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input type="radio" value="LAKI_LAKI" {...register('jenisKelamin')} className="text-primary focus:ring-primary h-4 w-4" />
+                        <span>Laki-Laki</span>
+                      </label>
+                      <label className="flex items-center space-x-2 cursor-pointer">
+                        <input type="radio" value="PEREMPUAN" {...register('jenisKelamin')} className="text-primary focus:ring-primary h-4 w-4" />
+                        <span>Perempuan</span>
+                      </label>
+                    </div>
+                    {errors.jenisKelamin && <p className="text-sm text-red-500">{errors.jenisKelamin.message}</p>}
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-xs font-bold text-muted uppercase">Alamat *</label>
+                    <textarea 
+                      className="flex min-h-[80px] w-full rounded-md border border-muted bg-surface px-3 py-2 text-sm placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      placeholder="Alamat lengkap"
+                      {...register('alamat')}
+                    ></textarea>
+                    {errors.alamat && <p className="text-sm text-red-500">{errors.alamat.message}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted uppercase">No HP *</label>
+                    <Input 
+                      placeholder="081xxxxxxxxx" 
+                      {...register('noHp')} 
+                      onChange={(e) => {
+                        let val = e.target.value;
+                        if (val.startsWith('+62')) {
+                          val = '0' + val.slice(3);
+                        } else if (val.startsWith('62')) {
+                          val = '0' + val.slice(2);
+                        }
+                        val = val.replace(/[^\d+]/g, '');
+                        e.target.value = val;
+                        register('noHp').onChange(e);
+                      }}
+                    />
+                    {errors.noHp && <p className="text-sm text-red-500">{errors.noHp.message}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted uppercase">Email</label>
+                    <Input type="email" placeholder="Email" {...register('email')} />
+                    {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted uppercase">Nama Griya *</label>
+                    <Input placeholder="Nama Griya" {...register('namaGriya')} />
+                    {errors.namaGriya && <p className="text-sm text-red-500">{errors.namaGriya.message}</p>}
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted uppercase">Nama Desa *</label>
+                    <Input placeholder="Nama Desa" {...register('namaDesa')} />
+                    {errors.namaDesa && <p className="text-sm text-red-500">{errors.namaDesa.message}</p>}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 mt-6 border-t border-muted/10">
+                  <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>Batal</Button>
+                  <Button type="submit" disabled={isUpdating}>
+                    {isUpdating ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
