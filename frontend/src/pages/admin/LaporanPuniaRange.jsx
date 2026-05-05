@@ -202,8 +202,21 @@ export default function LaporanPuniaRange() {
                     </td>
                     <td className="p-4 text-sm font-medium">{pay.sisya.namaLengkap}</td>
                     <td className="p-4 text-sm font-mono text-primary">{pay.sisya.nomorPendaftaran}</td>
-                    <td className="p-4 text-sm text-muted">
-                      {pay.sisya.programSisyas?.map(p => p.programAjahan.nama).join(', ') || '-'}
+                    <td className="p-4 text-sm">
+                      <div className="flex flex-wrap gap-1">
+                        {pay.sisya.programSisyas?.length > 0 ? (
+                          pay.sisya.programSisyas.map((p, idx) => (
+                            <span 
+                              key={idx}
+                              className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium border ${getProgramBadgeStyle(p.programAjahan.nama)}`}
+                            >
+                              {p.programAjahan.nama}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-muted">-</span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-4 text-sm font-mono text-right font-bold text-emerald-600">
                       Rp {pay.nominal.toLocaleString('id-ID')}
