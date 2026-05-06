@@ -11,6 +11,9 @@ router.get('/punia/range', requireAuth, requireAdmin, laporanController.getLapor
 
 // GET /api/laporan/punia/bulanan
 router.get('/punia/bulanan', requireAuth, requireAdmin, laporanController.getLaporanPuniaBulanan);
+ 
+// GET /api/laporan/punia/dashboard
+router.get('/punia/dashboard', requireAuth, requireAdmin, laporanController.getLaporanPuniaDashboard);
 
 // GET /api/laporan/punia/export
 router.get('/punia/export', requireAuth, requireAdmin, laporanController.exportPuniaRange);
