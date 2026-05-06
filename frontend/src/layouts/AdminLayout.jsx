@@ -14,7 +14,7 @@ import {
 import useAuthStore from '../store/authStore';
 
 export default function AdminLayout() {
-  const { token, logout } = useAuthStore();
+  const { token, user } = useAuthStore();
   const [isMinimized, setIsMinimized] = useState(false);
   const location = useLocation();
 
@@ -57,12 +57,26 @@ export default function AdminLayout() {
       label: 'Pengaturan',
       color: 'text-rose-400',
       subItems: [
-        { path: '/admin/pengaturan', label: 'Umum & Rekening' },
+        { path: '/admin/pengaturan', label: 'Umum & Rekening', restricted: true },
         { path: '/admin/pengaturan/tarif', label: 'Tarif Program' },
         { path: '/admin/pengaturan/sertifikat', label: 'Format Sertifikat' },
       ]
     },
   ];
+
+  // Filter menu items based on role
+  const filteredMenuItems = menuItems.map(item => {
+    if (item.subItems) {
+      return {
+        ...item,
+        subItems: item.subItems.filter(sub => {
+          if (sub.restricted && user?.role !== 'SUPER_ADMIN') return false;
+          return true;
+        })
+      };
+    }
+    return item;
+  });
 
   const toggleExpand = (path) => {
     setExpandedMenus(prev =>
@@ -72,6 +86,7 @@ export default function AdminLayout() {
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     window.location.href = '/admin/login';
   };
 
@@ -112,7 +127,7 @@ export default function AdminLayout() {
 
         {/* Navigation */}
         <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const Icon = item.icon;
             const isParentActive = location.pathname.startsWith(item.path);
             const isExpanded = expandedMenus.includes(item.path) || (isParentActive && !isMinimized);

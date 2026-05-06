@@ -211,7 +211,12 @@ export default function PresentasiKelulusan() {
     return (
       <div className="h-[80vh] flex flex-col items-center justify-center text-muted">
         <h2 className="text-2xl font-heading font-bold mb-2">Belum Ada Sisya Hadir</h2>
-        <p>Silakan lakukan absensi kehadiran di menu Absensi Kelulusan terlebih dahulu.</p>
+        <p className="mb-6">Silakan lakukan absensi kehadiran di menu Absensi Kelulusan terlebih dahulu.</p>
+        <Link to="/admin/kelulusan/absensi">
+          <button className="flex items-center gap-2 px-6 py-3 rounded-full bg-[#744210] text-white hover:bg-[#C05621] transition-all shadow-lg font-bold">
+            <ArrowLeft size={20} /> Kembali ke Absensi
+          </button>
+        </Link>
       </div>
     );
   }
@@ -328,17 +333,15 @@ export default function PresentasiKelulusan() {
                 <h2 className="text-4xl md:text-6xl font-black font-heading text-[#2D3748] leading-[1.1] drop-shadow-md">
                   {currentSisya.namaLengkap}
                 </h2>
+                <p className="text-xl md:text-3xl font-black text-[#744210] opacity-90 mt-2">
+                  {currentSisya.namaGriya}
+                </p>
               </div>
               
               <div className="grid grid-cols-1 gap-4">
                 <div className="bg-[#FFFAF0] p-5 rounded-2xl border-l-8 border-[#F6AD55] shadow-inner">
                   <p className="text-[11px] text-[#C05621] uppercase font-black tracking-widest mb-1 opacity-70">Nomor Sertifikat</p>
                   <p className="text-2xl md:text-4xl font-mono font-black text-[#744210] tracking-tight">{currentSisya.nomorSertifikat}</p>
-                </div>
-
-                <div className="bg-[#FFFAF0] p-5 rounded-2xl border-l-8 border-[#F6AD55] shadow-inner">
-                  <p className="text-[11px] text-[#C05621] uppercase font-black tracking-widest mb-1 opacity-70">Asal Griya</p>
-                  <p className="text-xl md:text-3xl font-black text-[#744210]">{currentSisya.namaGriya}</p>
                 </div>
               </div>
             </div>

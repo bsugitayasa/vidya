@@ -104,9 +104,12 @@ export default function AbsensiKelulusan() {
           <p className="text-muted text-sm mt-1">Tandai kehadiran sisya yang berhak mengikuti prosesi kelulusan.</p>
         </div>
         <div className="flex gap-3">
-          <Button onClick={exportToExcel} variant="outline" className="border-emerald-500 text-emerald-600 hover:bg-emerald-50">
-            <FileSpreadsheet size={18} className="mr-2" /> Export Excel
-          </Button>
+          <button 
+            onClick={exportToExcel}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors shadow-sm"
+          >
+            <FileSpreadsheet size={18} /> Export Excel
+          </button>
           <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold border border-primary/20 flex items-center">
             Total Hadir: {totalHadir} / {data.length}
           </div>
@@ -158,7 +161,12 @@ export default function AbsensiKelulusan() {
                 currentData.map((sisya) => (
                   <tr key={sisya.id} className={`hover:bg-muted/5 transition-colors ${sisya.isHadir ? 'bg-green-50/30' : ''}`}>
                     <td className="px-6 py-4 font-mono text-xs text-muted">{sisya.nomorPendaftaran}</td>
-                    <td className="px-6 py-4 font-bold text-text">{sisya.namaLengkap}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-text">{sisya.namaLengkap}</span>
+                        <span className="text-[10px] text-primary/70 font-bold uppercase tracking-tight">{sisya.namaGriya}</span>
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
                         {(sisya.program || '').split(', ').map((pName, idx) => (

@@ -3,8 +3,11 @@ import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { toast } from 'sonner';
+import { Navigate } from 'react-router-dom';
+import useAuthStore from '../../store/authStore';
 
 export default function Pengaturan() {
+  const { user } = useAuthStore();
   const [configs, setConfigs] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -12,6 +15,12 @@ export default function Pengaturan() {
   
   const [musicFile, setMusicFile] = useState(null);
   const [isUploadingMusic, setIsUploadingMusic] = useState(false);
+
+  // Protected page guard
+  if (user?.role !== 'SUPER_ADMIN') {
+    toast.error('Akses Ditolak: Hanya Super Admin yang dapat mengakses menu ini.');
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
   useEffect(() => {
     fetchData();
