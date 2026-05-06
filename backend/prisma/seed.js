@@ -49,6 +49,7 @@ async function main() {
     { kunci: 'nama_bank', nilai: 'Bank BPD Bali', label: 'Nama Bank' },
     { kunci: 'nomor_rekening', nilai: '018.02.02.31507-5', label: 'Nomor Rekening' },
     { kunci: 'nama_rekening', nilai: 'PDPN DIKJAR POLEKSOSDA', label: 'Nama Pemilik Rekening' },
+    { kunci: 'tanggal_kelulusan', nilai: '2026-05-10', label: 'Tanggal Prosesi Kelulusan' },
   ]
 
   for (const c of configs) {

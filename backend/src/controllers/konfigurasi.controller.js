@@ -45,7 +45,37 @@ const update = async (req, res) => {
   }
 };
 
+const uploadMusik = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Tidak ada file yang diunggah' });
+    }
+
+    const musicPath = `/api/sisya/files/${req.file.filename}`;
+
+    const config = await prisma.konfigurasiAplikasi.upsert({
+      where: { kunci: 'musik_kelulusan' },
+      update: { nilai: musicPath },
+      create: { 
+        kunci: 'musik_kelulusan', 
+        nilai: musicPath,
+        label: 'Musik Latar Kelulusan'
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Musik berhasil diunggah', 
+      data: config 
+    });
+  } catch (error) {
+    console.error('Upload Musik Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal mengunggah musik' });
+  }
+};
+
 module.exports = {
   getAll,
-  update
+  update,
+  uploadMusik
 };
