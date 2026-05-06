@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../../lib/axios';
-import { ChevronLeft, ChevronRight, Maximize, Minimize, Loader2, ArrowLeft } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize, Minimize, Loader2, ArrowLeft, Volume2, VolumeX, Music } from 'lucide-react';
 import { toast } from 'sonner';
 import useFileUrl from '../../../hooks/useFileUrl';
 
@@ -25,17 +25,28 @@ const SisyaPhoto = ({ filePath, namaLengkap, isFullscreen }) => {
 
 export default function PresentasiKelulusan() {
   const [rawData, setRawData] = useState([]);
+  const [configs, setConfigs] = useState({});
   const [activeProgramId, setActiveProgramId] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
+  const musicUrl = useFileUrl(configs.musik_kelulusan?.nilai);
 
   const fetchPresentasiData = async () => {
     try {
       setIsLoading(true);
-      const res = await api.get('/kelulusan/presentasi');
-      if (res.data.success) {
-        setRawData(res.data.data);
+      const [presRes, confRes] = await Promise.all([
+        api.get('/kelulusan/presentasi'),
+        api.get('/konfigurasi')
+      ]);
+      
+      if (presRes.data.success) {
+        setRawData(presRes.data.data);
+      }
+      if (confRes.data.success) {
+        setConfigs(confRes.data.data);
       }
     } catch (error) {
       toast.error('Gagal memuat data presentasi');
@@ -49,6 +60,54 @@ export default function PresentasiKelulusan() {
     const interval = setInterval(() => fetchPresentasiData(), 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const formatBalineseDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+
+    const days = ['Redite', 'Soma', 'Anggara', 'Budha', 'Wraspati', 'Sukra', 'Saniscara'];
+    const pancawaras = ['Umanis', 'Paing', 'Pon', 'Wage', 'Kliwon'];
+    const wukus = [
+      'Sinta', 'Landep', 'Ukir', 'Kulantir', 'Tolu', 'Gumbreg', 'Wariga', 'Warigadean', 'Julungwangi', 'Sungsang',
+      'Dungulan', 'Kuningan', 'Langkir', 'Medangsia', 'Pujut', 'Pahang', 'Krulut', 'Merakih', 'Tambir', 'Medangkungan',
+      'Matal', 'Uye', 'Menail', 'Prangbakat', 'Bala', 'Ugu', 'Wayang', 'Kelawu', 'Dukut', 'Watugunung'
+    ];
+    const months = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+
+    // Calibrate with a known date: 2026-05-06 is Budha (3), Pon (2), Tolu (4)
+    const refDate = new Date('2026-05-06');
+    const dateNoon = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
+    const refNoon = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), 12, 0, 0);
+    const diffDays = Math.round((dateNoon.getTime() - refNoon.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Saptawara (7 days) - Budha is idx 3
+    let sIdx = (diffDays + 3) % 7;
+    if (sIdx < 0) sIdx += 7;
+    const saptawara = days[sIdx];
+
+    // Pancawara (5 days) - Pon is idx 2
+    let pIdx = (diffDays + 2) % 5;
+    if (pIdx < 0) pIdx += 5;
+    const pancawara = pancawaras[pIdx];
+
+    // Wuku (210 days cycle, 30 weeks)
+    // Tolu is index 4. Start of Tolu week is 4 * 7 = 28 days into the cycle.
+    // 2026-05-06 (Budha) is the 4th day of Tolu week (Redite, Soma, Anggara, Budha).
+    // So 2026-05-06 is 28 + 3 = 31 days into the 210-day cycle.
+    let wCycleIdx = (diffDays + 31) % 210;
+    if (wCycleIdx < 0) wCycleIdx += 210;
+    const wuku = wukus[Math.floor(wCycleIdx / 7)];
+
+    const day = date.getDate();
+    const monthName = months[date.getMonth()];
+    const year = date.getFullYear();
+
+    return `${saptawara} ${pancawara} ${wuku}, ${day} ${monthName} ${year}`;
+  };
 
   // Unique programs from data
   const programs = useMemo(() => {
@@ -81,10 +140,11 @@ export default function PresentasiKelulusan() {
         return (a.nomorSertifikat || '').localeCompare(b.nomorSertifikat || '');
       });
 
-    // 2. Prepend a "Title Slide" object
+    // 2. Prepend a "Title Slide" object and Append a "Finish Slide"
     return [
       { type: 'TITLE', programNama: programName, programId: activeProgramId },
-      ...students
+      ...students,
+      { type: 'FINISH', programNama: programName, programId: activeProgramId }
     ];
   }, [rawData, activeProgramId, programs]);
 
@@ -124,6 +184,20 @@ export default function PresentasiKelulusan() {
     }
   };
 
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(err => {
+        console.error("Audio playback error:", err);
+        toast.error("Gagal memutar musik. Pastikan file audio valid.");
+      });
+    }
+    setIsPlaying(!isPlaying);
+  };
+
   if (isLoading && rawData.length === 0) {
     return (
       <div className="h-[80vh] flex flex-col items-center justify-center text-primary">
@@ -153,11 +227,14 @@ export default function PresentasiKelulusan() {
       <div className="w-full pt-6 px-12 flex flex-col border-b-2 border-[#C05621]/20 relative z-10 bg-white/50 backdrop-blur-sm">
         <div className="flex items-center justify-between pb-4">
           <div className="flex items-center gap-6">
-            <div className="w-14 h-14 bg-white rounded-full p-1.5 shadow-lg border border-[#C05621]/30 flex items-center justify-center">
-              <img src="/logo-yayasan.png" alt="Logo" className="w-full h-full object-contain" onError={(e) => {e.target.onerror = null; e.target.src="https://ui-avatars.com/api/?name=PD&background=744210&color=fff"}} />
-            </div>
-            <div>
-              <h1 className="text-xl md:text-3xl font-black font-heading tracking-wider text-[#C05621] uppercase">Perkumpulan Dharmopadesa Pusat Nusantara</h1>
+            <img 
+              src="/logo.png" 
+              alt="Logo" 
+              className="h-16 md:h-20 w-auto object-contain" 
+              onError={(e) => {e.target.onerror = null; e.target.src="https://ui-avatars.com/api/?name=PD&background=744210&color=fff"}} 
+            />
+            <div className="flex flex-col justify-center">
+              <h1 className="text-xl md:text-3xl font-black font-heading tracking-wider text-[#C05621] uppercase leading-tight">Perkumpulan Dharmopadesa Pusat Nusantara</h1>
               <p className="text-[#744210] font-black tracking-[0.3em] text-sm mt-1">PROSESI KELULUSAN — <span className="text-[#C05621]">{programs.find(p => p.id === activeProgramId)?.nama || 'PROGRAM AJAHAN'}</span></p>
             </div>
           </div>
@@ -197,16 +274,38 @@ export default function PresentasiKelulusan() {
         
         {currentSisya && currentSisya.type === 'TITLE' ? (
           // Program Title Slide
-          <div className="text-center animate-in fade-in zoom-in duration-700">
+          <div className="text-center animate-in fade-in zoom-in duration-700 mb-20">
             <p className="text-[#C05621] font-black tracking-[0.5em] uppercase text-xl mb-4 opacity-70">Memasuki Prosesi Kelulusan</p>
             <h1 className="text-7xl md:text-9xl font-black font-heading text-[#744210] drop-shadow-2xl uppercase tracking-tighter">
               {currentSisya.programNama}
             </h1>
             <div className="w-32 h-2 bg-[#F6AD55] mx-auto mt-8 rounded-full shadow-lg"></div>
           </div>
+        ) : currentSisya && currentSisya.type === 'FINISH' ? (
+          // Program Finish Slide
+          <div className="text-center animate-in fade-in zoom-in duration-700 mb-20">
+            <p className="text-[#C05621] font-black tracking-[0.5em] uppercase text-xl mb-4 opacity-70">Prosesi Kelulusan Selesai</p>
+            <h1 className="text-7xl md:text-9xl font-black font-heading text-[#744210] drop-shadow-2xl uppercase tracking-tighter">
+              PUPUT
+            </h1>
+            <p className="text-[#744210] font-bold tracking-[0.2em] text-lg mt-6 opacity-80 italic">— {currentSisya.programNama} —</p>
+            <div className="w-32 h-2 bg-[#F6AD55] mx-auto mt-8 rounded-full shadow-lg"></div>
+          </div>
         ) : currentSisya ? (
           // Student Profile Card
-          <div className="relative w-full max-w-5xl bg-white rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-4 border-[#F6AD55] p-12 flex flex-col md:flex-row items-center gap-16 animate-in fade-in slide-in-from-right-10 duration-500">
+          <div className="flex flex-col items-center gap-6 w-full animate-in fade-in slide-in-from-bottom-10 duration-700">
+            {/* Tanggal Kelulusan Display */}
+            {configs.tanggal_kelulusan && (
+              <div className="bg-[#744210]/5 px-6 py-2 rounded-full border border-[#F6AD55]/30 flex items-center gap-3">
+                <div className="w-2 h-2 bg-[#F6AD55] rounded-full animate-pulse"></div>
+                <span className="text-[#744210] font-black tracking-widest text-lg md:text-xl">
+                  {formatBalineseDate(configs.tanggal_kelulusan.nilai)}
+                </span>
+                <div className="w-2 h-2 bg-[#F6AD55] rounded-full animate-pulse"></div>
+              </div>
+            )}
+
+            <div className="relative w-full max-w-5xl bg-white rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-4 border-[#F6AD55] p-12 flex flex-col md:flex-row items-center gap-16">
             <div className="absolute -top-6 -left-6 w-16 h-16 border-t-8 border-l-8 border-[#744210] rounded-tl-[40px]"></div>
             <div className="absolute -top-6 -right-6 w-16 h-16 border-t-8 border-r-8 border-[#744210] rounded-tr-[40px]"></div>
             <div className="absolute -bottom-6 -left-6 w-16 h-16 border-b-8 border-l-8 border-[#744210] rounded-bl-[40px]"></div>
@@ -243,6 +342,7 @@ export default function PresentasiKelulusan() {
                 </div>
               </div>
             </div>
+            </div>
           </div>
         ) : (
           <div className="text-center bg-white/50 p-10 rounded-2xl border-2 border-dashed border-[#F6AD55]">
@@ -264,7 +364,7 @@ export default function PresentasiKelulusan() {
           
           <div className="text-center min-w-[120px]">
             <p className="text-[9px] font-black text-[#C05621] uppercase tracking-[0.2em]">
-              {currentSisya?.type === 'TITLE' ? 'Halaman Judul' : 'Urutan Kelulusan'}
+              {currentSisya?.type === 'TITLE' ? 'Halaman Judul' : currentSisya?.type === 'FINISH' ? 'Halaman Penutup' : 'Urutan Kelulusan'}
             </p>
             <div className="flex items-center justify-center gap-1">
               <span className="text-base font-black text-[#744210]">{currentIndex + 1}</span>
@@ -279,6 +379,43 @@ export default function PresentasiKelulusan() {
             className="w-8 h-8 rounded-full flex items-center justify-center bg-[#FFFAF0] text-[#744210] border border-[#C05621] hover:bg-[#C05621] hover:text-white disabled:opacity-30 transition-colors"
           >
             <ChevronRight size={20} />
+          </button>
+        </div>
+      )}
+
+      {/* Music Player Control */}
+      {configs.musik_kelulusan && musicUrl && (
+        <div className="absolute bottom-6 right-6 z-[110] flex items-center gap-3">
+          <audio 
+            ref={audioRef} 
+            src={musicUrl} 
+            loop 
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
+          />
+          
+          {isPlaying && (
+            <div className="bg-white/80 backdrop-blur-md px-4 py-2 rounded-full border border-[#F6AD55]/30 shadow-lg animate-in slide-in-from-right-5 duration-500">
+              <p className="text-[10px] font-black text-[#744210] uppercase tracking-widest flex items-center gap-2">
+                <Music size={12} className="animate-bounce" /> Musik Latar Aktif
+              </p>
+            </div>
+          )}
+
+          <button 
+            onClick={togglePlay}
+            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-2xl transition-all duration-500 border-2 group ${
+              isPlaying 
+                ? 'bg-emerald-500 border-emerald-200 text-white scale-110' 
+                : 'bg-white border-[#F6AD55]/30 text-[#744210] hover:scale-110'
+            }`}
+            title={isPlaying ? 'Pause Musik' : 'Putar Musik'}
+          >
+            {isPlaying ? (
+              <Volume2 size={24} className="animate-pulse" />
+            ) : (
+              <VolumeX size={24} className="opacity-50 group-hover:opacity-100" />
+            )}
           </button>
         </div>
       )}

@@ -15,13 +15,17 @@ const storage = multer.diskStorage({
   }
 });
 
-// Filter jenis file (hanya gambar dan PDF)
+// Filter jenis file (hanya gambar, PDF, dan Audio)
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+  const allowedMimeTypes = [
+    'image/jpeg', 'image/png', 'image/jpg', 
+    'application/pdf',
+    'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg'
+  ];
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Format file tidak didukung. Hanya JPG, PNG, dan PDF yang diperbolehkan.'), false);
+    cb(new Error('Format file tidak didukung. Hanya JPG, PNG, PDF, dan Audio (MP3/WAV) yang diperbolehkan.'), false);
   }
 };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../../lib/axios';
 import { Search, Loader2, UserCheck, UserX, FileSpreadsheet, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
+import { getProgramBadgeStyle } from '../../../lib/utils';
 import * as XLSX from 'xlsx';
 
 export default function AbsensiKelulusan() {
@@ -158,7 +159,18 @@ export default function AbsensiKelulusan() {
                   <tr key={sisya.id} className={`hover:bg-muted/5 transition-colors ${sisya.isHadir ? 'bg-green-50/30' : ''}`}>
                     <td className="px-6 py-4 font-mono text-xs text-muted">{sisya.nomorPendaftaran}</td>
                     <td className="px-6 py-4 font-bold text-text">{sisya.namaLengkap}</td>
-                    <td className="px-6 py-4 text-xs text-muted">{sisya.program}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1">
+                        {(sisya.program || '').split(', ').map((pName, idx) => (
+                          <span 
+                            key={idx} 
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase ${getProgramBadgeStyle(pName)}`}
+                          >
+                            {pName}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 text-center">
                       {sisya.isHadir ? (
                         <div className="inline-flex flex-col items-center">

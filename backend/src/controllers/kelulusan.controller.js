@@ -200,10 +200,27 @@ exports.inputHadirKelulusan = async (req, res) => {
 // 5. Data presentasi (flyer) - REKAP PER PROGRAM (Satu sisya bisa muncul 2x jika ikut 2 program)
 exports.getPresentasiData = async (req, res) => {
   try {
+    // 1. Ambil data program & sesi untuk hitung eligibility (sama seperti logic absensi)
+    const programs = await prisma.programAjahan.findMany({
+      include: {
+        mataKuliahs: { include: { sesiAbsensis: true } }
+      }
+    });
+    const programSesiMap = {};
+    programs.forEach(p => {
+      const sesiIds = [];
+      p.mataKuliahs.forEach(mk => {
+        mk.sesiAbsensis.forEach(s => sesiIds.push(s.id));
+      });
+      programSesiMap[p.id] = sesiIds;
+    });
+
+    // 2. Ambil data prosesi yang sudah hadir
     const prosesi = await prisma.prosesiKelulusan.findMany({
       include: {
         sisya: {
           include: {
+            absensiSisyas: true,
             programSisyas: {
               include: { programAjahan: true }
             }
@@ -215,18 +232,59 @@ exports.getPresentasiData = async (req, res) => {
 
     const data = [];
     prosesi.forEach(p => {
-      p.sisya.programSisyas.forEach(sp => {
-        data.push({
-          id: p.sisya.id,
-          spId: sp.id,
-          namaLengkap: p.sisya.namaLengkap,
-          fileFotoPath: p.sisya.fileFotoPath,
-          namaGriya: p.sisya.namaGriya,
-          nomorSertifikat: sp.nomorRegistrasi || '-',
-          programId: sp.programAjahan.id,
-          programNama: sp.programAjahan.nama,
-          waktuHadir: p.waktuHadir
+      const sisya = p.sisya;
+      
+      // Cek apakah sisya masih eligible secara keseluruhan
+      let isStillEligible = false;
+      if (sisya.statusKelulusan === 'LULUS') {
+        isStillEligible = true;
+      } else if (sisya.statusKelulusan === 'TIDAK_LULUS') {
+        isStillEligible = false;
+      } else {
+        // Cek eligibility minimal di 1 program
+        isStillEligible = sisya.programSisyas.some(sp => {
+          const targetSesiIds = programSesiMap[sp.programAjahanId] || [];
+          const totalSesi = targetSesiIds.length;
+          const totalHadir = sisya.absensiSisyas.filter(a => 
+            targetSesiIds.includes(a.sesiAbsensiId) && a.status === 'HADIR'
+          ).length;
+          const persentase = totalSesi === 0 ? 0 : Math.round((totalHadir / totalSesi) * 100);
+          return persentase >= 50;
         });
+      }
+
+      // Jika tidak eligible, jangan masukkan ke data presentasi
+      if (!isStillEligible) return;
+
+      sisya.programSisyas.forEach(sp => {
+        // Hanya masukkan program yang eligible jika status AUTO
+        // Namun jika status LULUS (paksa), masukkan semua program sisya tersebut
+        let showThisProgram = false;
+        if (sisya.statusKelulusan === 'LULUS') {
+          showThisProgram = true;
+        } else {
+          const targetSesiIds = programSesiMap[sp.programAjahanId] || [];
+          const totalSesi = targetSesiIds.length;
+          const totalHadir = sisya.absensiSisyas.filter(a => 
+            targetSesiIds.includes(a.sesiAbsensiId) && a.status === 'HADIR'
+          ).length;
+          const persentase = totalSesi === 0 ? 0 : Math.round((totalHadir / totalSesi) * 100);
+          if (persentase >= 50) showThisProgram = true;
+        }
+
+        if (showThisProgram) {
+          data.push({
+            id: sisya.id,
+            spId: sp.id,
+            namaLengkap: sisya.namaLengkap,
+            fileFotoPath: sisya.fileFotoPath,
+            namaGriya: sisya.namaGriya,
+            nomorSertifikat: sp.nomorRegistrasi || '-',
+            programId: sp.programAjahan.id,
+            programNama: sp.programAjahan.nama,
+            waktuHadir: p.waktuHadir
+          });
+        }
       });
     });
 
