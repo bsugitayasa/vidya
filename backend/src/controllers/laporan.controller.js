@@ -210,6 +210,61 @@ const getLaporanPuniaBulanan = async (req, res) => {
   }
 };
 
+const getLaporanPuniaDashboard = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const where = { status: 'VERIFIKASI' };
+    if (startDate || endDate) {
+      where.tanggalBayar = {};
+      if (startDate) where.tanggalBayar.gte = new Date(startDate);
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.tanggalBayar.lte = end;
+      }
+    }
+
+    // 1. Summary Stats
+    const summary = await prisma.pembayaran.aggregate({
+      where,
+      _sum: { nominal: true },
+      _count: { id: true },
+      _avg: { nominal: true }
+    });
+
+    // 2. Monthly Trend (Last 6 Months)
+    const trendResult = await prisma.$queryRaw`
+      SELECT 
+        EXTRACT(YEAR FROM "tanggalBayar")::text as year,
+        EXTRACT(MONTH FROM "tanggalBayar")::text as month,
+        SUM(nominal)::bigint as total
+      FROM "Pembayaran"
+      WHERE status = 'VERIFIKASI'
+      GROUP BY year, month
+      ORDER BY year DESC, month DESC
+      LIMIT 6
+    `;
+
+    res.json({
+      success: true,
+      summary: {
+        totalNominal: Number(summary._sum.nominal || 0),
+        totalTransactions: summary._count.id || 0,
+        averageNominal: Math.round(Number(summary._avg.nominal || 0))
+      },
+      trend: trendResult.map(r => ({
+        month: parseInt(r.month),
+        year: parseInt(r.year),
+        total: Number(r.total)
+      })).reverse()
+    });
+  } catch (error) {
+    console.error('Get Punia Dashboard Stats Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal mengambil data statistik dashboard' });
+  }
+};
+
 
 const exportSisya = async (req, res) => {
   try {
@@ -705,6 +760,7 @@ module.exports = {
   exportSisya,
   getLaporanPuniaRange,
   getLaporanPuniaBulanan,
+  getLaporanPuniaDashboard,
   exportPuniaRange,
   getLaporanAbsensi,
   exportLaporanAbsensi

@@ -46,7 +46,7 @@ export default function AdminLayout() {
       color: 'text-emerald-400',
       subItems: [
         { path: '/admin/laporan/pendaftaran', label: 'Pendaftaran' },
-        { path: '/admin/laporan/punia-range', label: 'Punia (Range)' },
+        { path: '/admin/laporan/punia-range', label: 'Detail Punia' },
         { path: '/admin/laporan/punia-bulanan', label: 'Rekap Bulanan' },
         { path: '/admin/laporan/absensi', label: 'Rekap Absensi' },
       ]
@@ -123,8 +123,8 @@ export default function AdminLayout() {
                   <button
                     onClick={() => toggleExpand(item.path)}
                     className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all ${isParentActive
-                        ? 'bg-primary/20 text-white font-semibold'
-                        : 'hover:bg-primary/20 text-white/80 hover:text-white'
+                      ? 'bg-primary/20 text-white font-semibold'
+                      : 'hover:bg-primary/20 text-white/80 hover:text-white'
                       } ${isMinimized ? 'justify-center' : ''}`}
                   >
                     <Icon size={20} className={isParentActive ? 'text-primary' : item.color} />
@@ -145,8 +145,8 @@ export default function AdminLayout() {
                             key={sub.path}
                             to={sub.path}
                             className={`block p-2 rounded-md text-sm transition-all ${isSubActive
-                                ? 'text-white bg-primary font-medium'
-                                : 'text-white/60 hover:text-white hover:bg-white/5'
+                              ? 'text-white bg-primary font-medium'
+                              : 'text-white/60 hover:text-white hover:bg-white/5'
                               }`}
                           >
                             {sub.label}
@@ -164,8 +164,8 @@ export default function AdminLayout() {
                 key={item.path}
                 to={item.path}
                 className={`flex items-center gap-3 p-3 rounded-lg transition-all ${location.pathname === item.path
-                    ? 'bg-primary text-white shadow-lg font-semibold'
-                    : 'hover:bg-primary/20 text-white/80 hover:text-white'
+                  ? 'bg-primary text-white shadow-lg font-semibold'
+                  : 'hover:bg-primary/20 text-white/80 hover:text-white'
                   } ${isMinimized ? 'justify-center' : ''}`}
                 title={isMinimized ? item.label : ''}
               >
