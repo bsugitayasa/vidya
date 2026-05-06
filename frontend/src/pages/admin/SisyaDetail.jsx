@@ -21,7 +21,14 @@ const sisyaUpdateSchema = z.object({
     errorMap: () => ({ message: 'Jenis kelamin harus LAKI_LAKI atau PEREMPUAN' })
   }),
   alamat: z.string().min(5, 'Alamat minimal 5 karakter'),
-  noHp: z.string().regex(/^081\d+$/, "Nomor HP harus diawali dengan 081").min(10, "Nomor HP minimal 10 digit"),
+  noHp: z.string()
+    .transform(val => val.replace(/\D/g, ''))
+    .transform(val => {
+      if (val.startsWith('62')) return '0' + val.substring(2);
+      return val;
+    })
+    .refine(val => /^08\d+$/.test(val), "Nomor HP harus diawali dengan 08")
+    .refine(val => val.length >= 10, "Nomor HP minimal 10 digit"),
   email: z.string().email('Format email tidak valid').optional().or(z.literal('')),
   namaGriya: z.string().min(2, 'Nama Griya wajib diisi'),
   namaDesa: z.string().min(2, 'Nama Desa wajib diisi')
@@ -712,7 +719,7 @@ export default function SisyaDetail() {
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-muted uppercase">No HP *</label>
                     <Input 
-                      placeholder="081xxxxxxxxx" 
+                      placeholder="08xxxxxxxxxx" 
                       {...register('noHp')} 
                       onChange={(e) => {
                         let val = e.target.value;

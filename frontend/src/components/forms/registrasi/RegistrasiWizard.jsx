@@ -17,7 +17,14 @@ const step1Schema = z.object({
   tanggalLahir: z.string().min(1, "Tanggal lahir harus diisi"),
   jenisKelamin: z.enum(['LAKI_LAKI', 'PEREMPUAN'], { required_error: "Pilih jenis kelamin" }),
   alamat: z.string().min(10, "Alamat harus lengkap (min 10 karakter)"),
-  noHp: z.string().regex(/^081\d+$/, "Nomor HP harus diawali dengan 081").min(10, "Nomor HP minimal 10 digit"),
+  noHp: z.string()
+    .transform(val => val.replace(/\D/g, ''))
+    .transform(val => {
+      if (val.startsWith('62')) return '0' + val.substring(2);
+      return val;
+    })
+    .refine(val => /^08\d+$/.test(val), "Nomor HP harus diawali dengan 08")
+    .refine(val => val.length >= 10, "Nomor HP minimal 10 digit"),
   email: z.string().email("Format email tidak valid").optional().or(z.literal('')),
 });
 

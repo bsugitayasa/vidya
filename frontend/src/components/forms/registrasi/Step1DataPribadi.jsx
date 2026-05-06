@@ -105,7 +105,7 @@ export default function Step1DataPribadi({ register, errors, setValue, watch }) 
           <Label htmlFor="noHp">No. HP / WhatsApp *</Label>
           <Input 
             id="noHp" 
-            placeholder="081xxxxxxxxx" 
+            placeholder="08xxxxxxxxxx" 
             {...register('noHp')}
             onChange={(e) => {
               let val = e.target.value;
