@@ -142,14 +142,14 @@ export default function Laporan() {
           <p className="text-sm text-muted mt-1">Unduh rekapitulasi data pendaftar dan punia</p>
         </div>
         
-        <Button 
+        <button 
           onClick={exportToExcel} 
           disabled={sisyas.length === 0 || isExporting} 
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
         >
           {isExporting ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />}
           {isExporting ? 'Sedang Mengekspor...' : 'Export Excel (.xlsx)'}
-        </Button>
+        </button>
       </div>
 
       <div className="bg-surface p-4 rounded-lg shadow-sm border border-muted/20 flex flex-wrap gap-4 items-end">
@@ -260,7 +260,12 @@ export default function Laporan() {
                 sisyas.map(sisya => (
                   <tr key={sisya.id} className="hover:bg-bg/50 transition-colors">
                     <td className="p-4 text-sm font-mono font-medium text-primary">{sisya.nomorPendaftaran}</td>
-                    <td className="p-4 text-sm font-medium">{sisya.namaLengkap}</td>
+                    <td className="p-4 text-sm font-medium">
+                      <div className="flex flex-col">
+                        <span>{sisya.namaLengkap}</span>
+                        <span className="text-[10px] text-primary/70 font-bold uppercase tracking-tight">{sisya.namaGriya}</span>
+                      </div>
+                    </td>
                     <td className="p-4 text-sm">
                       <div className="flex gap-1 flex-wrap">
                         {sisya.programSisyas.map(sp => (

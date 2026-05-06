@@ -116,6 +116,7 @@ const getLaporanPuniaRange = async (req, res) => {
               id: true,
               namaLengkap: true,
               nomorPendaftaran: true,
+              namaGriya: true,
               programSisyas: {
                 include: {
                   programAjahan: {

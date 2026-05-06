@@ -76,6 +76,7 @@ exports.getEligibility = async (req, res) => {
         persentase,
         statusKelulusan: sisya.statusKelulusan,
         isEligible,
+        namaGriya: sisya.namaGriya
       };
     });
 
@@ -161,7 +162,8 @@ exports.getHadirKelulusan = async (req, res) => {
         namaLengkap: sisya.namaLengkap,
         isHadir: !!sisya.prosesiKelulusan,
         waktuHadir: sisya.prosesiKelulusan?.waktuHadir || null,
-        program: sisya.programSisyas.map(p => p.programAjahan.nama).join(', ')
+        program: sisya.programSisyas.map(p => p.programAjahan.nama).join(', '),
+        namaGriya: sisya.namaGriya
       };
     });
 

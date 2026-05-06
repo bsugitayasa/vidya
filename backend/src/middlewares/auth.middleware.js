@@ -21,14 +21,23 @@ const requireAuth = (req, res, next) => {
 };
 
 const requireAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'ADMIN') {
+  if (req.user && (req.user.role === 'ADMIN' || req.user.role === 'SUPER_ADMIN')) {
     next();
   } else {
     return res.status(403).json({ success: false, message: 'Akses ditolak. Hanya untuk Admin.' });
   }
 };
 
+const requireSuperAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'SUPER_ADMIN') {
+    next();
+  } else {
+    return res.status(403).json({ success: false, message: 'Akses ditolak. Hanya untuk Super Admin.' });
+  }
+};
+
 module.exports = {
   requireAuth,
-  requireAdmin
+  requireAdmin,
+  requireSuperAdmin
 };

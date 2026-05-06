@@ -6,11 +6,32 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('Seeding data...')
 
-  // 1. Seed Admin User
+  // 1. Seed Admin Users
+  const superAdminPassword = await bcrypt.hash('pdpnjaya@2026', 10)
+
+  // Super Admin
+  await prisma.user.upsert({
+    where: { email: 'admin@pdpn.com' },
+    update: { 
+      role: 'SUPER_ADMIN',
+      password: superAdminPassword 
+    },
+    create: {
+      email: 'admin@pdpn.com',
+      password: superAdminPassword,
+      nama: 'Super Admin',
+      role: 'SUPER_ADMIN',
+    },
+  })
+
+  // Regular Admin
   const adminPassword = await bcrypt.hash('capungmas@2026', 10)
-  const admin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'admin.vidya@pdpn.com' },
-    update: {},
+    update: { 
+      role: 'ADMIN',
+      password: adminPassword
+    },
     create: {
       email: 'admin.vidya@pdpn.com',
       password: adminPassword,
@@ -18,7 +39,7 @@ async function main() {
       role: 'ADMIN',
     },
   })
-  console.log('Admin user created/verified.')
+  console.log('Admin users seeded.')
 
   // 2. Seed Program Ajahan
   const programs = [

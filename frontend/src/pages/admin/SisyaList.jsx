@@ -227,7 +227,12 @@ export default function SisyaList() {
                 sisyas.map(sisya => (
                   <tr key={sisya.id} className="hover:bg-bg/50 transition-colors">
                     <td className="p-4 text-sm font-mono font-medium text-primary">{sisya.nomorPendaftaran}</td>
-                    <td className="p-4 text-sm font-medium">{sisya.namaLengkap}</td>
+                    <td className="p-4 text-sm font-medium">
+                      <div className="flex flex-col">
+                        <span>{sisya.namaLengkap}</span>
+                        <span className="text-[10px] text-primary/70 font-bold uppercase tracking-tight">{sisya.namaGriya}</span>
+                      </div>
+                    </td>
                     <td className="p-4 text-sm">
                       <div className="flex flex-col gap-1">
                         {sisya.programSisyas.map(sp => (

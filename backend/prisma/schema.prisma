@@ -131,6 +131,7 @@ model AbsensiSisya {
 }
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
   STAFF
 }

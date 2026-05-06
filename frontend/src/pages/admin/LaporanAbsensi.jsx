@@ -108,14 +108,14 @@ export default function LaporanAbsensi() {
           </h2>
           <p className="text-sm text-muted mt-1">Laporan tingkat kehadiran sisya per program ajahan</p>
         </div>
-        <Button 
+        <button 
           onClick={exportToExcel} 
           disabled={isExporting}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
         >
           {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
           Export Excel
-        </Button>
+        </button>
       </div>
 
       {/* Filters */}

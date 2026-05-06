@@ -210,7 +210,7 @@ export default function SyaratKelulusan() {
                       <div className="flex flex-col">
                         <span className="text-sm font-bold text-text">{item.namaLengkap}</span>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-muted font-mono">{item.nomorPendaftaran}</span>
+                          <span className="text-[10px] text-primary/70 font-bold uppercase tracking-tight">{item.namaGriya}</span>
                           {item.statusSisya && item.statusSisya !== 'AKTIF' && (
                             <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[9px] font-black uppercase border border-amber-200">
                               {item.statusSisya}
