@@ -1,9 +1,19 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// Helper: ambil persentase minimum kelulusan dari konfigurasi
+async function getMinPersentase() {
+  const config = await prisma.konfigurasiAplikasi.findUnique({
+    where: { kunci: 'persentase_kelulusan' }
+  });
+  return config ? parseInt(config.nilai, 10) : 50; // fallback 50% jika tidak ada config
+}
+
 // 1. Dapatkan daftar syarat kelulusan (dengan persentase kehadiran) - REKAP PER PROGRAM
 exports.getEligibility = async (req, res) => {
   try {
+    const minPersentase = await getMinPersentase();
+
     // Ambil data sisya program beserta seluruh relasi absensi dan sesinya
     // Kita hilangkan filter status AKTIF agar semua yang terdaftar muncul, 
     // namun kita sertakan informasi statusnya.
@@ -59,7 +69,7 @@ exports.getEligibility = async (req, res) => {
       } else if (sisya.statusKelulusan === 'TIDAK_LULUS') {
         isEligible = false;
       } else {
-        isEligible = persentase >= 50;
+        isEligible = persentase >= minPersentase;
       }
 
       return {
@@ -80,7 +90,7 @@ exports.getEligibility = async (req, res) => {
       };
     });
 
-    res.json({ success: true, data });
+    res.json({ success: true, data, minPersentase });
   } catch (error) {
     console.error('Error getEligibility:', error);
     res.status(500).json({ success: false, error: 'Internal Server Error' });
@@ -112,6 +122,8 @@ exports.updateEligibility = async (req, res) => {
 // 3. Dapatkan daftar absensi hari H kelulusan (TETAP PER SISYA UNTUK ABSENSI)
 exports.getHadirKelulusan = async (req, res) => {
   try {
+    const minPersentase = await getMinPersentase();
+
     // 1. Ambil data program & sesi untuk hitung eligibility
     const programs = await prisma.programAjahan.findMany({
       include: {
@@ -153,7 +165,7 @@ exports.getHadirKelulusan = async (req, res) => {
           targetSesiIds.includes(a.sesiAbsensiId) && a.status === 'HADIR'
         ).length;
         const persentase = totalSesi === 0 ? 0 : Math.round((totalHadir / totalSesi) * 100);
-        return persentase >= 50;
+        return persentase >= minPersentase;
       });
     }).map(sisya => {
       return {
@@ -202,6 +214,8 @@ exports.inputHadirKelulusan = async (req, res) => {
 // 5. Data presentasi (flyer) - REKAP PER PROGRAM (Satu sisya bisa muncul 2x jika ikut 2 program)
 exports.getPresentasiData = async (req, res) => {
   try {
+    const minPersentase = await getMinPersentase();
+
     // 1. Ambil data program & sesi untuk hitung eligibility (sama seperti logic absensi)
     const programs = await prisma.programAjahan.findMany({
       include: {
@@ -251,7 +265,7 @@ exports.getPresentasiData = async (req, res) => {
             targetSesiIds.includes(a.sesiAbsensiId) && a.status === 'HADIR'
           ).length;
           const persentase = totalSesi === 0 ? 0 : Math.round((totalHadir / totalSesi) * 100);
-          return persentase >= 50;
+          return persentase >= minPersentase;
         });
       }
 
@@ -271,7 +285,7 @@ exports.getPresentasiData = async (req, res) => {
             targetSesiIds.includes(a.sesiAbsensiId) && a.status === 'HADIR'
           ).length;
           const persentase = totalSesi === 0 ? 0 : Math.round((totalHadir / totalSesi) * 100);
-          if (persentase >= 50) showThisProgram = true;
+          if (persentase >= minPersentase) showThisProgram = true;
         }
 
         if (showThisProgram) {

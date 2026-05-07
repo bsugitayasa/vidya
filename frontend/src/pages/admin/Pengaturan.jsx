@@ -122,7 +122,7 @@ export default function Pengaturan() {
             <h3 className="font-bold text-text">Informasi Pembayaran</h3>
           </div>
           
-          {Object.keys(configs).filter(k => k !== 'tanggal_kelulusan' && k !== 'musik_kelulusan').map(key => (
+          {Object.keys(configs).filter(k => k !== 'tanggal_kelulusan' && k !== 'musik_kelulusan' && k !== 'persentase_kelulusan').map(key => (
             <div key={key} className="space-y-1.5">
               <label className="text-xs font-bold text-muted uppercase tracking-wider">{configs[key].label}</label>
               <Input 
@@ -154,6 +154,26 @@ export default function Pengaturan() {
               />
               <p className="text-[10px] text-muted italic mt-2">
                 *Tanggal ini akan ditampilkan pada layar utama presentasi kelulusan.
+              </p>
+            </div>
+          )}
+
+          {configs.persentase_kelulusan && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">{configs.persentase_kelulusan.label}</label>
+              <div className="flex items-center gap-2">
+                <Input 
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={configs.persentase_kelulusan.nilai}
+                  onChange={(e) => handleConfigChange('persentase_kelulusan', e.target.value)}
+                  className="bg-muted/5 border-muted/20 w-24 text-center font-bold"
+                />
+                <span className="text-sm font-bold text-muted">%</span>
+              </div>
+              <p className="text-[10px] text-muted italic mt-2">
+                *Persentase kehadiran minimum yang dibutuhkan sisya untuk dinyatakan lulus. Contoh: 50 berarti sisya harus hadir minimal 50% dari total sesi.
               </p>
             </div>
           )}

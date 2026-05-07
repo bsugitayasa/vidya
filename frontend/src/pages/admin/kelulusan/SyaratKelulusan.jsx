@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 export default function SyaratKelulusan() {
   const [data, setData] = useState([]);
   const [programs, setPrograms] = useState([]);
+  const [minPersentase, setMinPersentase] = useState(50);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterProgram, setFilterProgram] = useState('ALL');
@@ -27,6 +28,9 @@ export default function SyaratKelulusan() {
       
       if (eligRes.data.success) {
         setData(eligRes.data.data);
+        if (eligRes.data.minPersentase !== undefined) {
+          setMinPersentase(eligRes.data.minPersentase);
+        }
       }
       if (progRes.data.success) {
         setPrograms(progRes.data.data);
@@ -54,7 +58,7 @@ export default function SyaratKelulusan() {
             let isEligible = false;
             if (newStatus === 'LULUS') isEligible = true;
             else if (newStatus === 'TIDAK_LULUS') isEligible = false;
-            else isEligible = s.persentase >= 50;
+            else isEligible = s.persentase >= minPersentase;
             return { ...s, statusKelulusan: newStatus, isEligible };
           }
           return s;
@@ -133,6 +137,10 @@ export default function SyaratKelulusan() {
         <div>
           <h2 className="text-2xl font-bold font-heading text-primary">Syarat Kelulusan</h2>
           <p className="text-muted text-sm mt-1">Rekapitulasi kelayakan lulus per program ajahan.</p>
+          <div className="mt-2 inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <span className="text-xs font-bold text-amber-700">Syarat kelulusan saat ini: <span className="text-amber-900">{minPersentase}%</span> kehadiran minimum</span>
+          </div>
         </div>
         <button 
           onClick={exportToExcel}
@@ -226,12 +234,12 @@ export default function SyaratKelulusan() {
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex flex-col items-center">
-                        <span className={`font-black text-sm ${item.persentase >= 50 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        <span className={`font-black text-sm ${item.persentase >= minPersentase ? 'text-emerald-600' : 'text-rose-600'}`}>
                           {item.persentase}%
                         </span>
                         <div className="w-12 bg-muted/20 rounded-full h-1 mt-1 overflow-hidden">
                           <div 
-                            className={`h-full rounded-full transition-all ${item.persentase >= 50 ? 'bg-emerald-500' : 'bg-rose-500'}`} 
+                            className={`h-full rounded-full transition-all ${item.persentase >= minPersentase ? 'bg-emerald-500' : 'bg-rose-500'}`} 
                             style={{ width: `${Math.min(100, item.persentase)}%` }}
                           />
                         </div>

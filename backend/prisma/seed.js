@@ -71,6 +71,7 @@ async function main() {
     { kunci: 'nomor_rekening', nilai: '018.02.02.31507-5', label: 'Nomor Rekening' },
     { kunci: 'nama_rekening', nilai: 'PDPN DIKJAR POLEKSOSDA', label: 'Nama Pemilik Rekening' },
     { kunci: 'tanggal_kelulusan', nilai: '2026-05-10', label: 'Tanggal Prosesi Kelulusan' },
+    { kunci: 'persentase_kelulusan', nilai: '50', label: 'Persentase Minimum Kelulusan (%)' },
   ]
 
   for (const c of configs) {

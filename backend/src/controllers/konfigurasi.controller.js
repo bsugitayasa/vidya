@@ -1,8 +1,26 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// Default configs yang harus selalu ada
+const DEFAULT_CONFIGS = [
+  { kunci: 'nama_bank', nilai: '', label: 'Nama Bank' },
+  { kunci: 'nomor_rekening', nilai: '', label: 'Nomor Rekening' },
+  { kunci: 'nama_rekening', nilai: '', label: 'Nama Pemilik Rekening' },
+  { kunci: 'tanggal_kelulusan', nilai: '', label: 'Tanggal Prosesi Kelulusan' },
+  { kunci: 'persentase_kelulusan', nilai: '50', label: 'Persentase Minimum Kelulusan (%)' },
+];
+
 const getAll = async (req, res) => {
   try {
+    // Pastikan semua default config ada di database
+    for (const def of DEFAULT_CONFIGS) {
+      await prisma.konfigurasiAplikasi.upsert({
+        where: { kunci: def.kunci },
+        update: {}, // Jangan overwrite nilai yang sudah ada
+        create: def,
+      });
+    }
+
     const configs = await prisma.konfigurasiAplikasi.findMany();
     // Convert array to object key-value pairs for easier frontend usage
     const configData = {};
