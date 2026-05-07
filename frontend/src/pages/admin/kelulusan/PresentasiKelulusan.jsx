@@ -224,7 +224,7 @@ export default function PresentasiKelulusan() {
   const currentSisya = filteredData[currentIndex];
 
   return (
-    <div className={`relative bg-[#FFFAF0] text-[#2D3748] overflow-hidden ${isFullscreen ? 'fixed inset-0 z-[100] flex flex-col' : 'h-[85vh] rounded-2xl shadow-xl border border-[#F6AD55]/30'}`}>
+    <div className={`relative bg-[#FFFAF0] text-[#2D3748] overflow-hidden flex flex-col ${isFullscreen ? 'fixed inset-0 z-[100]' : 'h-[85vh] rounded-2xl shadow-xl border border-[#F6AD55]/30'}`}>
       
       <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#C05621 1px, transparent 1px)', backgroundSize: '40px 40px' }}></div>
 

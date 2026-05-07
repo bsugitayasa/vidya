@@ -314,12 +314,12 @@ export default function SisyaDetail() {
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6 text-center relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-16 bg-primary/5 -z-0"></div>
             <div className="relative z-10">
-              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-primary/20 shadow-md overflow-hidden">
+              <div className="w-28 h-28 bg-white rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-primary/10 shadow-md overflow-hidden p-1">
                 {fotoUrl ? (
-                  <img src={fotoUrl} alt="Foto Sisya" className="w-full h-full object-cover" />
+                  <img src={fotoUrl} alt="Foto Sisya" className="w-full h-full object-cover rounded-full object-top" />
                 ) : (
-                  <div className="bg-primary/10 w-full h-full flex items-center justify-center">
-                    <User size={40} className="text-primary" />
+                  <div className="bg-primary/5 w-full h-full flex items-center justify-center rounded-full">
+                    <User size={40} className="text-primary/30" />
                   </div>
                 )}
               </div>
