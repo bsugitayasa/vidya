@@ -190,6 +190,30 @@ export default function SisyaDetail() {
     toast.success(`Mengunduh ${label}...`);
   };
 
+  const normalizeName = (name) => {
+    if (!name) return '';
+    const upperExceptions = ['IB', 'IA', 'AA', 'GD', 'S.PD', 'S.AG', 'M.PD', 'DR.'];
+    return name
+      .trim()
+      .replace(/\s+/g, ' ')
+      .split(' ')
+      .map(word => {
+        const firstAlphaIdx = word.search(/[a-zA-Z]/);
+        if (firstAlphaIdx === -1) return word.toUpperCase();
+        
+        const prefix = word.slice(0, firstAlphaIdx);
+        const mainPart = word.slice(firstAlphaIdx);
+        const upperMain = mainPart.toUpperCase();
+
+        if (upperExceptions.includes(upperMain) || upperExceptions.some(ex => upperMain.startsWith(ex))) {
+          return prefix + upperMain;
+        }
+        if (mainPart.length <= 1) return prefix + upperMain;
+        return prefix + upperMain.charAt(0) + upperMain.slice(1).toLowerCase();
+      })
+      .join(' ');
+  };
+
   const fetchSisyaDetail = async () => {
     try {
       const res = await api.get(`/sisya/${id}`);
@@ -717,7 +741,14 @@ export default function SisyaDetail() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-xs font-bold text-muted uppercase">Nama Lengkap *</label>
-                    <Input placeholder="Nama lengkap" {...register('namaLengkap')} />
+                    <Input 
+                      placeholder="Nama lengkap" 
+                      {...register('namaLengkap')} 
+                      onBlur={(e) => {
+                        const normalized = normalizeName(e.target.value);
+                        setValue('namaLengkap', normalized, { shouldValidate: true });
+                      }}
+                    />
                     {errors.namaLengkap && <p className="text-sm text-red-500">{errors.namaLengkap.message}</p>}
                   </div>
 
