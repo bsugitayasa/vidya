@@ -3,7 +3,7 @@ const router = express.Router();
 const sisyaController = require('../controllers/sisya.controller');
 const pembayaranController = require('../controllers/pembayaran.controller');
 const upload = require('../middlewares/upload.middleware');
-const { requireAuth, requireAdmin } = require('../middlewares/auth.middleware');
+const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const { sisyaRegistrationSchema, sisyaUpdateSchema } = require('../../../shared/schemas/sisya.schema');
 
@@ -30,7 +30,7 @@ router.get('/files/:filename', requireAuth, requireAdmin, sisyaController.serveF
 router.get('/:id', requireAuth, requireAdmin, sisyaController.getById);
 
 // PUT /api/sisya/:id
-router.put('/:id', requireAuth, requireAdmin, validate(sisyaUpdateSchema), sisyaController.updateSisya);
+router.put('/:id', requireAuth, requireSuperAdmin, validate(sisyaUpdateSchema), sisyaController.updateSisya);
 
 // POST /api/sisya/:sisyaId/upload-punia (Public - for late payment proof upload)
 router.post('/:sisyaId/upload-punia', statusCheckLimiter, upload.single('filePunia'), pembayaranController.uploadBuktiBayar);

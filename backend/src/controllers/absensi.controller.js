@@ -700,6 +700,43 @@ const exportAbsensi = async (req, res) => {
   }
 };
 
+// PATCH /api/absensi/sesi/:sesiId (Update tanggal/topik sesi — Super Admin only)
+const updateSesi = async (req, res) => {
+  try {
+    const { sesiId } = req.params;
+    const { tanggal, topik } = req.body;
+
+    const existing = await prisma.sesiAbsensi.findUnique({
+      where: { id: parseInt(sesiId) }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Sesi tidak ditemukan' });
+    }
+
+    const updateData = {};
+    if (tanggal) updateData.tanggal = new Date(tanggal);
+    if (topik !== undefined) updateData.topik = topik || null;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: 'Tidak ada data yang diubah' });
+    }
+
+    const updated = await prisma.sesiAbsensi.update({
+      where: { id: parseInt(sesiId) },
+      data: updateData,
+      include: {
+        mataKuliah: { select: { nama: true, kode: true } }
+      }
+    });
+
+    res.json({ success: true, data: updated, message: 'Sesi berhasil diperbarui' });
+  } catch (error) {
+    console.error('Update Sesi Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal memperbarui sesi' });
+  }
+};
+
 module.exports = {
   getMataKuliah,
   createMataKuliah,
@@ -709,6 +746,7 @@ module.exports = {
   createSesi,
   getSesiDetail,
   inputAbsensi,
+  updateSesi,
   getRekapSisya,
   getRekapMataKuliah,
   exportAbsensi

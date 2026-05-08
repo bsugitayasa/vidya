@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2, Download, Edit2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2, Download, Edit2, Upload } from 'lucide-react';
 import api from '../../lib/axios';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import useFileUrl from '../../hooks/useFileUrl';
 import { getProgramBadgeStyle } from '../../lib/utils';
+import useAuthStore from '../../store/authStore';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -36,6 +38,8 @@ const sisyaUpdateSchema = z.object({
 
 export default function SisyaDetail() {
   const { id } = useParams();
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const [sisya, setSisya] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -53,6 +57,12 @@ export default function SisyaDetail() {
   const [showEditRegModal, setShowEditRegModal] = useState(false);
   const [selectedSp, setSelectedSp] = useState(null);
   const [newNomorRegistrasi, setNewNomorRegistrasi] = useState('');
+
+  // Upload Bukti Bayar state (Super Admin)
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadKeterangan, setUploadKeterangan] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
     resolver: zodResolver(sisyaUpdateSchema),
@@ -201,6 +211,33 @@ export default function SisyaDetail() {
     setShowVerifyModal(true);
   };
 
+  const handleAdminUploadBukti = async () => {
+    if (!uploadFile) {
+      toast.error('Pilih file bukti pembayaran');
+      return;
+    }
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('filePunia', uploadFile);
+      formData.append('keterangan', uploadKeterangan || 'Upload oleh Admin');
+      const res = await api.post(`/pembayaran/admin-upload/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      if (res.data.success) {
+        toast.success('Bukti pembayaran berhasil diupload');
+        setShowUploadModal(false);
+        setUploadFile(null);
+        setUploadKeterangan('');
+        fetchSisyaDetail();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal mengupload bukti');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleVerifikasi = async (status) => {
     if (status === 'VERIFIKASI' && !nominalVerifikasi) {
       toast.error('Masukkan nominal yang diverifikasi');
@@ -227,15 +264,21 @@ export default function SisyaDetail() {
     }
   };
 
-  const handleDeletePembayaran = async (pembayaranId) => {
-    if (!confirm('Hapus bukti pembayaran ini?')) return;
-    
+  // Delete confirmation state
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, id: null });
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeletePembayaran = async () => {
+    setIsDeleting(true);
     try {
-        await api.delete(`/pembayaran/${pembayaranId}`);
+        await api.delete(`/pembayaran/${confirmDelete.id}`);
         toast.success('Bukti pembayaran dihapus');
+        setConfirmDelete({ open: false, id: null });
         fetchSisyaDetail();
     } catch (err) {
         toast.error('Gagal menghapus pembayaran');
+    } finally {
+        setIsDeleting(false);
     }
   };
 
@@ -414,9 +457,11 @@ export default function SisyaDetail() {
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
             <div className="flex justify-between items-center border-b border-muted/20 pb-2 mb-4">
               <h4 className="font-bold text-primary">Data Pribadi</h4>
-              <Button variant="ghost" size="sm" className="h-8 text-primary hover:bg-primary/10" onClick={handleOpenEditModal}>
-                <Edit2 size={14} className="mr-1" /> Edit
-              </Button>
+              {isSuperAdmin && (
+                <Button variant="ghost" size="sm" className="h-8 text-primary hover:bg-primary/10" onClick={handleOpenEditModal}>
+                  <Edit2 size={14} className="mr-1" /> Edit
+                </Button>
+              )}
             </div>
             <div className="space-y-4 text-sm">
                 <div>
@@ -440,9 +485,16 @@ export default function SisyaDetail() {
           
           {/* Riwayat Pembayaran */}
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
-            <h4 className="font-bold text-lg border-b border-muted/20 pb-3 mb-4 text-primary flex items-center gap-2">
-                <CreditCard size={20} /> Riwayat Pembayaran (Cicilan)
-            </h4>
+            <div className="flex justify-between items-center border-b border-muted/20 pb-3 mb-4">
+              <h4 className="font-bold text-lg text-primary flex items-center gap-2">
+                  <CreditCard size={20} /> Riwayat Pembayaran (Cicilan)
+              </h4>
+              {isSuperAdmin && (
+                <Button size="sm" variant="outline" className="h-8 text-xs font-bold" onClick={() => setShowUploadModal(true)}>
+                  <Upload size={14} className="mr-1" /> Upload Bukti Bayar
+                </Button>
+              )}
+            </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                     <thead>
@@ -486,7 +538,7 @@ export default function SisyaDetail() {
                                                 <Button size="sm" className="h-7 text-xs" onClick={() => handleOpenVerifyModal(p)}>
                                                     Verifikasi
                                                 </Button>
-                                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500" onClick={() => handleDeletePembayaran(p.id)}>
+                                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500" onClick={() => setConfirmDelete({ open: true, id: p.id })}>
                                                     <Trash2 size={14} />
                                                 </Button>
                                             </div>
@@ -513,15 +565,17 @@ export default function SisyaDetail() {
                         <span className="text-[10px] font-mono bg-white/50 px-1.5 py-0.5 rounded border border-black/5">
                           {sp.nomorRegistrasi || 'No Registrasi Belum Ada'}
                         </span>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-5 w-5 p-0 opacity-50 hover:opacity-100" 
-                          onClick={() => handleOpenEditRegModal(sp)}
-                          title="Edit Nomor Sertifikat"
-                        >
-                          <Edit2 size={10} />
-                        </Button>
+                        {isSuperAdmin && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="h-5 w-5 p-0 opacity-50 hover:opacity-100" 
+                            onClick={() => handleOpenEditRegModal(sp)}
+                            title="Edit Nomor Sertifikat"
+                          >
+                            <Edit2 size={10} />
+                          </Button>
+                        )}
                       </div>
                     </div>
                     <span className="font-mono text-sm font-semibold">{formatRupiah(sp.puniaProgram)}</span>
@@ -796,6 +850,62 @@ export default function SisyaDetail() {
           </div>
         </div>
       )}
+
+      {/* Upload Bukti Bayar Modal (Super Admin) */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-muted/20">
+            <div className="p-6 border-b border-muted/10 flex justify-between items-center bg-primary/5">
+              <h3 className="font-bold text-lg text-primary">Upload Bukti Pembayaran</h3>
+              <button onClick={() => { setShowUploadModal(false); setUploadFile(null); setUploadKeterangan(''); }} className="text-muted hover:text-text">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted uppercase">File Bukti Transfer *</label>
+                <input 
+                  type="file" 
+                  accept="image/*"
+                  onChange={(e) => setUploadFile(e.target.files[0])}
+                  className="w-full text-sm border border-muted/20 rounded-md p-2 file:mr-3 file:px-3 file:py-1 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
+                />
+              </div>
+
+              {uploadFile && (
+                <div className="border border-muted/20 rounded-lg overflow-hidden bg-bg aspect-video flex items-center justify-center">
+                  <img src={URL.createObjectURL(uploadFile)} alt="Preview" className="max-w-full max-h-full object-contain" />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted uppercase">Keterangan</label>
+                <Input 
+                  placeholder="Contoh: Pembayaran tunai di kantor"
+                  value={uploadKeterangan}
+                  onChange={(e) => setUploadKeterangan(e.target.value)}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 mt-2">
+                <Button variant="outline" onClick={() => { setShowUploadModal(false); setUploadFile(null); setUploadKeterangan(''); }}>Batal</Button>
+                <Button onClick={handleAdminUploadBukti} disabled={isUploading || !uploadFile}>
+                  {isUploading ? 'Mengupload...' : 'Upload Bukti'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="Hapus Bukti Pembayaran?"
+        message="Data bukti pembayaran ini akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan."
+        confirmLabel="Ya, Hapus"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleDeletePembayaran}
+        onCancel={() => setConfirmDelete({ open: false, id: null })}
+      />
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2, Calendar, BookOpen, Check } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Calendar, BookOpen, Check, Edit2, X } from 'lucide-react';
 import api from '../../../lib/axios';
 import { Button } from '../../../components/ui/button';
 import { getProgramBadgeStyle } from '../../../lib/utils';
+import useAuthStore from '../../../store/authStore';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 
 const STATUS_OPTIONS = [
   { value: 'HADIR', label: 'H', color: 'bg-green-500', hoverBg: 'hover:bg-green-100', activeBg: 'bg-green-100 ring-2 ring-green-500', textColor: 'text-green-700' },
@@ -15,12 +17,19 @@ const STATUS_OPTIONS = [
 export default function SesiAbsensi() {
   const { sesiId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const [sesiData, setSesiData] = useState(null);
   const [absensiState, setAbsensiState] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Edit tanggal state (Super Admin)
+  const [isEditingDate, setIsEditingDate] = useState(false);
+  const [editTanggal, setEditTanggal] = useState('');
+  const [isSavingDate, setIsSavingDate] = useState(false);
 
   useEffect(() => {
     fetchSesiDetail();
@@ -64,6 +73,9 @@ export default function SesiAbsensi() {
     setHasChanges(true);
   };
 
+  // Confirm dialog state for Set Semua
+  const [confirmSetAll, setConfirmSetAll] = useState({ open: false, status: '' });
+
   const handleSave = async () => {
     // Hanya kirim sisya yang sudah diberi status
     const absensi = Object.entries(absensiState)
@@ -91,6 +103,24 @@ export default function SesiAbsensi() {
       setMessage({ type: 'error', text: msg });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSaveDate = async () => {
+    if (!editTanggal) return;
+    setIsSavingDate(true);
+    try {
+      const res = await api.patch(`/absensi/sesi/${sesiId}`, { tanggal: editTanggal });
+      if (res.data.success) {
+        setMessage({ type: 'success', text: 'Tanggal sesi berhasil diperbarui' });
+        setIsEditingDate(false);
+        fetchSesiDetail();
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Gagal memperbarui tanggal';
+      setMessage({ type: 'error', text: msg });
+    } finally {
+      setIsSavingDate(false);
     }
   };
 
@@ -130,12 +160,50 @@ export default function SesiAbsensi() {
             Input Absensi — Pertemuan {sesiData.pertemuan}
           </h2>
           <div className="flex flex-wrap gap-3 mt-2">
-            <span className="text-sm text-muted flex items-center gap-1">
-              <Calendar size={14} />
-              {new Date(sesiData.tanggal).toLocaleDateString('id-ID', {
-                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
-              })}
-            </span>
+            {isEditingDate ? (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="date" 
+                  value={editTanggal}
+                  onChange={(e) => setEditTanggal(e.target.value)}
+                  className="text-sm border border-muted/30 rounded-md px-2 py-1 focus:ring-2 focus:ring-primary/20 outline-none"
+                />
+                <button 
+                  onClick={handleSaveDate}
+                  disabled={isSavingDate}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50"
+                  title="Simpan"
+                >
+                  {isSavingDate ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                </button>
+                <button 
+                  onClick={() => setIsEditingDate(false)}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                  title="Batal"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <span className="text-sm text-muted flex items-center gap-1">
+                <Calendar size={14} />
+                {new Date(sesiData.tanggal).toLocaleDateString('id-ID', {
+                  weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+                })}
+                {isSuperAdmin && (
+                  <button 
+                    onClick={() => {
+                      setEditTanggal(new Date(sesiData.tanggal).toISOString().split('T')[0]);
+                      setIsEditingDate(true);
+                    }}
+                    className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200 transition-colors"
+                    title="Edit Tanggal"
+                  >
+                    <Edit2 size={10} /> Edit
+                  </button>
+                )}
+              </span>
+            )}
             {sesiData.topik && (
               <span className="text-sm text-muted">Topik: <strong className="text-text">{sesiData.topik}</strong></span>
             )}
@@ -194,13 +262,26 @@ export default function SesiAbsensi() {
         {STATUS_OPTIONS?.map(opt => (
           <button
             key={opt.value}
-            onClick={() => setAllStatus(opt.value)}
+            onClick={() => setConfirmSetAll({ open: true, status: opt.value })}
             className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${opt.hoverBg} ${opt.textColor} border-current/20`}
           >
             Semua {opt.value}
           </button>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={confirmSetAll.open}
+        title={`Set Semua ${confirmSetAll.status}?`}
+        message={`Status kehadiran seluruh sisya pada pertemuan ini akan diubah menjadi "${confirmSetAll.status}". Perubahan belum tersimpan sampai Anda klik Simpan Absensi.`}
+        confirmLabel="Ya, Set Semua"
+        variant="warning"
+        onConfirm={() => {
+          setAllStatus(confirmSetAll.status);
+          setConfirmSetAll({ open: false, status: '' });
+        }}
+        onCancel={() => setConfirmSetAll({ open: false, status: '' })}
+      />
 
       {/* Table */}
       <div className="bg-surface rounded-lg shadow-sm border border-muted/20 overflow-hidden">
