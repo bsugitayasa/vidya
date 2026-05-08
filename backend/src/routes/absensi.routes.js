@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const absensiController = require('../controllers/absensi.controller');
-const { requireAuth, requireAdmin } = require('../middlewares/auth.middleware');
+const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middlewares/auth.middleware');
 const validate = require('../middlewares/validate.middleware');
 const { mataKuliahSchema, createSesiSchema, inputAbsensiSchema } = require('../../../shared/schemas/absensi.schema');
 
@@ -21,6 +21,7 @@ router.get('/mata-kuliah/:mkId/export', absensiController.exportAbsensi);
 router.post('/sesi', validate(createSesiSchema), absensiController.createSesi);
 router.get('/sesi/:sesiId', absensiController.getSesiDetail);
 router.post('/sesi/:sesiId/input', validate(inputAbsensiSchema), absensiController.inputAbsensi);
+router.patch('/sesi/:sesiId', requireSuperAdmin, absensiController.updateSesi);
 
 // ─── Rekap Per Sisya ─────────────────────────────────────────────────────────
 router.get('/sisya/:sisyaId', absensiController.getRekapSisya);

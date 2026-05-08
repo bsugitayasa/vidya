@@ -5,6 +5,7 @@ import api from '../../../lib/axios';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { getProgramBadgeStyle } from '../../../lib/utils';
+import ConfirmDialog from '../../../components/ui/ConfirmDialog';
 
 export default function MataKuliahList() {
   const navigate = useNavigate();
@@ -92,18 +93,25 @@ export default function MataKuliahList() {
     }
   };
 
-  const handleDelete = async (mk) => {
-    if (!confirm(`Hapus mata kuliah "${mk.nama}"? Tindakan ini tidak dapat dibatalkan.`)) return;
+  // Delete confirmation state
+  const [confirmDelete, setConfirmDelete] = useState({ open: false, mk: null });
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
     try {
-      const res = await api.delete(`/absensi/mata-kuliah/${mk.id}`);
+      const res = await api.delete(`/absensi/mata-kuliah/${confirmDelete.mk.id}`);
       if (res.data.success) {
         setMessage({ type: 'success', text: 'Mata kuliah berhasil dihapus' });
+        setConfirmDelete({ open: false, mk: null });
         fetchMataKuliah();
       }
     } catch (error) {
       const msg = error.response?.data?.message || 'Gagal menghapus mata kuliah';
       setMessage({ type: 'error', text: msg });
+      setConfirmDelete({ open: false, mk: null });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -203,7 +211,7 @@ export default function MataKuliahList() {
                           <Pencil size={15} />
                         </button>
                         <button
-                          onClick={() => handleDelete(mk)}
+                          onClick={() => setConfirmDelete({ open: true, mk })}
                           className="p-1.5 rounded hover:bg-red-50 text-red-500 transition-colors"
                           title="Hapus"
                         >
@@ -293,6 +301,17 @@ export default function MataKuliahList() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="Hapus Mata Kuliah?"
+        message={`Mata kuliah "${confirmDelete.mk?.nama || ''}" akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.`}
+        confirmLabel="Ya, Hapus"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete({ open: false, mk: null })}
+      />
     </div>
   );
 }
