@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2, Calendar, BookOpen, Check, Edit2, X } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Calendar, BookOpen, Check, Edit2, X, Camera, Users, GraduationCap, ClipboardList, FileDown } from 'lucide-react';
 import api from '../../../lib/axios';
 import { Button } from '../../../components/ui/button';
 import { getProgramBadgeStyle } from '../../../lib/utils';
 import useAuthStore from '../../../store/authStore';
 import ConfirmDialog from '../../../components/ui/ConfirmDialog';
+import DokumentasiUpload from '../../../components/ui/DokumentasiUpload';
 
 const STATUS_OPTIONS = [
   { value: 'HADIR', label: 'H', color: 'bg-green-500', hoverBg: 'hover:bg-green-100', activeBg: 'bg-green-100 ring-2 ring-green-500', textColor: 'text-green-700' },
@@ -30,6 +31,11 @@ export default function SesiAbsensi() {
   const [isEditingDate, setIsEditingDate] = useState(false);
   const [editTanggal, setEditTanggal] = useState('');
   const [isSavingDate, setIsSavingDate] = useState(false);
+
+  // Edit topik state (Super Admin)
+  const [isEditingTopik, setIsEditingTopik] = useState(false);
+  const [editTopik, setEditTopik] = useState('');
+  const [isSavingTopik, setIsSavingTopik] = useState(false);
 
   useEffect(() => {
     fetchSesiDetail();
@@ -124,6 +130,314 @@ export default function SesiAbsensi() {
     }
   };
 
+  const handleSaveTopik = async () => {
+    setIsSavingTopik(true);
+    try {
+      const res = await api.patch(`/absensi/sesi/${sesiId}`, { topik: editTopik });
+      if (res.data.success) {
+        setMessage({ type: 'success', text: 'Topik sesi berhasil diperbarui' });
+        setIsEditingTopik(false);
+        fetchSesiDetail();
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Gagal memperbarui topik';
+      setMessage({ type: 'error', text: msg });
+    } finally {
+      setIsSavingTopik(false);
+    }
+  };
+
+  const handleDokUploadSuccess = (data) => {
+    setSesiData(prev => ({
+      ...prev,
+      ...data
+    }));
+    setMessage({ type: 'success', text: 'Dokumentasi berhasil diunggah' });
+  };
+
+  const handleDokDeleteSuccess = (fieldName) => {
+    const pathMap = {
+      dokSisya: 'dokSisyaPath',
+      dokNarawak: 'dokNarawakPath',
+      dokPanitia: 'dokPanitiaPath'
+    };
+    setSesiData(prev => ({
+      ...prev,
+      [pathMap[fieldName]]: null
+    }));
+    setMessage({ type: 'success', text: 'Dokumentasi berhasil dihapus' });
+  };
+
+  const exportToPDF = async () => {
+    const { default: jsPDF } = await import('jspdf');
+    const autoTableModule = await import('jspdf-autotable');
+    const autoTable = autoTableModule.default;
+
+    const doc = new jsPDF('portrait', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 14;
+
+    // Helper: fetch protected image as base64 data URL
+    const fetchImageAsBase64 = async (filePath) => {
+      try {
+        const filename = filePath.split('/').pop();
+        const response = await api.get(`/sisya/files/${filename}`, { responseType: 'blob' });
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(response.data);
+        });
+      } catch {
+        return null;
+      }
+    };
+
+    // ── Header ──
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('REKAPITULASI ABSENSI', pageWidth / 2, 18, { align: 'center' });
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SEKSI PENDIDIKAN & PENGAJARAN KEBRAHMANAN PDPN', pageWidth / 2, 24, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Pasraman Dharma Wasitha Capung Mas Ubud Gianyar', pageWidth / 2, 30, { align: 'center' });
+
+    doc.setDrawColor(124, 58, 237);
+    doc.setLineWidth(0.5);
+    doc.line(margin, 33, pageWidth - margin, 33);
+
+    // ── Info Sesi ──
+    let y = 39;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Program Ajahan', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`: ${sesiData.mataKuliah.programAjahan?.nama || '-'}`, margin + 42, y);
+
+    y += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Mata Ajah', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`: ${sesiData.mataKuliah.nama} (${sesiData.mataKuliah.kode || ''})`, margin + 42, y);
+
+    y += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Pertemuan', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`: Pertemuan ke-${sesiData.pertemuan}`, margin + 42, y);
+
+    y += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Tanggal', margin, y);
+    doc.setFont('helvetica', 'normal');
+    const tanggalStr = new Date(sesiData.tanggal).toLocaleDateString('id-ID', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+    doc.text(`: ${tanggalStr}`, margin + 42, y);
+
+    y += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Topik', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`: ${sesiData.topik || '-'}`, margin + 42, y);
+
+    // ── Statistik ──
+    y += 10;
+    doc.setFillColor(245, 245, 255);
+    doc.roundedRect(margin, y - 4, pageWidth - (margin * 2), 12, 2, 2, 'F');
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    const statsText = `Hadir: ${stats.hadir}    Izin: ${stats.izin}    Sakit: ${stats.sakit}    Alpha: ${stats.alpha}    Belum: ${stats.belum}    |    Total: ${sesiData.daftarSisya?.length || 0} sisya`;
+    doc.text(statsText, pageWidth / 2, y + 2, { align: 'center' });
+
+    y += 14;
+
+    // ── Tabel Absensi ──
+    const tableData = (sesiData.daftarSisya || []).map((sisya, index) => {
+      const status = absensiState[sisya.sisyaId];
+      let statusLabel = '-';
+      if (status === 'HADIR') statusLabel = 'HADIR';
+      else if (status === 'IZIN') statusLabel = 'IZIN';
+      else if (status === 'SAKIT') statusLabel = 'SAKIT';
+      else if (status === 'ALPHA') statusLabel = 'ALPHA';
+      return [index + 1, sisya.namaLengkap, sisya.namaGriya, statusLabel];
+    });
+
+    autoTable(doc, {
+      startY: y,
+      head: [['No', 'Nama Sisya', 'Griya', 'Status']],
+      body: tableData,
+      margin: { left: margin, right: margin },
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+        lineWidth: 0.1,
+        lineColor: [200, 200, 200]
+      },
+      headStyles: {
+        fillColor: [124, 58, 237],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { halign: 'center', cellWidth: 12 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 45 },
+        3: { halign: 'center', cellWidth: 25 }
+      },
+      bodyStyles: {
+        valign: 'middle'
+      },
+      alternateRowStyles: {
+        fillColor: [249, 250, 251]
+      },
+      didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 3) {
+          const val = data.cell.raw;
+          if (val === 'HADIR') data.cell.styles.textColor = [22, 163, 74];
+          else if (val === 'IZIN') data.cell.styles.textColor = [37, 99, 235];
+          else if (val === 'SAKIT') data.cell.styles.textColor = [202, 138, 4];
+          else if (val === 'ALPHA') data.cell.styles.textColor = [220, 38, 38];
+          else data.cell.styles.textColor = [156, 163, 175];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      }
+    });
+
+    // ── Footer & Tanda Tangan ──
+    const finalY = doc.lastAutoTable.finalY + 12;
+    const signatureX = pageWidth - margin - 60;
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Dicetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`, margin, finalY);
+
+    doc.text('Mengetahui,', signatureX, finalY);
+    doc.text('Koordinator Program', signatureX, finalY + 5);
+    doc.line(signatureX, finalY + 22, signatureX + 50, finalY + 22);
+
+    // ── Dokumentasi KBM ──
+    const dokList = [
+      { path: sesiData.dokSisyaPath, label: 'Dokumentasi Sisya' },
+      { path: sesiData.dokNarawakPath, label: 'Dokumentasi Narawakya' },
+      { path: sesiData.dokPanitiaPath, label: 'Dokumentasi Panitia/Kordinator' },
+    ].filter(d => d.path);
+
+    if (dokList.length > 0) {
+      doc.addPage();
+
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('DOKUMENTASI KEGIATAN BELAJAR MENGAJAR', pageWidth / 2, 18, { align: 'center' });
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${sesiData.mataKuliah.nama} — Pertemuan ${sesiData.pertemuan} — ${tanggalStr}`, pageWidth / 2, 24, { align: 'center' });
+
+      doc.setDrawColor(124, 58, 237);
+      doc.setLineWidth(0.5);
+      doc.line(margin, 28, pageWidth - margin, 28);
+
+      let dokY = 36;
+      const imgMaxWidth = pageWidth - (margin * 2);
+      const imgMaxHeight = 70;
+
+      for (const dok of dokList) {
+        const ext = dok.path.split('.').pop().toLowerCase();
+        const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
+        const isVideo = ['mp4', 'mov', 'webm', 'avi'].includes(ext);
+
+        // Check if we need a new page
+        if (dokY + imgMaxHeight + 16 > pageHeight - 10) {
+          doc.addPage();
+          dokY = 18;
+        }
+
+        // Label
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(124, 58, 237);
+        doc.text(dok.label, margin, dokY);
+        doc.setTextColor(0, 0, 0);
+        dokY += 3;
+
+        if (isImage) {
+          try {
+            const base64 = await fetchImageAsBase64(dok.path);
+            if (base64) {
+              const format = ext === 'png' ? 'PNG' : 'JPEG';
+
+              // Create temp image to get dimensions
+              const img = new Image();
+              await new Promise((resolve) => {
+                img.onload = resolve;
+                img.onerror = resolve;
+                img.src = base64;
+              });
+
+              // Calculate scaled dimensions to fit
+              let imgW = imgMaxWidth;
+              let imgH = (img.height / img.width) * imgW;
+              if (imgH > imgMaxHeight) {
+                imgH = imgMaxHeight;
+                imgW = (img.width / img.height) * imgH;
+              }
+
+              const imgX = margin + (imgMaxWidth - imgW) / 2;
+
+              doc.setDrawColor(220, 220, 220);
+              doc.setLineWidth(0.3);
+              doc.roundedRect(imgX - 1, dokY - 1, imgW + 2, imgH + 2, 1, 1, 'S');
+
+              doc.addImage(base64, format, imgX, dokY, imgW, imgH);
+              dokY += imgH + 10;
+            } else {
+              doc.setFontSize(9);
+              doc.setFont('helvetica', 'italic');
+              doc.setTextColor(150, 150, 150);
+              doc.text('(Gagal memuat gambar)', margin, dokY + 4);
+              doc.setTextColor(0, 0, 0);
+              dokY += 12;
+            }
+          } catch {
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(150, 150, 150);
+            doc.text('(Gagal memuat gambar)', margin, dokY + 4);
+            doc.setTextColor(0, 0, 0);
+            dokY += 12;
+          }
+        } else if (isVideo) {
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'italic');
+          doc.setTextColor(100, 100, 100);
+          const videoFilename = dok.path.split('/').pop();
+          doc.text(`[Video: ${videoFilename}] — Video tidak dapat ditampilkan di PDF`, margin, dokY + 4);
+          doc.setTextColor(0, 0, 0);
+          dokY += 12;
+        } else {
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'italic');
+          doc.setTextColor(100, 100, 100);
+          const docFilename = dok.path.split('/').pop();
+          doc.text(`[File: ${docFilename}]`, margin, dokY + 4);
+          doc.setTextColor(0, 0, 0);
+          dokY += 12;
+        }
+      }
+    }
+
+    // ── Save ──
+    const mkCode = sesiData.mataKuliah.kode || 'MK';
+    const fileName = `Absensi-${mkCode}-P${sesiData.pertemuan}-${new Date().getTime()}.pdf`;
+    doc.save(fileName);
+  };
   // Hitung statistik
   const stats = {
     hadir: Object.values(absensiState).filter(s => s === 'HADIR').length,
@@ -162,13 +476,13 @@ export default function SesiAbsensi() {
           <div className="flex flex-wrap gap-3 mt-2">
             {isEditingDate ? (
               <div className="flex items-center gap-2">
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   value={editTanggal}
                   onChange={(e) => setEditTanggal(e.target.value)}
                   className="text-sm border border-muted/30 rounded-md px-2 py-1 focus:ring-2 focus:ring-primary/20 outline-none"
                 />
-                <button 
+                <button
                   onClick={handleSaveDate}
                   disabled={isSavingDate}
                   className="w-7 h-7 rounded-md flex items-center justify-center bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50"
@@ -176,7 +490,7 @@ export default function SesiAbsensi() {
                 >
                   {isSavingDate ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
                 </button>
-                <button 
+                <button
                   onClick={() => setIsEditingDate(false)}
                   className="w-7 h-7 rounded-md flex items-center justify-center bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
                   title="Batal"
@@ -191,7 +505,7 @@ export default function SesiAbsensi() {
                   weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
                 })}
                 {isSuperAdmin && (
-                  <button 
+                  <button
                     onClick={() => {
                       setEditTanggal(new Date(sesiData.tanggal).toISOString().split('T')[0]);
                       setIsEditingDate(true);
@@ -204,28 +518,76 @@ export default function SesiAbsensi() {
                 )}
               </span>
             )}
-            {sesiData.topik && (
-              <span className="text-sm text-muted">Topik: <strong className="text-text">{sesiData.topik}</strong></span>
+            {isEditingTopik ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editTopik}
+                  onChange={(e) => setEditTopik(e.target.value)}
+                  placeholder="Topik pertemuan..."
+                  className="text-sm border border-muted/30 rounded-md px-2 py-1 focus:ring-2 focus:ring-primary/20 outline-none min-w-[200px]"
+                />
+                <button
+                  onClick={handleSaveTopik}
+                  disabled={isSavingTopik}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50"
+                  title="Simpan"
+                >
+                  {isSavingTopik ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                </button>
+                <button
+                  onClick={() => setIsEditingTopik(false)}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                  title="Batal"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <span className="text-sm text-muted">
+                Topik: <strong className="text-text">{sesiData.topik || '-'}</strong>
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => {
+                      setEditTopik(sesiData.topik || '');
+                      setIsEditingTopik(true);
+                    }}
+                    className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200 transition-colors"
+                    title="Edit Topik"
+                  >
+                    <Edit2 size={10} /> Edit
+                  </button>
+                )}
+              </span>
             )}
             <span className={`inline-block px-2 py-0.5 text-xs rounded font-medium border ${getProgramBadgeStyle(sesiData.mataKuliah.programAjahan?.nama)}`}>
               {sesiData.mataKuliah.programAjahan?.nama}
             </span>
           </div>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={isSaving || !hasChanges}
-          className="flex items-center gap-2"
-        >
-          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-          {isSaving ? 'Menyimpan...' : 'Simpan Absensi'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportToPDF}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-primary/30 text-primary bg-primary/5 hover:bg-primary/10 transition-colors"
+            title="Export PDF untuk print"
+          >
+            <FileDown size={16} />
+            Export PDF
+          </button>
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || !hasChanges}
+            className="flex items-center gap-2"
+          >
+            {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {isSaving ? 'Menyimpan...' : 'Simpan Absensi'}
+          </Button>
+        </div>
       </div>
 
       {message.text && (
-        <div className={`p-4 rounded-md text-sm border ${
-          message.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
-        }`}>
+        <div className={`p-4 rounded-md text-sm border ${message.type === 'success' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'
+          }`}>
           {message.text}
         </div>
       )}
@@ -316,11 +678,10 @@ export default function SesiAbsensi() {
                             <button
                               key={opt.value}
                               onClick={() => handleStatusChange(sisya.sisyaId, opt.value)}
-                              className={`w-10 h-10 rounded-lg text-xs font-bold transition-all ${
-                                isActive
-                                  ? `${opt.activeBg} ${opt.textColor} scale-110`
-                                  : `bg-gray-50 text-gray-400 hover:bg-gray-100 border border-gray-200`
-                              }`}
+                              className={`w-10 h-10 rounded-lg text-xs font-bold transition-all ${isActive
+                                ? `${opt.activeBg} ${opt.textColor} scale-110`
+                                : `bg-gray-50 text-gray-400 hover:bg-gray-100 border border-gray-200`
+                                }`}
                               title={opt.value}
                             >
                               {isActive && <Check size={12} className="inline mr-0.5" />}
@@ -335,6 +696,46 @@ export default function SesiAbsensi() {
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* Dokumentasi KBM Section */}
+      <div className="mt-6">
+        <h3 className="text-lg font-bold font-heading text-text flex items-center gap-2 mb-4">
+          <Camera size={20} className="text-primary" />
+          Dokumentasi KBM
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <DokumentasiUpload
+            label="Dokumentasi Sisya"
+            icon={Users}
+            fieldName="dokSisya"
+            existingPath={sesiData.dokSisyaPath}
+            sesiId={sesiId}
+            onUploadSuccess={handleDokUploadSuccess}
+            onDeleteSuccess={handleDokDeleteSuccess}
+            isSuperAdmin={isSuperAdmin}
+          />
+          <DokumentasiUpload
+            label="Dokumentasi Narawakya"
+            icon={GraduationCap}
+            fieldName="dokNarawak"
+            existingPath={sesiData.dokNarawakPath}
+            sesiId={sesiId}
+            onUploadSuccess={handleDokUploadSuccess}
+            onDeleteSuccess={handleDokDeleteSuccess}
+            isSuperAdmin={isSuperAdmin}
+          />
+          <DokumentasiUpload
+            label="Dokumentasi Panitia"
+            icon={ClipboardList}
+            fieldName="dokPanitia"
+            existingPath={sesiData.dokPanitiaPath}
+            sesiId={sesiId}
+            onUploadSuccess={handleDokUploadSuccess}
+            onDeleteSuccess={handleDokDeleteSuccess}
+            isSuperAdmin={isSuperAdmin}
+          />
         </div>
       </div>
 

@@ -12,6 +12,8 @@ import {
   GraduationCap
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
+import useIdleTimeout from '../hooks/useIdleTimeout';
+import IdleWarningDialog from '../components/ui/IdleWarningDialog';
 
 export default function AdminLayout() {
   const { token, user } = useAuthStore();
@@ -90,8 +92,17 @@ export default function AdminLayout() {
     window.location.href = '/admin/login';
   };
 
+  const { showWarning, countdown, stayLoggedIn, performLogout } = useIdleTimeout();
+
   return (
     <div className="flex min-h-screen bg-bg font-sans">
+      {/* Idle Warning Dialog */}
+      <IdleWarningDialog
+        open={showWarning}
+        countdown={countdown}
+        onStayLoggedIn={stayLoggedIn}
+        onLogout={performLogout}
+      />
       {/* Sidebar */}
       <aside
         className={`${isMinimized ? 'w-20' : 'w-64'

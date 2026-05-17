@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const absensiController = require('../controllers/absensi.controller');
 const { requireAuth, requireAdmin, requireSuperAdmin } = require('../middlewares/auth.middleware');
+const upload = require('../middlewares/upload.middleware');
 const validate = require('../middlewares/validate.middleware');
 const { mataKuliahSchema, createSesiSchema, inputAbsensiSchema } = require('../../../shared/schemas/absensi.schema');
 
@@ -23,7 +24,16 @@ router.get('/sesi/:sesiId', absensiController.getSesiDetail);
 router.post('/sesi/:sesiId/input', validate(inputAbsensiSchema), absensiController.inputAbsensi);
 router.patch('/sesi/:sesiId', requireSuperAdmin, absensiController.updateSesi);
 
+// ─── Dokumentasi KBM ─────────────────────────────────────────────────────────
+router.post('/sesi/:sesiId/upload-dokumentasi', upload.fields([
+  { name: 'dokSisya', maxCount: 1 },
+  { name: 'dokNarawak', maxCount: 1 },
+  { name: 'dokPanitia', maxCount: 1 }
+]), absensiController.uploadDokumentasi);
+router.delete('/sesi/:sesiId/dokumentasi/:kategori', requireSuperAdmin, absensiController.deleteDokumentasi);
+
 // ─── Rekap Per Sisya ─────────────────────────────────────────────────────────
 router.get('/sisya/:sisyaId', absensiController.getRekapSisya);
 
 module.exports = router;
+

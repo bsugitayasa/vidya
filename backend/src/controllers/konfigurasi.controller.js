@@ -8,6 +8,7 @@ const DEFAULT_CONFIGS = [
   { kunci: 'nama_rekening', nilai: '', label: 'Nama Pemilik Rekening' },
   { kunci: 'tanggal_kelulusan', nilai: '', label: 'Tanggal Prosesi Kelulusan' },
   { kunci: 'persentase_kelulusan', nilai: '50', label: 'Persentase Minimum Kelulusan (%)' },
+  { kunci: 'admin_idle_timeout', nilai: '5', label: 'Auto-logout timeout (menit)' },
 ];
 
 const getAll = async (req, res) => {

@@ -1,5 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const ExcelJS = require('exceljs');
+const path = require('path');
+const fs = require('fs');
 
 const prisma = new PrismaClient();
 
@@ -286,6 +288,9 @@ const getSesiDetail = async (req, res) => {
         tanggal: sesi.tanggal,
         pertemuan: sesi.pertemuan,
         topik: sesi.topik,
+        dokSisyaPath: sesi.dokSisyaPath,
+        dokNarawakPath: sesi.dokNarawakPath,
+        dokPanitiaPath: sesi.dokPanitiaPath,
         mataKuliah: sesi.mataKuliah,
         daftarSisya
       }
@@ -737,6 +742,130 @@ const updateSesi = async (req, res) => {
   }
 };
 
+// POST /api/absensi/sesi/:sesiId/upload-dokumentasi
+const uploadDokumentasi = async (req, res) => {
+  try {
+    const { sesiId } = req.params;
+
+    const sesi = await prisma.sesiAbsensi.findUnique({
+      where: { id: parseInt(sesiId) }
+    });
+
+    if (!sesi) {
+      return res.status(404).json({ success: false, message: 'Sesi tidak ditemukan' });
+    }
+
+    const updateData = {};
+    const filesToDelete = [];
+
+    // Mapping field name to database column
+    const fieldMap = {
+      dokSisya: 'dokSisyaPath',
+      dokNarawak: 'dokNarawakPath',
+      dokPanitia: 'dokPanitiaPath'
+    };
+
+    if (req.files) {
+      for (const [fieldName, dbField] of Object.entries(fieldMap)) {
+        if (req.files[fieldName] && req.files[fieldName][0]) {
+          // If there's an existing file, mark it for deletion
+          if (sesi[dbField]) {
+            const oldFilename = sesi[dbField].split('/').pop();
+            const oldFilePath = path.join(__dirname, '../../uploads', oldFilename);
+            filesToDelete.push(oldFilePath);
+          }
+          updateData[dbField] = `/uploads/${req.files[fieldName][0].filename}`;
+        }
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ success: false, message: 'Tidak ada file yang diunggah' });
+    }
+
+    // Delete old files from disk
+    for (const filePath of filesToDelete) {
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (e) {
+        console.error('Failed to delete old file:', e);
+      }
+    }
+
+    const updated = await prisma.sesiAbsensi.update({
+      where: { id: parseInt(sesiId) },
+      data: updateData
+    });
+
+    res.json({
+      success: true,
+      data: {
+        dokSisyaPath: updated.dokSisyaPath,
+        dokNarawakPath: updated.dokNarawakPath,
+        dokPanitiaPath: updated.dokPanitiaPath
+      },
+      message: 'Dokumentasi berhasil diunggah'
+    });
+  } catch (error) {
+    console.error('Upload Dokumentasi Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal mengunggah dokumentasi' });
+  }
+};
+
+// DELETE /api/absensi/sesi/:sesiId/dokumentasi/:kategori (Super Admin only)
+const deleteDokumentasi = async (req, res) => {
+  try {
+    const { sesiId, kategori } = req.params;
+
+    const fieldMap = {
+      sisya: 'dokSisyaPath',
+      narawak: 'dokNarawakPath',
+      panitia: 'dokPanitiaPath'
+    };
+
+    const dbField = fieldMap[kategori];
+    if (!dbField) {
+      return res.status(400).json({ success: false, message: 'Kategori tidak valid. Gunakan: sisya, narawak, atau panitia' });
+    }
+
+    const sesi = await prisma.sesiAbsensi.findUnique({
+      where: { id: parseInt(sesiId) }
+    });
+
+    if (!sesi) {
+      return res.status(404).json({ success: false, message: 'Sesi tidak ditemukan' });
+    }
+
+    if (!sesi[dbField]) {
+      return res.status(400).json({ success: false, message: 'Tidak ada dokumentasi untuk kategori ini' });
+    }
+
+    // Delete file from disk
+    const filename = sesi[dbField].split('/').pop();
+    const filePath = path.join(__dirname, '../../uploads', filename);
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (e) {
+      console.error('Failed to delete file:', e);
+    }
+
+    // Update database
+    await prisma.sesiAbsensi.update({
+      where: { id: parseInt(sesiId) },
+      data: { [dbField]: null }
+    });
+
+    res.json({ success: true, message: 'Dokumentasi berhasil dihapus' });
+  } catch (error) {
+    console.error('Delete Dokumentasi Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal menghapus dokumentasi' });
+  }
+};
+
 module.exports = {
   getMataKuliah,
   createMataKuliah,
@@ -749,5 +878,7 @@ module.exports = {
   updateSesi,
   getRekapSisya,
   getRekapMataKuliah,
-  exportAbsensi
+  exportAbsensi,
+  uploadDokumentasi,
+  deleteDokumentasi
 };
