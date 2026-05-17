@@ -107,14 +107,17 @@ model MataKuliah {
 }
 
 model SesiAbsensi {
-  id            Int            @id @default(autoincrement())
-  mataKuliahId  Int
-  tanggal       DateTime
-  pertemuan     Int
-  topik         String?
-  createdAt     DateTime       @default(now())
-  absensiSisyas AbsensiSisya[]
-  mataKuliah    MataKuliah     @relation(fields: [mataKuliahId], references: [id])
+  id              Int            @id @default(autoincrement())
+  mataKuliahId    Int
+  tanggal         DateTime
+  pertemuan       Int
+  topik           String?
+  dokSisyaPath    String?
+  dokNarawakPath  String?
+  dokPanitiaPath  String?
+  createdAt       DateTime       @default(now())
+  absensiSisyas   AbsensiSisya[]
+  mataKuliah      MataKuliah     @relation(fields: [mataKuliahId], references: [id])
 }
 
 model AbsensiSisya {

@@ -122,7 +122,7 @@ export default function Pengaturan() {
             <h3 className="font-bold text-text">Informasi Pembayaran</h3>
           </div>
           
-          {Object.keys(configs).filter(k => k !== 'tanggal_kelulusan' && k !== 'musik_kelulusan' && k !== 'persentase_kelulusan').map(key => (
+          {Object.keys(configs).filter(k => k !== 'tanggal_kelulusan' && k !== 'musik_kelulusan' && k !== 'persentase_kelulusan' && k !== 'admin_idle_timeout').map(key => (
             <div key={key} className="space-y-1.5">
               <label className="text-xs font-bold text-muted uppercase tracking-wider">{configs[key].label}</label>
               <Input 
@@ -203,6 +203,36 @@ export default function Pengaturan() {
               </p>
             )}
           </div>
+        </div>
+
+        {/* Pengaturan Sistem */}
+        <div className="bg-surface p-6 rounded-xl shadow-sm border border-muted/20 space-y-4">
+          <div className="flex items-center gap-3 border-b border-muted/10 pb-4 mb-2">
+            <div className="p-2 bg-violet-50 text-violet-600 rounded-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <h3 className="font-bold text-text">Pengaturan Sistem</h3>
+          </div>
+
+          {configs.admin_idle_timeout && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">{configs.admin_idle_timeout.label}</label>
+              <div className="flex items-center gap-2">
+                <Input 
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={configs.admin_idle_timeout.nilai}
+                  onChange={(e) => handleConfigChange('admin_idle_timeout', e.target.value)}
+                  className="bg-muted/5 border-muted/20 w-24 text-center font-bold"
+                />
+                <span className="text-sm font-bold text-muted">menit</span>
+              </div>
+              <p className="text-[10px] text-muted italic mt-2">
+                *Durasi waktu tidak aktif (idle) sebelum sistem otomatis melakukan logout dari halaman admin. Minimum 1 menit, maksimum 60 menit.
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
