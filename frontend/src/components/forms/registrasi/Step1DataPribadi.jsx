@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
+import { normalizeName } from '../../../lib/normalizeName';
 
 export default function Step1DataPribadi({ register, errors, setValue, watch }) {
   const tanggalLahirVal = watch ? watch('tanggalLahir') : '';
@@ -28,30 +29,6 @@ export default function Step1DataPribadi({ register, errors, setValue, watch }) 
     } else if (!date && setValue) {
       setValue('tanggalLahir', '', { shouldValidate: true });
     }
-  };
-
-  const normalizeName = (name) => {
-    if (!name) return '';
-    const upperExceptions = ['IB', 'IA', 'AA', 'GD', 'S.PD', 'S.AG', 'M.PD', 'DR.'];
-    return name
-      .trim()
-      .replace(/\s+/g, ' ')
-      .split(' ')
-      .map(word => {
-        const firstAlphaIdx = word.search(/[a-zA-Z]/);
-        if (firstAlphaIdx === -1) return word.toUpperCase();
-        
-        const prefix = word.slice(0, firstAlphaIdx);
-        const mainPart = word.slice(firstAlphaIdx);
-        const upperMain = mainPart.toUpperCase();
-
-        if (upperExceptions.includes(upperMain) || upperExceptions.some(ex => upperMain.startsWith(ex))) {
-          return prefix + upperMain;
-        }
-        if (mainPart.length <= 1) return prefix + upperMain;
-        return prefix + upperMain.charAt(0) + upperMain.slice(1).toLowerCase();
-      })
-      .join(' ');
   };
 
   return (
