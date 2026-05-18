@@ -44,21 +44,35 @@ export default function VerifikasiDokumenPublic() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between font-sans">
-      {/* Mini Header with Logo only */}
-      <header className="bg-primary text-white py-4 shadow-md">
-        <div className="max-w-4xl mx-auto px-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="Logo PDPN" className="w-10 h-10 object-contain bg-white rounded-full p-0.5" />
-            <div>
-              <h1 className="font-bold text-base leading-none">PDPN - VIDYA</h1>
-              <p className="text-[10px] text-white/80">Sistem Verifikasi Dokumen Digital</p>
+      {/* Premium Header - Matching /daftar Page exactly (With bold logo, no white border, same subtitle) */}
+      <nav className="sticky top-0 z-50 bg-primary shadow-xl border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-20">
+            <div className="flex items-center">
+              <Link to="/" className="flex items-center gap-4 group">
+                <div className="group-hover:scale-110 transition-transform duration-300">
+                  <img src="/logo.png" alt="Logo PDPN" className="w-12 h-12 object-contain" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xl font-black tracking-tight text-white leading-none">PDPN - VIDYA</span>
+                  <p className="text-white/95 text-[10px] mt-1.5 uppercase tracking-[0.15em] font-black">
+                    Visualisasi Data dan Sisya Administrasi Pesraman
+                  </p>
+                </div>
+              </Link>
+            </div>
+
+            <div className="flex items-center">
+              <Link 
+                to="/" 
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white/95 hover:bg-white/10 hover:text-white transition-all duration-300"
+              >
+                <ArrowLeft size={16} /> Beranda
+              </Link>
             </div>
           </div>
-          <Link to="/" className="text-white/80 hover:text-white flex items-center gap-1 text-xs font-semibold">
-            <ArrowLeft size={14} /> Beranda
-          </Link>
         </div>
-      </header>
+      </nav>
 
       {/* Main Verification Dashboard */}
       <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-12 flex flex-col justify-center">
