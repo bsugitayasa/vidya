@@ -26,6 +26,8 @@ import AbsensiKelulusan from './pages/admin/kelulusan/AbsensiKelulusan';
 import PresentasiKelulusan from './pages/admin/kelulusan/PresentasiKelulusan';
 import SertifikatConfig from './pages/admin/SertifikatConfig';
 import TarifConfig from './pages/admin/TarifConfig';
+import VerifikasiDokumenAdmin from './pages/admin/VerifikasiDokumenAdmin';
+import VerifikasiDokumenPublic from './pages/public/VerifikasiDokumenPublic';
 
 const queryClient = new QueryClient();
 
@@ -68,7 +70,11 @@ function App() {
             <Route path="pengaturan/tarif" element={<TarifConfig />} />
             <Route path="kelulusan/syarat" element={<SyaratKelulusan />} />
             <Route path="kelulusan/absensi" element={<AbsensiKelulusan />} />
+            <Route path="verifikasi-dokumen" element={<VerifikasiDokumenAdmin />} />
           </Route>
+
+          {/* Standalone Public Verification Scan Page */}
+          <Route path="/verify/:token" element={<VerifikasiDokumenPublic />} />
 
           {/* Presentasi Fullscreen without Sidebar */}
           <Route path="/admin/kelulusan/presentasi" element={<PresentasiKelulusan />} />
