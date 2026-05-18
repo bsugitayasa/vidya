@@ -24,7 +24,7 @@ export default function PublicLayout() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xl font-black tracking-tight text-white leading-none">PDPN - VIDYA</span>
-                  <p className="text-white/80 text-[10px] mt-1.5 uppercase tracking-[0.15em] font-black">
+                  <p className="text-white/95 text-[10px] mt-1.5 uppercase tracking-[0.15em] font-black">
                     Visualisasi Data dan Sisya Administrasi Pesraman
                   </p>
                 </div>
@@ -41,7 +41,7 @@ export default function PublicLayout() {
                     flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300
                     ${isActive
                       ? 'bg-white text-primary shadow-lg scale-105'
-                      : 'text-white/80 hover:bg-white/10 hover:text-white'}
+                      : 'text-white/95 hover:bg-white/10 hover:text-white'}
                   `}
                 >
                   <item.icon size={18} />
@@ -54,7 +54,8 @@ export default function PublicLayout() {
             <div className="md:hidden flex items-center">
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="p-2 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-colors"
+                className="p-2 rounded-xl text-white/95 hover:bg-white/10 hover:text-white transition-colors"
+                aria-label="Menu Navigasi Mobile"
               >
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -74,7 +75,7 @@ export default function PublicLayout() {
                   flex items-center gap-3 px-4 py-4 rounded-2xl text-base font-bold transition-all
                   ${isActive
                     ? 'bg-white text-primary'
-                    : 'text-white/80 hover:bg-white/5'}
+                    : 'text-white/95 hover:bg-white/5'}
                 `}
               >
                 {({ isActive }) => (
@@ -100,7 +101,7 @@ export default function PublicLayout() {
           </p>
           <div className="mt-3 flex items-center justify-center gap-2">
             <div className="h-px w-8 bg-white/30"></div>
-            <p className="text-white/60 text-[10px] uppercase tracking-[0.4em] font-black">
+            <p className="text-white/85 text-[10px] uppercase tracking-[0.4em] font-black">
               Administrasi Pesraman
             </p>
             <div className="h-px w-8 bg-white/30"></div>
