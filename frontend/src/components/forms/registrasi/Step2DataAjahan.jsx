@@ -14,9 +14,18 @@ export default function Step2DataAjahan({
   selectedPrograms,
   pasanganOptions,
   onProgramChange,
-  onFileSelected
+  onFileSelected,
+  isLoading
 }) {
   const puniaCalc = usePuniaCalculator(selectedPrograms, pasanganOptions, programs);
+
+  if (isLoading) {
+    return (
+      <div className="text-center py-12 text-muted animate-pulse">
+        Memuat data program & rekening...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
