@@ -55,7 +55,7 @@ export default function VerifikasiDokumenPublic() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xl font-black tracking-tight text-white leading-none">PDPN - VIDYA</span>
-                  <p className="text-white/95 text-[10px] mt-1.5 uppercase tracking-[0.15em] font-black">
+                  <p className="text-white text-[10px] mt-1.5 uppercase tracking-[0.15em] font-black">
                     Visualisasi Data dan Sisya Administrasi Pesraman
                   </p>
                 </div>
@@ -65,7 +65,7 @@ export default function VerifikasiDokumenPublic() {
             <div className="flex items-center">
               <Link 
                 to="/" 
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white/95 hover:bg-white/10 hover:text-white transition-all duration-300"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white hover:bg-white/10 hover:text-white transition-all duration-300"
               >
                 <ArrowLeft size={16} /> Beranda
               </Link>
@@ -94,7 +94,7 @@ export default function VerifikasiDokumenPublic() {
               <p className="text-emerald-700 text-xs mt-1 font-semibold uppercase tracking-wider">
                 Terverifikasi Resmi oleh Sistem Vidya - PDPN
               </p>
-              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-600 text-white rounded-full text-[10px] font-mono font-bold tracking-wider">
+              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 text-emerald-950 border border-emerald-300 rounded-full text-[10.5px] font-mono font-black tracking-wider shadow-sm">
                 TOKEN: {docData.token}
               </div>
             </div>
@@ -118,7 +118,7 @@ export default function VerifikasiDokumenPublic() {
                       Sekretariat Kantor Pusat: Pasraman Dharma Wasitha, Wantilan Capung Mas, Banjar Batan Ancak,
                       Desa Mas, Kecamatan Ubud, Kabupaten Gianyar, Provinsi Bali, Indonesia - 80571
                     </p>
-                    <p className="text-[9px] md:text-[10px] text-slate-400 font-medium italic">
+                    <p className="text-[9px] md:text-[10px] text-slate-600 font-medium italic">
                       SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud
                     </p>
                   </div>
@@ -145,65 +145,65 @@ export default function VerifikasiDokumenPublic() {
                   
                   <div className="bg-slate-50 p-4 md:p-5 rounded-2xl border border-slate-100 text-xs md:text-sm space-y-3.5">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 items-start py-0.5">
-                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] md:text-xs">Nomor Surat</span>
+                      <span className="font-bold text-slate-650 uppercase tracking-wider text-[10px] md:text-xs">Nomor Surat</span>
                       <span className="sm:col-span-2 font-black text-slate-800 flex gap-1.5">
-                        <span className="hidden sm:inline text-slate-400 font-sans font-normal">:</span> {docData.nomorSurat}
+                        <span className="hidden sm:inline text-slate-500 font-sans font-normal">:</span> {docData.nomorSurat}
                       </span>
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 items-start py-0.5 border-t border-slate-200/50 pt-3">
-                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] md:text-xs">Keterangan</span>
+                      <span className="font-bold text-slate-650 uppercase tracking-wider text-[10px] md:text-xs">Keterangan</span>
                       <span className="sm:col-span-2 font-bold text-slate-700 leading-relaxed flex gap-1.5">
-                        <span className="hidden sm:inline text-slate-400 font-sans font-normal">:</span> {docData.keteranganSurat}
+                        <span className="hidden sm:inline text-slate-500 font-sans font-normal">:</span> {docData.keteranganSurat}
                       </span>
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 items-start py-0.5 border-t border-slate-200/50 pt-3">
-                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] md:text-xs">Tanggal Terbit</span>
+                      <span className="font-bold text-slate-650 uppercase tracking-wider text-[10px] md:text-xs">Tanggal Terbit</span>
                       <span className="sm:col-span-2 font-semibold text-slate-700 flex gap-1.5 items-center">
-                        <span className="hidden sm:inline text-slate-400 font-sans font-normal">:</span> {formatDate(docData.tanggal)}
+                        <span className="hidden sm:inline text-slate-500 font-sans font-normal">:</span> {formatDate(docData.tanggal)}
                       </span>
                     </div>
 
                     {docData.namaPejabat2 && docData.namaPejabat2.trim() !== '' ? (
                       <>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 items-start py-0.5 border-t border-slate-200/50 pt-3">
-                          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] md:text-xs">Pejabat Penandatangan 1</span>
+                          <span className="font-bold text-slate-650 uppercase tracking-wider text-[10px] md:text-xs">Pejabat Penandatangan 1</span>
                           <span className="sm:col-span-2 font-black text-slate-800 flex gap-1.5">
-                            <span className="hidden sm:inline text-slate-400 font-sans font-normal">:</span> {docData.namaPejabat}
+                            <span className="hidden sm:inline text-slate-500 font-sans font-normal">:</span> {docData.namaPejabat}
                           </span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 items-start py-0.5 border-t border-slate-200/50 pt-3">
-                          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] md:text-xs">Jabatan 1</span>
+                          <span className="font-bold text-slate-650 uppercase tracking-wider text-[10px] md:text-xs">Jabatan 1</span>
                           <span className="sm:col-span-2 font-semibold text-slate-600 flex gap-1.5">
-                            <span className="hidden sm:inline text-slate-400 font-sans font-normal">:</span> {docData.jabatan}
+                            <span className="hidden sm:inline text-slate-500 font-sans font-normal">:</span> {docData.jabatan}
                           </span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 items-start py-0.5 border-t border-slate-200/50 pt-3">
-                          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] md:text-xs">Pejabat Penandatangan 2</span>
+                          <span className="font-bold text-slate-650 uppercase tracking-wider text-[10px] md:text-xs">Pejabat Penandatangan 2</span>
                           <span className="sm:col-span-2 font-black text-slate-800 flex gap-1.5">
-                            <span className="hidden sm:inline text-slate-400 font-sans font-normal">:</span> {docData.namaPejabat2}
+                            <span className="hidden sm:inline text-slate-500 font-sans font-normal">:</span> {docData.namaPejabat2}
                           </span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 items-start py-0.5 border-t border-slate-200/50 pt-3">
-                          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] md:text-xs">Jabatan 2</span>
+                          <span className="font-bold text-slate-650 uppercase tracking-wider text-[10px] md:text-xs">Jabatan 2</span>
                           <span className="sm:col-span-2 font-semibold text-slate-600 flex gap-1.5">
-                            <span className="hidden sm:inline text-slate-400 font-sans font-normal">:</span> {docData.jabatan2}
+                            <span className="hidden sm:inline text-slate-500 font-sans font-normal">:</span> {docData.jabatan2}
                           </span>
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 items-start py-0.5 border-t border-slate-200/50 pt-3">
-                          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] md:text-xs">Pejabat Penandatangan</span>
+                          <span className="font-bold text-slate-650 uppercase tracking-wider text-[10px] md:text-xs">Pejabat Penandatangan</span>
                           <span className="sm:col-span-2 font-black text-slate-800 flex gap-1.5">
-                            <span className="hidden sm:inline text-slate-400 font-sans font-normal">:</span> {docData.namaPejabat}
+                            <span className="hidden sm:inline text-slate-500 font-sans font-normal">:</span> {docData.namaPejabat}
                           </span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 items-start py-0.5 border-t border-slate-200/50 pt-3">
-                          <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px] md:text-xs">Jabatan</span>
+                          <span className="font-bold text-slate-650 uppercase tracking-wider text-[10px] md:text-xs">Jabatan</span>
                           <span className="sm:col-span-2 font-semibold text-slate-600 flex gap-1.5">
-                            <span className="hidden sm:inline text-slate-400 font-sans font-normal">:</span> {docData.jabatan}
+                            <span className="hidden sm:inline text-slate-500 font-sans font-normal">:</span> {docData.jabatan}
                           </span>
                         </div>
                       </>
@@ -215,7 +215,7 @@ export default function VerifikasiDokumenPublic() {
             </Card>
 
             {/* Official Seal / Note */}
-            <div className="bg-slate-100 border border-slate-200 rounded-xl p-4 text-xs text-slate-500 text-center">
+            <div className="bg-slate-100 border border-slate-200 rounded-xl p-4 text-xs text-slate-700 text-center font-medium leading-relaxed">
               Dokumen ini ditandatangani secara elektronik menggunakan verifikasi QR-Code terenkripsi sistem. Informasi di atas adalah mutlak benar dan sesuai dengan data resmi terverifikasi secara elektronik di dalam server PDPN.
             </div>
           </div>
@@ -235,7 +235,7 @@ export default function VerifikasiDokumenPublic() {
                 <h4 className="font-bold text-red-900 flex items-center gap-1.5 text-sm">
                   <AlertTriangle size={16} /> Mengapa ini terjadi?
                 </h4>
-                <ul className="list-disc ml-5 text-xs text-red-700 space-y-1.5">
+                <ul className="list-disc ml-5 text-xs text-red-750 space-y-1.5 font-medium">
                   <li>Surat atau QR-code ini dibuat di luar sistem Vidya resmi (Upaya pemalsuan).</li>
                   <li>Token dalam URL verifikasi telah diedit atau diubah secara sengaja.</li>
                   <li>Dokumen telah dihapus dari sistem oleh Administrator.</li>
@@ -256,9 +256,11 @@ export default function VerifikasiDokumenPublic() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-slate-900 text-slate-500 py-6 border-t border-slate-800 text-center text-xs">
-        <p>&copy; 2026 Perkumpulan Dharmopadesa Pusat Nusantara (PDPN)</p>
-        <p className="mt-1 opacity-70">Administrasi Pesraman &bull; Terlindungi Secara Digital</p>
+      <footer className="bg-slate-900 text-slate-300 py-6 border-t border-slate-800 text-center text-xs">
+        <p className="font-semibold">&copy; 2026 Perkumpulan Dharmopadesa Pusat Nusantara (PDPN)</p>
+        <p className="mt-1.5 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
+          Administrasi Pesraman &bull; Terlindungi Secara Digital
+        </p>
       </footer>
     </div>
   );
