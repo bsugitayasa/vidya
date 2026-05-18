@@ -165,10 +165,6 @@ export default function RegistrasiWizard() {
     }
   };
 
-  if (isLoadingPrograms) {
-    return <div className="text-center my-12 text-muted">Memuat data program...</div>;
-  }
-
   return (
     <div className="max-w-4xl mx-auto my-8 font-sans">
 
@@ -215,6 +211,7 @@ export default function RegistrasiWizard() {
                 pasanganOptions={pasanganOptions}
                 onProgramChange={handleProgramChange}
                 onFileSelected={handleFileSelected}
+                isLoading={isLoadingPrograms}
               />
             )}
 
