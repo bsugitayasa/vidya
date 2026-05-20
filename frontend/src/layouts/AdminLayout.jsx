@@ -10,7 +10,8 @@ import {
   ChevronRight,
   ClipboardList,
   GraduationCap,
-  QrCode
+  QrCode,
+  UserCog
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import useIdleTimeout from '../hooks/useIdleTimeout';
@@ -32,6 +33,7 @@ export default function AdminLayout() {
     { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400' },
     { path: '/admin/absensi', icon: ClipboardList, label: 'Absensi', color: 'text-violet-400' },
     { path: '/admin/verifikasi-dokumen', icon: QrCode, label: 'Verifikasi Dokumen', color: 'text-cyan-400' },
+    { path: '/admin/manajemen-user', icon: UserCog, label: 'Manajemen User', color: 'text-pink-400', superAdminOnly: true },
     {
       path: '/admin/kelulusan',
       icon: GraduationCap,
@@ -69,18 +71,23 @@ export default function AdminLayout() {
   ];
 
   // Filter menu items based on role
-  const filteredMenuItems = menuItems.map(item => {
-    if (item.subItems) {
-      return {
-        ...item,
-        subItems: item.subItems.filter(sub => {
-          if (sub.restricted && user?.role !== 'SUPER_ADMIN') return false;
-          return true;
-        })
-      };
-    }
-    return item;
-  });
+  const filteredMenuItems = menuItems
+    .filter(item => {
+      if (item.superAdminOnly && user?.role !== 'SUPER_ADMIN') return false;
+      return true;
+    })
+    .map(item => {
+      if (item.subItems) {
+        return {
+          ...item,
+          subItems: item.subItems.filter(sub => {
+            if (sub.restricted && user?.role !== 'SUPER_ADMIN') return false;
+            return true;
+          })
+        };
+      }
+      return item;
+    });
 
   const toggleExpand = (path) => {
     setExpandedMenus(prev =>

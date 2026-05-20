@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   QrCode, FileCheck, Search, ArrowUpDown, ChevronLeft, ChevronRight,
   Download, FileSpreadsheet, FileText, Loader2, Plus, Info, AlertCircle, X, ExternalLink,
-  Edit3, Trash2, Save, AlertTriangle
+  Edit3, Trash2, Save, AlertTriangle, Settings2, ChevronDown, BookTemplate
 } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { jsPDF } from 'jspdf';
@@ -34,6 +34,14 @@ export default function VerifikasiDokumenAdmin() {
   const [docToDelete, setDocToDelete] = useState(null);
   const [pendingUpdatePayload, setPendingUpdatePayload] = useState(null);
 
+  // State Template Penandatangan
+  const [templates, setTemplates] = useState([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [templateForm, setTemplateForm] = useState({ namaTemplate: '', namaPejabat: '', jabatan: '', namaPejabat2: '', jabatan2: '' });
+  const [editingTemplate, setEditingTemplate] = useState(null);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+
   // State Table & Monitoring
   const [docsList, setDocsList] = useState([]);
   const [isLoadingList, setIsLoadingList] = useState(false);
@@ -52,6 +60,91 @@ export default function VerifikasiDokumenAdmin() {
   useEffect(() => {
     fetchDocuments();
   }, [page, sortBy, sortOrder]);
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await api.get('/template-penandatangan');
+      if (response.data.success) {
+        setTemplates(response.data.data);
+      }
+    } catch (error) {
+      console.error('Fetch templates error:', error);
+    }
+  };
+
+  const handleSelectTemplate = (templateId) => {
+    setSelectedTemplateId(templateId);
+    if (!templateId) return; // "Ketik Manual" selected
+    const tpl = templates.find(t => t.id === parseInt(templateId));
+    if (tpl) {
+      setNamaPejabat(tpl.namaPejabat);
+      setJabatan(tpl.jabatan);
+      setNamaPejabat2(tpl.namaPejabat2 || '');
+      setJabatan2(tpl.jabatan2 || '');
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateForm.namaTemplate || !templateForm.namaPejabat || !templateForm.jabatan) {
+      toast.warning('Nama template, nama pejabat, dan jabatan wajib diisi!');
+      return;
+    }
+    setIsSavingTemplate(true);
+    try {
+      if (editingTemplate) {
+        const response = await api.put(`/template-penandatangan/${editingTemplate.id}`, templateForm);
+        if (response.data.success) {
+          toast.success('Template berhasil diperbarui');
+        }
+      } else {
+        const response = await api.post('/template-penandatangan', templateForm);
+        if (response.data.success) {
+          toast.success('Template baru berhasil dibuat');
+        }
+      }
+      setTemplateForm({ namaTemplate: '', namaPejabat: '', jabatan: '', namaPejabat2: '', jabatan2: '' });
+      setEditingTemplate(null);
+      fetchTemplates();
+    } catch (error) {
+      console.error('Save template error:', error);
+      toast.error(error.response?.data?.message || 'Gagal menyimpan template');
+    } finally {
+      setIsSavingTemplate(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (id) => {
+    try {
+      const response = await api.delete(`/template-penandatangan/${id}`);
+      if (response.data.success) {
+        toast.success('Template berhasil dihapus');
+        fetchTemplates();
+      }
+    } catch (error) {
+      console.error('Delete template error:', error);
+      toast.error(error.response?.data?.message || 'Gagal menghapus template');
+    }
+  };
+
+  const handleStartEditTemplate = (tpl) => {
+    setEditingTemplate(tpl);
+    setTemplateForm({
+      namaTemplate: tpl.namaTemplate,
+      namaPejabat: tpl.namaPejabat,
+      jabatan: tpl.jabatan,
+      namaPejabat2: tpl.namaPejabat2 || '',
+      jabatan2: tpl.jabatan2 || '',
+    });
+  };
+
+  const handleCancelEditTemplate = () => {
+    setEditingTemplate(null);
+    setTemplateForm({ namaTemplate: '', namaPejabat: '', jabatan: '', namaPejabat2: '', jabatan2: '' });
+  };
 
   const fetchDocuments = async () => {
     setIsLoadingList(true);
@@ -265,17 +358,17 @@ export default function VerifikasiDokumenAdmin() {
     if (logoBase64) {
       // Draw Logo on the Left (Symmetric vertical alignment)
       pdf.addImage(logoBase64, 'PNG', 20, 12, 17, 17);
-      
+
       // Draw Aligned Text on the Right
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(12);
       pdf.text('PERKUMPULAN DHARMOPADESA PUSAT NUSANTARA', 41, 16);
-      
+
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7.5);
       pdf.text('Sekretariat Kantor Pusat: Pasraman Dharma Wasitha, Wantilan Capung Mas, Banjar Batan Ancak,', 41, 20.5);
       pdf.text('Desa Mas, Kecamatan Ubud, Kabupaten Gianyar, Provinsi Bali, Indonesia - 80571', 41, 24);
-      
+
       pdf.setFont('helvetica', 'italic');
       pdf.setFontSize(7);
       pdf.setTextColor(100, 100, 100);
@@ -286,12 +379,12 @@ export default function VerifikasiDokumenAdmin() {
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(12);
       pdf.text('PERKUMPULAN DHARMOPADESA PUSAT NUSANTARA', 105, 16, { align: 'center' });
-      
+
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(8);
       pdf.text('Sekretariat Kantor Pusat: Pasraman Dharma Wasitha, Wantilan Capung Mas, Banjar Batan Ancak,', 105, 21, { align: 'center' });
       pdf.text('Desa Mas, Kecamatan Ubud, Kabupaten Gianyar, Provinsi Bali, Indonesia - 80571', 105, 25, { align: 'center' });
-      
+
       pdf.setFont('helvetica', 'italic');
       pdf.setFontSize(7.5);
       pdf.setTextColor(100, 100, 100);
@@ -553,11 +646,45 @@ export default function VerifikasiDokumenAdmin() {
                     />
                   </div>
 
+                  {/* Template Penandatangan Selector */}
+                  <div className="p-4 bg-gradient-to-r from-slate-50 to-indigo-50/30 rounded-xl border border-slate-200/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <BookTemplate size={13} className="text-indigo-500" /> Template Penandatangan
+                      </label>
+                      {isSuperAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setShowTemplateModal(true)}
+                          className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-white hover:bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-lg transition"
+                        >
+                          <Settings2 size={12} /> Kelola Template
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={selectedTemplateId}
+                        onChange={(e) => handleSelectTemplate(e.target.value)}
+                        className="w-full appearance-none bg-white border border-slate-200 rounded-xl px-4 py-2.5 pr-10 text-sm text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition cursor-pointer"
+                      >
+                        <option value="">(Ketik Manual)</option>
+                        {templates.map(tpl => (
+                          <option key={tpl.id} value={tpl.id}>{tpl.namaTemplate}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                    {selectedTemplateId && (
+                      <p className="text-[10px] text-indigo-600 font-medium">✓ Template diterapkan — Anda tetap bisa mengedit field di bawah.</p>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Pejabat Penandatangan 1</label>
                       <Input
-                        placeholder="Contoh: Dr. Ir. Bagus Sugitayasa, M.Pd.H."
+                        placeholder="Contoh: Ir. Ida Bagus Arga"
                         value={namaPejabat}
                         onChange={(e) => setNamaPejabat(e.target.value)}
                         required
@@ -578,7 +705,7 @@ export default function VerifikasiDokumenAdmin() {
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Pejabat Penandatangan 2 (Opsional)</label>
                       <Input
-                        placeholder="Contoh: I Ketut Suastika, S.Ag."
+                        placeholder="Contoh: Ida Bagus Anom"
                         value={namaPejabat2}
                         onChange={(e) => setNamaPejabat2(e.target.value)}
                       />
@@ -1081,6 +1208,158 @@ export default function VerifikasiDokumenAdmin() {
                 onClick={handleConfirmUpdate}
               >
                 Ya, Perbarui
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* 6. MODAL KELOLA TEMPLATE PENANDATANGAN (SUPER_ADMIN ONLY) */}
+      {showTemplateModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-indigo-100 overflow-hidden max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50 shrink-0">
+              <div>
+                <h3 className="font-black text-slate-800 text-base flex items-center gap-2">
+                  <BookTemplate size={18} className="text-indigo-500" /> Kelola Template Penandatangan
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">Buat, edit, dan hapus template pejabat penandatangan.</p>
+              </div>
+              <button
+                onClick={() => { setShowTemplateModal(false); handleCancelEditTemplate(); }}
+                className="text-slate-400 hover:text-slate-700 transition p-1"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-5 overflow-y-auto space-y-5 flex-1">
+              {/* Form */}
+              <div className="p-4 bg-slate-50/80 rounded-xl border border-slate-100 space-y-4">
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  {editingTemplate ? `Edit: ${editingTemplate.namaTemplate}` : 'Tambah Template Baru'}
+                </h4>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Template</label>
+                  <Input
+                    placeholder="Contoh: Surat Antar Bidang — Ketua & Sekretaris Umum"
+                    value={templateForm.namaTemplate}
+                    onChange={(e) => setTemplateForm(prev => ({ ...prev, namaTemplate: e.target.value }))}
+                  />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Pejabat 1</label>
+                    <Input
+                      placeholder="Contoh: Ir. Ida Bagus Arga"
+                      value={templateForm.namaPejabat}
+                      onChange={(e) => setTemplateForm(prev => ({ ...prev, namaPejabat: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jabatan 1</label>
+                    <Input
+                      placeholder="Contoh: Ketua Umum PDPN"
+                      value={templateForm.jabatan}
+                      onChange={(e) => setTemplateForm(prev => ({ ...prev, jabatan: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Pejabat 2 (Opsional)</label>
+                    <Input
+                      placeholder="Contoh: Ida Bagus Anom"
+                      value={templateForm.namaPejabat2}
+                      onChange={(e) => setTemplateForm(prev => ({ ...prev, namaPejabat2: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jabatan 2 (Opsional)</label>
+                    <Input
+                      placeholder="Contoh: Sekretaris Umum PDPN"
+                      value={templateForm.jabatan2}
+                      onChange={(e) => setTemplateForm(prev => ({ ...prev, jabatan2: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-end pt-2">
+                  {editingTemplate && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="text-xs font-bold border-slate-200 rounded-lg"
+                      onClick={handleCancelEditTemplate}
+                    >
+                      Batal Edit
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    className="text-xs font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow"
+                    onClick={handleSaveTemplate}
+                    disabled={isSavingTemplate}
+                  >
+                    {isSavingTemplate ? <Loader2 className="animate-spin mr-1.5" size={14} /> : <Save className="mr-1.5" size={14} />}
+                    {editingTemplate ? 'Simpan Perubahan' : 'Tambah Template'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* List */}
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Template Tersimpan ({templates.length})</h4>
+                {templates.length === 0 ? (
+                  <div className="text-center py-8 text-slate-400 text-xs border border-dashed border-slate-200 rounded-xl">
+                    Belum ada template. Buat template pertama di atas.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {templates.map(tpl => (
+                      <div key={tpl.id} className="p-3 bg-white border border-slate-100 rounded-xl hover:border-indigo-200 transition group">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-sm text-slate-800 truncate">{tpl.namaTemplate}</div>
+                            <div className="mt-1.5 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-500">
+                              <div><span className="font-semibold text-slate-600">Pejabat 1:</span> {tpl.namaPejabat} — <span className="italic">{tpl.jabatan}</span></div>
+                              {tpl.namaPejabat2 && (
+                                <div><span className="font-semibold text-slate-600">Pejabat 2:</span> {tpl.namaPejabat2} — <span className="italic">{tpl.jabatan2}</span></div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="inline-flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => handleStartEditTemplate(tpl)}
+                              className="p-1.5 hover:bg-indigo-50 text-indigo-600 rounded-lg border border-slate-100 hover:border-indigo-200 transition"
+                              title="Edit Template"
+                            >
+                              <Edit3 size={13} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTemplate(tpl.id)}
+                              className="p-1.5 hover:bg-red-50 text-red-500 rounded-lg border border-slate-100 hover:border-red-200 transition"
+                              title="Hapus Template"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0 flex justify-end">
+              <Button
+                variant="outline"
+                className="font-bold border-slate-200 rounded-xl"
+                onClick={() => { setShowTemplateModal(false); handleCancelEditTemplate(); }}
+              >
+                Tutup
               </Button>
             </div>
           </div>

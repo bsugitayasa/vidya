@@ -203,3 +203,14 @@ model QrDocument {
 
   @@map("qr_document")
 }
+
+model TemplatePenandatangan {
+  id             Int      @id @default(autoincrement())
+  namaTemplate   String   @unique
+  namaPejabat    String
+  jabatan        String
+  namaPejabat2   String?
+  jabatan2       String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

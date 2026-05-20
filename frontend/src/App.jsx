@@ -33,6 +33,7 @@ const PresentasiKelulusan = lazy(() => import('./pages/admin/kelulusan/Presentas
 const SertifikatConfig = lazy(() => import('./pages/admin/SertifikatConfig'));
 const TarifConfig = lazy(() => import('./pages/admin/TarifConfig'));
 const VerifikasiDokumenAdmin = lazy(() => import('./pages/admin/VerifikasiDokumenAdmin'));
+const ManajemenUser = lazy(() => import('./pages/admin/ManajemenUser'));
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ function App() {
               <Route path="kelulusan/syarat" element={<SyaratKelulusan />} />
               <Route path="kelulusan/absensi" element={<AbsensiKelulusan />} />
               <Route path="verifikasi-dokumen" element={<VerifikasiDokumenAdmin />} />
+              <Route path="manajemen-user" element={<ManajemenUser />} />
             </Route>
 
             {/* Standalone Public Verification Scan Page */}
