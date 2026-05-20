@@ -31,6 +31,8 @@ const telegramRoutes = require('./routes/telegram.routes');
 const absensiRoutes = require('./routes/absensi.routes');
 const kelulusanRoutes = require('./routes/kelulusan.routes');
 const qrDocumentRoutes = require('./routes/qrDocument.routes');
+const templatePenandatanganRoutes = require('./routes/templatePenandatangan.routes');
+const userManagementRoutes = require('./routes/userManagement.routes');
 
 // Apply limiters to specific paths
 app.use('/api/auth/login', authLimiter);
@@ -48,6 +50,8 @@ app.use('/api/telegram', telegramRoutes);
 app.use('/api/absensi', absensiRoutes);
 app.use('/api/kelulusan', kelulusanRoutes);
 app.use('/api/qr-document', qrDocumentRoutes);
+app.use('/api/template-penandatangan', templatePenandatanganRoutes);
+app.use('/api/user-management', userManagementRoutes);
 
 const multer = require('multer');
 
