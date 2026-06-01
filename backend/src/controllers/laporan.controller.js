@@ -9,7 +9,7 @@ const getLaporanSisya = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
-    const whereClause = {};
+    const whereClause = { status: { not: 'TIDAK_AKTIF' } };
 
     if (status && status !== 'SEMUA') {
       whereClause.statusPembayaran = status;
@@ -87,7 +87,8 @@ const getLaporanPuniaRange = async (req, res) => {
     const take = parseInt(limit);
 
     const where = {
-      status: 'VERIFIKASI'
+      status: 'VERIFIKASI',
+      sisya: { status: { not: 'TIDAK_AKTIF' } }
     };
 
     if (startDate || endDate) {
@@ -169,12 +170,13 @@ const getLaporanPuniaBulanan = async (req, res) => {
     // Get monthly sums using raw query (PostgreSQL specific)
     const result = await prisma.$queryRaw`
       SELECT 
-        EXTRACT(YEAR FROM "tanggalBayar")::text as year,
-        EXTRACT(MONTH FROM "tanggalBayar")::text as month,
-        SUM(nominal)::bigint as total,
-        COUNT(id)::int as count
-      FROM "Pembayaran"
-      WHERE status = 'VERIFIKASI'
+        EXTRACT(YEAR FROM p."tanggalBayar")::text as year,
+        EXTRACT(MONTH FROM p."tanggalBayar")::text as month,
+        SUM(p.nominal)::bigint as total,
+        COUNT(p.id)::int as count
+      FROM "Pembayaran" p
+      INNER JOIN "Sisya" s ON p."sisyaId" = s.id
+      WHERE p.status = 'VERIFIKASI' AND s.status != 'TIDAK_AKTIF'
       GROUP BY year, month
       ORDER BY year DESC, month DESC
       LIMIT ${take} OFFSET ${skip}
@@ -182,9 +184,10 @@ const getLaporanPuniaBulanan = async (req, res) => {
 
     const countResult = await prisma.$queryRaw`
       SELECT COUNT(*) as total FROM (
-        SELECT 1 FROM "Pembayaran"
-        WHERE status = 'VERIFIKASI'
-        GROUP BY EXTRACT(YEAR FROM "tanggalBayar"), EXTRACT(MONTH FROM "tanggalBayar")
+        SELECT 1 FROM "Pembayaran" p
+        INNER JOIN "Sisya" s ON p."sisyaId" = s.id
+        WHERE p.status = 'VERIFIKASI' AND s.status != 'TIDAK_AKTIF'
+        GROUP BY EXTRACT(YEAR FROM p."tanggalBayar"), EXTRACT(MONTH FROM p."tanggalBayar")
       ) as sub
     `;
 
@@ -215,7 +218,10 @@ const getLaporanPuniaDashboard = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
 
-    const where = { status: 'VERIFIKASI' };
+    const where = { 
+      status: 'VERIFIKASI',
+      sisya: { status: { not: 'TIDAK_AKTIF' } }
+    };
     if (startDate || endDate) {
       where.tanggalBayar = {};
       if (startDate) where.tanggalBayar.gte = new Date(startDate);
@@ -237,11 +243,12 @@ const getLaporanPuniaDashboard = async (req, res) => {
     // 2. Monthly Trend (Last 6 Months)
     const trendResult = await prisma.$queryRaw`
       SELECT 
-        EXTRACT(YEAR FROM "tanggalBayar")::text as year,
-        EXTRACT(MONTH FROM "tanggalBayar")::text as month,
-        SUM(nominal)::bigint as total
-      FROM "Pembayaran"
-      WHERE status = 'VERIFIKASI'
+        EXTRACT(YEAR FROM p."tanggalBayar")::text as year,
+        EXTRACT(MONTH FROM p."tanggalBayar")::text as month,
+        SUM(p.nominal)::bigint as total
+      FROM "Pembayaran" p
+      INNER JOIN "Sisya" s ON p."sisyaId" = s.id
+      WHERE p.status = 'VERIFIKASI' AND s.status != 'TIDAK_AKTIF'
       GROUP BY year, month
       ORDER BY year DESC, month DESC
       LIMIT 6
@@ -271,7 +278,7 @@ const exportSisya = async (req, res) => {
   try {
     const { status, startDate, endDate, programId } = req.query;
 
-    const whereClause = {};
+    const whereClause = { status: { not: 'TIDAK_AKTIF' } };
     if (status && status !== 'SEMUA') whereClause.statusPembayaran = status;
     if (programId && programId !== 'SEMUA') {
       whereClause.programSisyas = { some: { programAjahanId: parseInt(programId) } };
@@ -442,7 +449,8 @@ const exportPuniaRange = async (req, res) => {
     const { startDate, endDate } = req.query;
 
     const where = {
-      status: 'VERIFIKASI'
+      status: 'VERIFIKASI',
+      sisya: { status: { not: 'TIDAK_AKTIF' } }
     };
 
     if (startDate || endDate) {
@@ -584,6 +592,7 @@ const getLaporanAbsensi = async (req, res) => {
 
     // 2. Ambil daftar sisya di program ini
     const whereSisya = {
+      status: { not: 'TIDAK_AKTIF' },
       programSisyas: { some: { programAjahanId: progId } }
     };
 
@@ -676,7 +685,10 @@ const exportLaporanAbsensi = async (req, res) => {
 
       // Ambil sisya di program ini
       const sisyas = await prisma.sisya.findMany({
-        where: { programSisyas: { some: { programAjahanId: progId } } },
+        where: { 
+          status: { not: 'TIDAK_AKTIF' },
+          programSisyas: { some: { programAjahanId: progId } } 
+        },
         include: {
           absensiSisyas: {
             where: {

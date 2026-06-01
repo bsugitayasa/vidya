@@ -10,16 +10,24 @@ const getSummaryForBot = async () => {
   const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   // Total Sisya
-  const total = await prisma.sisya.count();
+  const total = await prisma.sisya.count({
+    where: { status: { not: 'TIDAK_AKTIF' } }
+  });
   
   // Sisya Bulan Ini
   const bulanIni = await prisma.sisya.count({
-    where: { createdAt: { gte: startOfMonth } }
+    where: { 
+      createdAt: { gte: startOfMonth },
+      status: { not: 'TIDAK_AKTIF' }
+    }
   });
 
   // Sisya Hari Ini
   const hariIni = await prisma.sisya.count({
-    where: { createdAt: { gte: startOfDay } }
+    where: { 
+      createdAt: { gte: startOfDay },
+      status: { not: 'TIDAK_AKTIF' }
+    }
   });
 
   // Data per Program dan Jenis Kelamin
@@ -27,6 +35,11 @@ const getSummaryForBot = async () => {
     where: { isAktif: true },
     include: {
       sisyaPrograms: {
+        where: {
+          sisya: {
+            status: { not: 'TIDAK_AKTIF' }
+          }
+        },
         include: {
           sisya: true
         }
@@ -57,7 +70,10 @@ const getSummaryForBot = async () => {
  */
 const getMenungguVerifikasi = async () => {
   return await prisma.sisya.findMany({
-    where: { statusPembayaran: 'MENUNGGU_VERIFIKASI' },
+    where: { 
+      statusPembayaran: 'MENUNGGU_VERIFIKASI',
+      status: { not: 'TIDAK_AKTIF' }
+    },
     orderBy: { updatedAt: 'asc' },
     select: {
       namaLengkap: true,

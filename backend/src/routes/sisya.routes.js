@@ -51,4 +51,7 @@ router.patch('/:id/academic-status', requireAuth, requireAdmin, sisyaController.
 // PATCH /api/sisya/program/:spId (Update nomorRegistrasi for a SisyaProgram)
 router.patch('/program/:spId', requireAuth, requireAdmin, sisyaController.updateProgramRegistrasi);
 
+// DELETE /api/sisya/:id/soft-delete (Soft delete by changing status to TIDAK_AKTIF)
+router.delete('/:id/soft-delete', requireAuth, requireSuperAdmin, sisyaController.softDelete);
+
 module.exports = router;

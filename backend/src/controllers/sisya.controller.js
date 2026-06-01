@@ -183,6 +183,7 @@ const getAll = async (req, res) => {
       programId, 
       status, 
       search, 
+      showInactive,
       sortBy = 'createdAt', 
       sortOrder = 'desc' 
     } = req.query;
@@ -195,6 +196,9 @@ const getAll = async (req, res) => {
     const finalSortOrder = sortOrder === 'asc' ? 'asc' : 'desc';
 
     const where = {};
+    if (showInactive !== 'true') {
+      where.status = { not: 'TIDAK_AKTIF' };
+    }
 
     if (status) {
       where.statusPembayaran = status;
@@ -505,6 +509,25 @@ const updateProgramRegistrasi = async (req, res) => {
   }
 };
 
+const softDelete = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const updatedSisya = await prisma.sisya.update({
+      where: { id: parseInt(id) },
+      data: { status: 'TIDAK_AKTIF' }
+    });
+
+    res.json({ success: true, message: 'Data Sisya berhasil dinonaktifkan', data: updatedSisya });
+  } catch (error) {
+    console.error('Soft Delete Sisya Error:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Data Sisya tidak ditemukan' });
+    }
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan saat menonaktifkan data' });
+  }
+};
+
 module.exports = {
   register,
   getAll,
@@ -515,5 +538,6 @@ module.exports = {
   updateStatus,
   updateAcademicStatus,
   updateSisya,
-  updateProgramRegistrasi
+  updateProgramRegistrasi,
+  softDelete
 };

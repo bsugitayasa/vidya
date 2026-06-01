@@ -32,7 +32,9 @@ export default function useFileUrl(filePath) {
         // Cleanup function
         return () => URL.revokeObjectURL(blobUrl);
       } catch (error) {
-        console.error('Failed to fetch protected file:', error);
+        if (error.response && error.response.status !== 404) {
+          console.error('Failed to fetch protected file:', error);
+        }
         setUrl(null);
       }
     };

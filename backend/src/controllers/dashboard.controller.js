@@ -6,15 +6,19 @@ const getStats = async (req, res) => {
   try {
     const { programId } = req.query;
 
+    // Base filter: exclude TIDAK_AKTIF sisya from all stats
+    const activeFilter = { status: { not: 'TIDAK_AKTIF' } };
+
     // Statistics for general dashboard
-    const totalSisya = await prisma.sisya.count();
+    const totalSisya = await prisma.sisya.count({ where: activeFilter });
     
     const menungguVerifikasi = await prisma.sisya.count({
-      where: { statusPembayaran: 'MENUNGGU_VERIFIKASI' }
+      where: { ...activeFilter, statusPembayaran: 'MENUNGGU_VERIFIKASI' }
     });
 
     const belumLunas = await prisma.sisya.count({
       where: { 
+        ...activeFilter,
         statusPembayaran: {
           in: ['BELUM_LUNAS', 'MENUNGGU_PEMBAYARAN']
         }
@@ -23,13 +27,14 @@ const getStats = async (req, res) => {
     
     // Total Punia
     const result = await prisma.sisya.aggregate({
+      where: activeFilter,
       _sum: { totalPunia: true },
     });
     
     const totalPunia = result._sum.totalPunia || 0;
 
     // Gender Stats (Filtered by Program if provided)
-    const genderFilter = {};
+    const genderFilter = { ...activeFilter };
     if (programId && programId !== 'all') {
       genderFilter.programSisyas = {
         some: { programAjahanId: parseInt(programId) }
@@ -43,23 +48,24 @@ const getStats = async (req, res) => {
       where: { ...genderFilter, jenisKelamin: 'PEREMPUAN' }
     });
 
-    // Program Stats
+    // Program Stats (exclude TIDAK_AKTIF sisya)
     const programsData = await prisma.programAjahan.findMany({
       where: { isAktif: true },
       select: {
         id: true,
         nama: true,
-        _count: {
-          select: { sisyaPrograms: true }
-        }
       },
       orderBy: { urutan: 'asc' }
     });
 
-    const programStats = programsData.map(p => ({
-      id: p.id,
-      nama: p.nama,
-      total: p._count.sisyaPrograms
+    const programStats = await Promise.all(programsData.map(async (p) => {
+      const total = await prisma.sisyaProgram.count({
+        where: {
+          programAjahanId: p.id,
+          sisya: activeFilter
+        }
+      });
+      return { id: p.id, nama: p.nama, total };
     }));
 
     // Ambil data pendaftar 7 hari terakhir untuk grafik
@@ -69,6 +75,7 @@ const getStats = async (req, res) => {
 
     const recentSisyas = await prisma.sisya.findMany({
       where: {
+        ...activeFilter,
         createdAt: {
           gte: sevenDaysAgo
         }

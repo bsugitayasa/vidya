@@ -15,6 +15,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Loader2 } from 'lucide-react';
 
 const sisyaUpdateSchema = z.object({
   namaLengkap: z.string().min(3, 'Nama lengkap minimal 3 karakter'),
@@ -45,7 +48,7 @@ export default function SisyaDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState('');
-  
+
   // Modal state
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [selectedPembayaran, setSelectedPembayaran] = useState(null);
@@ -53,7 +56,7 @@ export default function SisyaDetail() {
   const [keteranganVerifikasi, setKeteranganVerifikasi] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
-  
+
   // Registration Number Edit state
   const [showEditRegModal, setShowEditRegModal] = useState(false);
   const [selectedSp, setSelectedSp] = useState(null);
@@ -69,6 +72,9 @@ export default function SisyaDetail() {
     resolver: zodResolver(sisyaUpdateSchema),
     mode: 'onTouched'
   });
+
+  const [showSoftDeleteConfirm, setShowSoftDeleteConfirm] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const tanggalLahirVal = watch('tanggalLahir');
 
@@ -160,6 +166,195 @@ export default function SisyaDetail() {
   const ktpUrl = useFileUrl(sisya?.fileIdentitasPath);
   const rekomendasiUrl = useFileUrl(sisya?.fileRekomendasiPath);
 
+  const handleSoftDelete = async () => {
+    setIsUpdating(true);
+    try {
+      const res = await api.delete(`/sisya/${id}/soft-delete`);
+      if (res.data.success) {
+        toast.success('Data sisya berhasil dinonaktifkan');
+        setShowSoftDeleteConfirm(false);
+        fetchSisyaDetail();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal menonaktifkan data');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const getBase64ImageFromUrl = async (imageUrl) => {
+    try {
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener("load", function () {
+          resolve(reader.result);
+        }, false);
+        reader.onerror = () => reject(new Error("Gagal membaca blob gambar"));
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.error('Gagal mengambil base64 logo:', err);
+      return null;
+    }
+  };
+
+  const handleDownloadPdfForm = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      let logoBase64 = null;
+      try {
+        logoBase64 = await getBase64ImageFromUrl('/logo.png');
+      } catch (err) {
+        console.error('Gagal memuat logo untuk PDF:', err);
+      }
+
+      if (logoBase64) {
+        pdf.addImage(logoBase64, 'PNG', 20, 12, 17, 17);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.text('PERKUMPULAN DHARMOPADESA PUSAT NUSANTARA', 41, 16);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+        pdf.text('Sekretariat Kantor Pusat: Pasraman Dharma Wasitha, Wantilan Capung Mas, Banjar Batan Ancak,', 41, 20.5);
+        pdf.text('Desa Mas, Kecamatan Ubud, Kabupaten Gianyar, Provinsi Bali, Indonesia - 80571', 41, 24);
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(7);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 41, 27.5);
+        pdf.setTextColor(0, 0, 0);
+      } else {
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.text('PERKUMPULAN DHARMOPADESA PUSAT NUSANTARA', 105, 16, { align: 'center' });
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.text('Sekretariat Kantor Pusat: Pasraman Dharma Wasitha, Wantilan Capung Mas, Banjar Batan Ancak,', 105, 21, { align: 'center' });
+        pdf.text('Desa Mas, Kecamatan Ubud, Kabupaten Gianyar, Provinsi Bali, Indonesia - 80571', 105, 25, { align: 'center' });
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 105, 29, { align: 'center' });
+        pdf.setTextColor(0, 0, 0);
+      }
+
+      pdf.setLineWidth(0.8);
+      pdf.line(20, 33, 190, 33);
+      pdf.setLineWidth(0.2);
+      pdf.line(20, 34, 190, 34);
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.text('FORMULIR REGISTRASI SISYA', 105, 45, { align: 'center' });
+      pdf.setFontSize(10);
+      pdf.text(`No. Pendaftaran: ${sisya.nomorPendaftaran}`, 105, 51, { align: 'center' });
+
+      // Data Pribadi
+      let startY = 55;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('A. DATA PRIBADI', 20, startY);
+
+      autoTable(pdf, {
+        startY: startY + 2,
+        theme: 'plain',
+        head: [],
+        body: [
+          ['Nama Lengkap', ':', sisya.namaLengkap],
+          ['Tempat, Tanggal Lahir', ':', `${sisya.tempatLahir}, ${new Date(sisya.tanggalLahir).toLocaleDateString('id-ID')}`],
+          ['Jenis Kelamin', ':', sisya.jenisKelamin === 'LAKI_LAKI' ? 'Laki-Laki' : 'Perempuan'],
+          ['Alamat', ':', sisya.alamat],
+          ['Nomor HP', ':', sisya.noHp],
+          ['Email', ':', sisya.email || '-'],
+          ['Nama Griya', ':', sisya.namaGriya],
+          ['Nama Desa', ':', sisya.namaDesa]
+        ],
+        styles: { fontSize: 9, cellPadding: 1 },
+        columnStyles: {
+          0: { cellWidth: 45, fontStyle: 'bold' },
+          1: { cellWidth: 5 },
+          2: { cellWidth: 100 }
+        },
+        margin: { left: 20 }
+      });
+
+      // Program Ajahan
+      startY = pdf.lastAutoTable.finalY + 8;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('B. PROGRAM AJAHAN', 20, startY);
+
+      const programData = sisya.programSisyas.map(sp => [
+        sp.programAjahan.nama,
+        sp.isPasangan ? 'Termasuk Pasangan' : 'Individu',
+        sp.nomorRegistrasi || '-',
+        formatRupiah(sp.puniaProgram)
+      ]);
+
+      autoTable(pdf, {
+        startY: startY + 2,
+        theme: 'grid',
+        head: [['Nama Program', 'Tipe', 'No. Registrasi', 'Punia']],
+        body: programData,
+        styles: { fontSize: 9, cellPadding: 2 },
+        headStyles: { fillColor: [241, 245, 249], textColor: 20 },
+        margin: { left: 20, right: 20 }
+      });
+
+      // Status
+      startY = pdf.lastAutoTable.finalY + 8;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('C. STATUS & PEMBAYARAN', 20, startY);
+
+      autoTable(pdf, {
+        startY: startY + 4,
+        theme: 'plain',
+        head: [],
+        body: [
+          ['Status Akademik', ':', formatStatus(sisya.status)],
+          ['Status Pembayaran', ':', formatStatus(sisya.statusPembayaran)],
+          ['Total Tagihan Punia', ':', formatRupiah(sisya.totalPunia)],
+          ['Total Terbayar', ':', formatRupiah(sisya.totalTerbayar)],
+          ['Sisa Tagihan', ':', formatRupiah(sisya.totalPunia - sisya.totalTerbayar)]
+        ],
+        styles: { fontSize: 9, cellPadding: 1 },
+        columnStyles: {
+          0: { cellWidth: 45, fontStyle: 'bold' },
+          1: { cellWidth: 5 },
+          2: { cellWidth: 100 }
+        },
+        margin: { left: 20 }
+      });
+
+      // Tanda Tangan
+      startY = pdf.lastAutoTable.finalY + 20;
+      if (startY > 270) {
+        pdf.addPage();
+        startY = 20;
+      }
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Denpasar, ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), 130, startY);
+      pdf.text('Pendaftar', 130, startY + 6);
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(sisya.namaLengkap, 130, startY + 25);
+      pdf.line(130, startY + 26, 180, startY + 26);
+
+      pdf.save(`Formulir_Registrasi_${sisya.nomorPendaftaran}.pdf`);
+      toast.success('Formulir registrasi berhasil diunduh');
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Gagal membuat file PDF');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   // Academic status state
   const [academicStatus, setAcademicStatus] = useState('');
   const [tanggalDiksan, setTanggalDiksan] = useState('');
@@ -179,13 +374,13 @@ export default function SisyaDetail() {
 
   const handleDownload = (blobUrl, label) => {
     if (!blobUrl) return;
-    
-    const extension = blobUrl.includes('image/png') ? 'png' : 
-                    blobUrl.includes('image/jpeg') ? 'jpg' : 
-                    blobUrl.includes('application/pdf') ? 'pdf' : 'jpg';
-    
+
+    const extension = blobUrl.includes('image/png') ? 'png' :
+      blobUrl.includes('image/jpeg') ? 'jpg' :
+        blobUrl.includes('application/pdf') ? 'pdf' : 'jpg';
+
     const fileName = `${label}_${sisya.namaLengkap.replace(/\s+/g, '_')}`;
-    
+
     const link = document.createElement('a');
     link.href = blobUrl;
     link.download = fileName;
@@ -278,14 +473,14 @@ export default function SisyaDetail() {
   const handleDeletePembayaran = async () => {
     setIsDeleting(true);
     try {
-        await api.delete(`/pembayaran/${confirmDelete.id}`);
-        toast.success('Bukti pembayaran dihapus');
-        setConfirmDelete({ open: false, id: null });
-        fetchSisyaDetail();
+      await api.delete(`/pembayaran/${confirmDelete.id}`);
+      toast.success('Bukti pembayaran dihapus');
+      setConfirmDelete({ open: false, id: null });
+      fetchSisyaDetail();
     } catch (err) {
-        toast.error('Gagal menghapus pembayaran');
+      toast.error('Gagal menghapus pembayaran');
     } finally {
-        setIsDeleting(false);
+      setIsDeleting(false);
     }
   };
 
@@ -309,7 +504,7 @@ export default function SisyaDetail() {
   };
 
   const getAcademicStatusBadgeColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'AKTIF': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
       case 'MEDIKSA': return 'bg-purple-100 text-purple-800 border-purple-200';
       case 'TIDAK_AKTIF': return 'bg-red-100 text-red-800 border-red-200';
@@ -318,7 +513,7 @@ export default function SisyaDetail() {
   };
 
   const getStatusBadgeColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'LUNAS': return 'bg-green-100 text-green-800 border-green-200';
       case 'BELUM_LUNAS': return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'MENUNGGU_VERIFIKASI': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -345,20 +540,42 @@ export default function SisyaDetail() {
 
   return (
     <div className="space-y-6 pb-12 font-sans">
-      <div className="flex items-center gap-4 mb-6">
-        <Link to="/admin/sisya">
-          <Button variant="outline" className="w-10 h-10 p-0 rounded-full">
-            <ArrowLeft size={18} />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <Link to="/admin/sisya">
+            <Button variant="outline" className="w-10 h-10 p-0 rounded-full">
+              <ArrowLeft size={18} />
+            </Button>
+          </Link>
+          <div>
+            <h2 className="text-2xl font-bold font-heading text-primary">Detail Sisya</h2>
+            <p className="text-sm text-muted">No. {sisya.nomorPendaftaran}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            className="flex-1 sm:flex-none"
+            onClick={handleDownloadPdfForm}
+            disabled={isGeneratingPdf}
+          >
+            {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <FileText className="mr-2" size={16} />}
+            Formulir
           </Button>
-        </Link>
-        <div>
-          <h2 className="text-2xl font-bold font-heading text-primary">Detail Sisya</h2>
-          <p className="text-sm text-muted">No. {sisya.nomorPendaftaran}</p>
+          {isSuperAdmin && sisya.status !== 'TIDAK_AKTIF' && (
+            <Button
+              variant="destructive"
+              className="flex-1 sm:flex-none"
+              onClick={() => setShowSoftDeleteConfirm(true)}
+            >
+              <Trash2 className="mr-2" size={16} /> Nonaktifkan
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+
         {/* Kolom Kiri: Profil & Ringkasan */}
         <div className="space-y-6 md:col-span-1">
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6 text-center relative overflow-hidden">
@@ -373,11 +590,11 @@ export default function SisyaDetail() {
                   </div>
                 )}
               </div>
-              
+
               {fotoUrl && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="mb-4 h-8 text-[10px] font-bold uppercase tracking-wider"
                   onClick={() => handleDownload(fotoUrl, 'Foto')}
                 >
@@ -386,7 +603,7 @@ export default function SisyaDetail() {
               )}
               <h3 className="text-xl font-bold">{sisya.namaLengkap}</h3>
               <p className="text-sm text-muted mb-4">{sisya.email}</p>
-              
+
               <div className="flex flex-wrap justify-center gap-2 mb-6">
                 <div className={`inline-block px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-wider ${getStatusBadgeColor(sisya.statusPembayaran)}`}>
                   {formatStatus(sisya.statusPembayaran)}
@@ -406,7 +623,7 @@ export default function SisyaDetail() {
               <div className="pt-4 border-t border-muted/10 text-left mb-6">
                 <h4 className="text-xs font-bold text-muted uppercase mb-3">Update Status Akademik</h4>
                 <div className="space-y-3">
-                  <select 
+                  <select
                     className="w-full text-sm border-muted/20 rounded-md bg-white p-2 outline-none focus:ring-1 focus:ring-primary"
                     value={academicStatus}
                     onChange={(e) => setAcademicStatus(e.target.value)}
@@ -420,17 +637,17 @@ export default function SisyaDetail() {
                   {academicStatus === 'MEDIKSA' && (
                     <div className="space-y-1">
                       <label className="text-[10px] font-bold text-muted uppercase">Tanggal Diksan</label>
-                      <Input 
-                        type="date" 
+                      <Input
+                        type="date"
                         value={tanggalDiksan}
                         onChange={(e) => setTanggalDiksan(e.target.value)}
                       />
                     </div>
                   )}
 
-                  <Button 
-                    size="sm" 
-                    className="w-full font-bold" 
+                  <Button
+                    size="sm"
+                    className="w-full font-bold"
                     onClick={handleUpdateAcademicStatus}
                     disabled={isUpdating}
                   >
@@ -440,23 +657,23 @@ export default function SisyaDetail() {
               </div>
 
               <div className="pt-4 border-t border-muted/10 space-y-4">
-                  <div className="text-left">
-                      <span className="text-xs text-muted block mb-1">Ringkasan Punia</span>
-                      <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                              <span>Total Tagihan</span>
-                              <span className="font-bold">{formatRupiah(sisya.totalPunia)}</span>
-                          </div>
-                          <div className="flex justify-between text-sm text-green-600">
-                              <span>Total Terbayar</span>
-                              <span className="font-bold">{formatRupiah(sisya.totalTerbayar)}</span>
-                          </div>
-                          <div className={`flex justify-between text-sm p-2 rounded ${sisaTagihan > 0 ? 'bg-red-50 text-red-700 font-bold' : 'bg-green-50 text-green-700 font-bold'}`}>
-                              <span>Sisa Tagihan</span>
-                              <span>{formatRupiah(sisaTagihan)}</span>
-                          </div>
-                      </div>
+                <div className="text-left">
+                  <span className="text-xs text-muted block mb-1">Ringkasan Punia</span>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Total Tagihan</span>
+                      <span className="font-bold">{formatRupiah(sisya.totalPunia)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Total Terbayar</span>
+                      <span className="font-bold">{formatRupiah(sisya.totalTerbayar)}</span>
+                    </div>
+                    <div className={`flex justify-between text-sm p-2 rounded ${sisaTagihan > 0 ? 'bg-red-50 text-red-700 font-bold' : 'bg-green-50 text-green-700 font-bold'}`}>
+                      <span>Sisa Tagihan</span>
+                      <span>{formatRupiah(sisaTagihan)}</span>
+                    </div>
                   </div>
+                </div>
               </div>
             </div>
           </div>
@@ -471,30 +688,30 @@ export default function SisyaDetail() {
               )}
             </div>
             <div className="space-y-4 text-sm">
-                <div>
-                    <span className="text-muted text-xs block">TTL</span>
-                    <span className="font-medium">{sisya.tempatLahir}, {new Date(sisya.tanggalLahir).toLocaleDateString('id-ID')}</span>
-                </div>
-                <div>
-                    <span className="text-muted text-xs block">Alamat</span>
-                    <span className="font-medium">{sisya.alamat}</span>
-                </div>
-                <div>
-                    <span className="text-muted text-xs block">Griya / Desa</span>
-                    <span className="font-medium">{sisya.namaGriya} / {sisya.namaDesa}</span>
-                </div>
+              <div>
+                <span className="text-muted text-xs block">TTL</span>
+                <span className="font-medium">{sisya.tempatLahir}, {new Date(sisya.tanggalLahir).toLocaleDateString('id-ID')}</span>
+              </div>
+              <div>
+                <span className="text-muted text-xs block">Alamat</span>
+                <span className="font-medium">{sisya.alamat}</span>
+              </div>
+              <div>
+                <span className="text-muted text-xs block">Griya / Desa</span>
+                <span className="font-medium">{sisya.namaGriya} / {sisya.namaDesa}</span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Kolom Kanan: Riwayat & Dokumen */}
         <div className="space-y-6 md:col-span-2">
-          
+
           {/* Riwayat Pembayaran */}
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
             <div className="flex justify-between items-center border-b border-muted/20 pb-3 mb-4">
               <h4 className="font-bold text-lg text-primary flex items-center gap-2">
-                  <CreditCard size={20} /> Riwayat Pembayaran (Cicilan)
+                <CreditCard size={20} /> Riwayat Pembayaran (Cicilan)
               </h4>
               {isSuperAdmin && (
                 <Button size="sm" variant="outline" className="h-8 text-xs font-bold" onClick={() => setShowUploadModal(true)}>
@@ -503,59 +720,58 @@ export default function SisyaDetail() {
               )}
             </div>
             <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                    <thead>
-                        <tr className="text-muted border-b border-muted/10">
-                            <th className="py-2">Tanggal</th>
-                            <th className="py-2">Keterangan</th>
-                            <th className="py-2 text-right">Nominal</th>
-                            <th className="py-2 text-center">Bukti</th>
-                            <th className="py-2 text-center">Status</th>
-                            <th className="py-2"></th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-muted/5">
-                        {sisya.pembayarans.length === 0 ? (
-                            <tr>
-                                <td colSpan="6" className="py-8 text-center text-muted">Belum ada riwayat pembayaran.</td>
-                            </tr>
-                        ) : (
-                            sisya.pembayarans.map((p) => (
-                                <tr key={p.id} className="hover:bg-bg/50">
-                                    <td className="py-3">{new Date(p.createdAt).toLocaleDateString('id-ID')}</td>
-                                    <td className="py-3 font-medium">{p.keterangan || '-'}</td>
-                                    <td className="py-3 text-right font-mono font-bold">
-                                        {p.status === 'VERIFIKASI' ? formatRupiah(p.nominal) : '-'}
-                                    </td>
-                                    <td className="py-3 text-center">
-                                        <ProofLink path={p.buktiPath} />
-                                    </td>
-                                    <td className="py-3 text-center">
-                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${
-                                            p.status === 'VERIFIKASI' ? 'bg-green-100 text-green-700 border-green-200' :
-                                            p.status === 'MENUNGGU' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
-                                            'bg-red-100 text-red-700 border-red-200'
-                                        }`}>
-                                            {p.status}
-                                        </span>
-                                    </td>
-                                    <td className="py-3 text-right">
-                                        {p.status === 'MENUNGGU' && (
-                                            <div className="flex gap-2 justify-end">
-                                                <Button size="sm" className="h-7 text-xs" onClick={() => handleOpenVerifyModal(p)}>
-                                                    Verifikasi
-                                                </Button>
-                                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500" onClick={() => setConfirmDelete({ open: true, id: p.id })}>
-                                                    <Trash2 size={14} />
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="text-muted border-b border-muted/10">
+                    <th className="py-2">Tanggal</th>
+                    <th className="py-2">Keterangan</th>
+                    <th className="py-2 text-right">Nominal</th>
+                    <th className="py-2 text-center">Bukti</th>
+                    <th className="py-2 text-center">Status</th>
+                    <th className="py-2"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-muted/5">
+                  {sisya.pembayarans.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="py-8 text-center text-muted">Belum ada riwayat pembayaran.</td>
+                    </tr>
+                  ) : (
+                    sisya.pembayarans.map((p) => (
+                      <tr key={p.id} className="hover:bg-bg/50">
+                        <td className="py-3">{new Date(p.createdAt).toLocaleDateString('id-ID')}</td>
+                        <td className="py-3 font-medium">{p.keterangan || '-'}</td>
+                        <td className="py-3 text-right font-mono font-bold">
+                          {p.status === 'VERIFIKASI' ? formatRupiah(p.nominal) : '-'}
+                        </td>
+                        <td className="py-3 text-center">
+                          <ProofLink path={p.buktiPath} />
+                        </td>
+                        <td className="py-3 text-center">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${p.status === 'VERIFIKASI' ? 'bg-green-100 text-green-700 border-green-200' :
+                              p.status === 'MENUNGGU' ? 'bg-yellow-100 text-yellow-700 border-yellow-200' :
+                                'bg-red-100 text-red-700 border-red-200'
+                            }`}>
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="py-3 text-right">
+                          {p.status === 'MENUNGGU' && (
+                            <div className="flex gap-2 justify-end">
+                              <Button size="sm" className="h-7 text-xs" onClick={() => handleOpenVerifyModal(p)}>
+                                Verifikasi
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500" onClick={() => setConfirmDelete({ open: true, id: p.id })}>
+                                <Trash2 size={14} />
+                              </Button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
@@ -573,10 +789,10 @@ export default function SisyaDetail() {
                           {sp.nomorRegistrasi || 'No Registrasi Belum Ada'}
                         </span>
                         {isSuperAdmin && (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-5 w-5 p-0 opacity-50 hover:opacity-100" 
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 opacity-50 hover:opacity-100"
                             onClick={() => handleOpenEditRegModal(sp)}
                             title="Edit Nomor Sertifikat"
                           >
@@ -606,9 +822,9 @@ export default function SisyaDetail() {
                           <ExternalLink size={14} className="mr-1" /> Lihat
                         </Button>
                       </a>
-                      <Button 
-                        variant="secondary" 
-                        size="sm" 
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         className="font-bold"
                         onClick={() => handleDownload(ktpUrl, 'KTP')}
                       >
@@ -634,9 +850,9 @@ export default function SisyaDetail() {
                           <ExternalLink size={14} className="mr-1" /> Lihat
                         </Button>
                       </a>
-                      <Button 
-                        variant="secondary" 
-                        size="sm" 
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         className="font-bold"
                         onClick={() => handleDownload(rekomendasiUrl, 'Rekomendasi')}
                       >
@@ -659,56 +875,56 @@ export default function SisyaDetail() {
 
       {/* Verification Modal */}
       {showVerifyModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-              <div className="bg-surface w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-muted/20">
-                  <div className="p-6 border-b border-muted/10 flex justify-between items-center bg-primary/5">
-                      <h3 className="font-bold text-lg text-primary">Verifikasi Pembayaran</h3>
-                      <button onClick={() => setShowVerifyModal(false)} className="text-muted hover:text-text">✕</button>
-                  </div>
-                  <div className="p-6 space-y-4">
-                      <div className="aspect-video border rounded-lg overflow-hidden bg-bg flex items-center justify-center">
-                         <ProofPreview path={selectedPembayaran.buktiPath} />
-                      </div>
-                      
-                      <div className="space-y-2">
-                          <label className="text-xs font-bold text-muted uppercase">Nominal Diterima (Rp)</label>
-                          <Input 
-                            type="number" 
-                            placeholder="Contoh: 1500000"
-                            value={nominalVerifikasi}
-                            onChange={(e) => setNominalVerifikasi(e.target.value)}
-                          />
-                      </div>
-
-                      <div className="space-y-2">
-                          <label className="text-xs font-bold text-muted uppercase">Catatan / Keterangan</label>
-                          <Input 
-                            placeholder="Catatan verifikasi..."
-                            value={keteranganVerifikasi}
-                            onChange={(e) => setKeteranganVerifikasi(e.target.value)}
-                          />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 pt-4">
-                          <Button 
-                            variant="outline" 
-                            className="text-red-600 border-red-200 hover:bg-red-50"
-                            onClick={() => handleVerifikasi('DITOLAK')}
-                            disabled={isUpdating}
-                          >
-                              <XCircle className="mr-2" size={18} /> Tolak
-                          </Button>
-                          <Button 
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => handleVerifikasi('VERIFIKASI')}
-                            disabled={isUpdating}
-                          >
-                              <CheckCircle className="mr-2" size={18} /> Verifikasi
-                          </Button>
-                      </div>
-                  </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-muted/20">
+            <div className="p-6 border-b border-muted/10 flex justify-between items-center bg-primary/5">
+              <h3 className="font-bold text-lg text-primary">Verifikasi Pembayaran</h3>
+              <button onClick={() => setShowVerifyModal(false)} className="text-muted hover:text-text">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="aspect-video border rounded-lg overflow-hidden bg-bg flex items-center justify-center">
+                <ProofPreview path={selectedPembayaran.buktiPath} />
               </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted uppercase">Nominal Diterima (Rp)</label>
+                <Input
+                  type="number"
+                  placeholder="Contoh: 1500000"
+                  value={nominalVerifikasi}
+                  onChange={(e) => setNominalVerifikasi(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-muted uppercase">Catatan / Keterangan</label>
+                <Input
+                  placeholder="Catatan verifikasi..."
+                  value={keteranganVerifikasi}
+                  onChange={(e) => setKeteranganVerifikasi(e.target.value)}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                <Button
+                  variant="outline"
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={() => handleVerifikasi('DITOLAK')}
+                  disabled={isUpdating}
+                >
+                  <XCircle className="mr-2" size={18} /> Tolak
+                </Button>
+                <Button
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => handleVerifikasi('VERIFIKASI')}
+                  disabled={isUpdating}
+                >
+                  <CheckCircle className="mr-2" size={18} /> Verifikasi
+                </Button>
+              </div>
+            </div>
           </div>
+        </div>
       )}
 
       {/* Edit Sisya Modal */}
@@ -724,9 +940,9 @@ export default function SisyaDetail() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-xs font-bold text-muted uppercase">Nama Lengkap *</label>
-                    <Input 
-                      placeholder="Nama lengkap" 
-                      {...register('namaLengkap')} 
+                    <Input
+                      placeholder="Nama lengkap"
+                      {...register('namaLengkap')}
                       onBlur={(e) => {
                         const normalized = normalizeName(e.target.value);
                         setValue('namaLengkap', normalized, { shouldValidate: true });
@@ -776,7 +992,7 @@ export default function SisyaDetail() {
 
                   <div className="space-y-2 md:col-span-2">
                     <label className="text-xs font-bold text-muted uppercase">Alamat *</label>
-                    <textarea 
+                    <textarea
                       className="flex min-h-[80px] w-full rounded-md border border-muted bg-surface px-3 py-2 text-sm placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                       placeholder="Alamat lengkap"
                       {...register('alamat')}
@@ -786,9 +1002,9 @@ export default function SisyaDetail() {
 
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-muted uppercase">No HP *</label>
-                    <Input 
-                      placeholder="08xxxxxxxxxx" 
-                      {...register('noHp')} 
+                    <Input
+                      placeholder="08xxxxxxxxxx"
+                      {...register('noHp')}
                       onChange={(e) => {
                         let val = e.target.value;
                         if (val.startsWith('+62')) {
@@ -846,7 +1062,7 @@ export default function SisyaDetail() {
             <div className="p-6 space-y-4">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-muted uppercase">Program: {selectedSp?.programAjahan.nama}</label>
-                <Input 
+                <Input
                   placeholder="Contoh: 001/WLK.XVIII-BD.SDM/PDPN/V/2026"
                   value={newNomorRegistrasi}
                   onChange={(e) => setNewNomorRegistrasi(e.target.value)}
@@ -876,8 +1092,8 @@ export default function SisyaDetail() {
             <div className="p-6 space-y-4">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-muted uppercase">File Bukti Transfer *</label>
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   accept="image/*"
                   onChange={(e) => setUploadFile(e.target.files[0])}
                   className="w-full text-sm border border-muted/20 rounded-md p-2 file:mr-3 file:px-3 file:py-1 file:rounded-md file:border-0 file:text-xs file:font-bold file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
@@ -892,7 +1108,7 @@ export default function SisyaDetail() {
 
               <div className="space-y-2">
                 <label className="text-xs font-bold text-muted uppercase">Keterangan</label>
-                <Input 
+                <Input
                   placeholder="Contoh: Pembayaran tunai di kantor"
                   value={uploadKeterangan}
                   onChange={(e) => setUploadKeterangan(e.target.value)}
@@ -920,24 +1136,35 @@ export default function SisyaDetail() {
         onConfirm={handleDeletePembayaran}
         onCancel={() => setConfirmDelete({ open: false, id: null })}
       />
+      {/* Soft Delete Confirm Modal */}
+      <ConfirmDialog
+        open={showSoftDeleteConfirm}
+        onCancel={() => setShowSoftDeleteConfirm(false)}
+        title="Nonaktifkan Sisya"
+        message={`Apakah Anda yakin ingin menonaktifkan sisya ${sisya.namaLengkap}? Data sisya tidak akan dihapus permanen, namun tidak akan muncul lagi di laporan, dashboard, dan statistik.`}
+        onConfirm={handleSoftDelete}
+        confirmLabel={isUpdating ? "Memproses..." : "Nonaktifkan"}
+        variant="danger"
+        isLoading={isUpdating}
+      />
     </div>
   );
 }
 
 // Helper component for Proof Preview in Modal to avoid Hook Order Error
 function ProofPreview({ path }) {
-    const url = useFileUrl(path);
-    if (!url) return <div className="text-muted animate-pulse">Memuat bukti...</div>;
-    return <img src={url} alt="Bukti" className="max-w-full max-h-full object-contain" />;
+  const url = useFileUrl(path);
+  if (!url) return <div className="text-muted animate-pulse">Memuat bukti...</div>;
+  return <img src={url} alt="Bukti" className="max-w-full max-h-full object-contain" />;
 }
 
 // Helper component for Proof Link
 function ProofLink({ path }) {
-    const url = useFileUrl(path);
-    if (!url) return <span className="text-muted">-</span>;
-    return (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center justify-center gap-1">
-            <FileText size={14} /> View
-        </a>
-    );
+  const url = useFileUrl(path);
+  if (!url) return <span className="text-muted">-</span>;
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center justify-center gap-1">
+      <FileText size={14} /> View
+    </a>
+  );
 }

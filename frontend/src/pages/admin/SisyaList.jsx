@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Eye, Filter, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, XCircle, Info, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Eye, Filter, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, XCircle, Info, ArrowUpDown, ArrowUp, ArrowDown, FileDown } from 'lucide-react';
 import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { getProgramBadgeStyle } from '../../lib/utils';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function SisyaList() {
   const [sisyas, setSisyas] = useState([]);
@@ -13,8 +15,9 @@ export default function SisyaList() {
   const [programs, setPrograms] = useState([]);
   const [filterStatus, setFilterStatus] = useState('');
   const [filterProgram, setFilterProgram] = useState('');
+  const [showInactive, setShowInactive] = useState(false);
   const [sort, setSort] = useState({ sortBy: 'createdAt', sortOrder: 'desc' });
-  
+
   // Pagination state
   const [pagination, setPagination] = useState({
     total: 0,
@@ -29,7 +32,7 @@ export default function SisyaList() {
 
   useEffect(() => {
     fetchSisyas();
-  }, [pagination.page, filterStatus, filterProgram, searchTerm, sort]);
+  }, [pagination.page, filterStatus, filterProgram, searchTerm, sort, showInactive]);
 
   const fetchPrograms = async () => {
     try {
@@ -52,7 +55,8 @@ export default function SisyaList() {
         programId: filterProgram,
         search: searchTerm,
         sortBy: sort.sortBy,
-        sortOrder: sort.sortOrder
+        sortOrder: sort.sortOrder,
+        ...(showInactive && { showInactive: 'true' })
       });
 
       const res = await api.get(`/sisya?${params.toString()}`);
@@ -85,9 +89,9 @@ export default function SisyaList() {
       'MENUNGGU_PEMBAYARAN': { color: 'bg-slate-100 text-slate-600 border-slate-200', icon: AlertCircle },
       'DITOLAK': { color: 'bg-rose-100 text-rose-700 border-rose-200', icon: XCircle },
     };
-    
+
     const { color, icon: Icon } = config[status] || { color: 'bg-gray-100 text-gray-800 border-gray-200', icon: Info };
-    
+
     return (
       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border shadow-sm ${color}`}>
         <Icon size={12} />
@@ -103,9 +107,9 @@ export default function SisyaList() {
       'PENDING': { color: 'bg-slate-100 text-slate-600 border-slate-200' },
       'TIDAK_AKTIF': { color: 'bg-rose-100 text-rose-700 border-rose-200' },
     };
-    
+
     const { color } = config[status] || { color: 'bg-gray-100 text-gray-800 border-gray-200' };
-    
+
     return (
       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase shadow-sm ${color}`}>
         {status}
@@ -126,6 +130,138 @@ export default function SisyaList() {
     return sort.sortOrder === 'asc' ? <ArrowUp size={14} className="text-primary" /> : <ArrowDown size={14} className="text-primary" />;
   };
 
+  const getBase64ImageFromUrl = async (imageUrl) => {
+    try {
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.addEventListener("load", function () {
+          resolve(reader.result);
+        }, false);
+        reader.onerror = () => reject(new Error("Gagal membaca blob gambar"));
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.error('Gagal mengambil base64 logo:', err);
+      return null;
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      let logoBase64 = null;
+      try {
+        logoBase64 = await getBase64ImageFromUrl('/logo.png');
+      } catch (err) { }
+
+      if (logoBase64) {
+        pdf.addImage(logoBase64, 'PNG', 20, 12, 17, 17);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(12);
+        pdf.text('PERKUMPULAN DHARMOPADESA PUSAT NUSANTARA', 41, 16);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(7.5);
+        pdf.text('Sekretariat Kantor Pusat: Pasraman Dharma Wasitha, Wantilan Capung Mas, Banjar Batan Ancak,', 41, 20.5);
+        pdf.text('Desa Mas, Kecamatan Ubud, Kabupaten Gianyar, Provinsi Bali, Indonesia - 80571', 41, 24);
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(7);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 41, 27.5);
+        pdf.setTextColor(0, 0, 0);
+      }
+
+      pdf.setLineWidth(0.8);
+      pdf.line(20, 33, 190, 33);
+      pdf.setLineWidth(0.2);
+      pdf.line(20, 34, 190, 34);
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.text('FORMULIR REGISTRASI SISYA', 105, 45, { align: 'center' });
+      pdf.setFontSize(10);
+      pdf.text('No. Pendaftaran: .........(Dikosongkan).........', 105, 51, { align: 'center' });
+
+      // Data Pribadi
+      let startY = 55;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('A. DATA PRIBADI', 20, startY);
+
+      autoTable(pdf, {
+        startY: startY + 2,
+        theme: 'plain',
+        head: [],
+        body: [
+          ['Nama Lengkap', ':', '....................................................................................................'],
+          ['Tempat, Tanggal Lahir', ':', '................................................... , ..................................................'],
+          ['Jenis Kelamin', ':', 'Laki-Laki  /  Perempuan'],
+          ['Alamat', ':', '....................................................................................................'],
+          ['Nomor HP', ':', '....................................................................................................'],
+          ['Email', ':', '....................................................................................................'],
+          ['Nama Griya', ':', '....................................................................................................'],
+          ['Nama Desa', ':', '....................................................................................................']
+        ],
+        styles: { fontSize: 9, cellPadding: 2 },
+        columnStyles: {
+          0: { cellWidth: 45, fontStyle: 'bold' },
+          1: { cellWidth: 5 },
+          2: { cellWidth: 120 }
+        },
+        margin: { left: 20 }
+      });
+
+      // Program Ajahan
+      startY = pdf.lastAutoTable.finalY + 8;
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('B. PROGRAM AJAHAN', 20, startY);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      pdf.text('Beri tanda (X) atau centang pada program yang ingin diikuti:', 20, startY + 6);
+
+      let currentY = startY + 13;
+      const drawCheckbox = (x, y, label) => {
+        pdf.rect(x, y - 3, 4, 4);
+        pdf.text(label, x + 7, y);
+      };
+
+      if (programs && programs.length > 0) {
+        programs.forEach((prog, idx) => {
+          drawCheckbox(25, currentY, `${prog.nama} (Individu)`);
+          if (prog.isPasanganTersedia) {
+            drawCheckbox(105, currentY, `${prog.nama} (+Pasangan)`);
+          }
+          currentY += 7;
+        });
+      } else {
+        pdf.text('(Daftar program belum tersedia, silakan tulis manual di bawah)', 20, currentY);
+        currentY += 8;
+        pdf.text('.......................................................................................................................', 20, currentY);
+      }
+
+      // Tanda Tangan
+      startY = currentY + 20;
+      if (startY > 270) {
+        pdf.addPage();
+        startY = 20;
+      }
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.text('Denpasar, ........................................... 20....', 120, startY);
+      pdf.text('Pendaftar', 120, startY + 6);
+
+      pdf.text('(..............................................................)', 115, startY + 25);
+
+      pdf.save('Template_Formulir_Registrasi.pdf');
+    } catch (error) {
+      console.error('Error generating PDF template:', error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
@@ -133,51 +269,70 @@ export default function SisyaList() {
           <h2 className="text-2xl font-bold font-heading text-primary">Data Sisya</h2>
           <p className="text-sm text-muted mt-1">Kelola data pendaftar dan status verifikasi</p>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={18} />
-            <Input 
-              placeholder="Cari nama atau nomor..." 
-              className="pl-10 w-full md:w-64"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setPagination(prev => ({ ...prev, page: 1 }));
-              }}
-            />
-          </div>
-          
-          <select 
-            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            value={filterStatus}
-            onChange={(e) => {
-              setFilterStatus(e.target.value);
-              setPagination(prev => ({ ...prev, page: 1 }));
-            }}
-          >
-            <option value="">Semua Status</option>
-            <option value="MENUNGGU_PEMBAYARAN">Menunggu Pembayaran</option>
-            <option value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi</option>
-            <option value="BELUM_LUNAS">Belum Lunas</option>
-            <option value="LUNAS">Lunas</option>
-            <option value="DITOLAK">Ditolak</option>
-          </select>
 
-          <select 
-            className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-            value={filterProgram}
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
+            <FileDown size={16} className="mr-2" />
+            Download Template
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0 justify-end">
+        <label className="flex items-center gap-2 text-sm text-slate-600 bg-white border border-slate-200 px-3 py-2 rounded-lg cursor-pointer hover:bg-slate-50 transition">
+          <input
+            type="checkbox"
+            className="rounded text-primary focus:ring-primary w-4 h-4"
+            checked={showInactive}
             onChange={(e) => {
-              setFilterProgram(e.target.value);
+              setShowInactive(e.target.checked);
               setPagination(prev => ({ ...prev, page: 1 }));
             }}
-          >
-            <option value="">Semua Program</option>
-            {programs.map(p => (
-              <option key={p.id} value={p.id}>{p.nama}</option>
-            ))}
-          </select>
+          />
+          Tampilkan Nonaktif
+        </label>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={18} />
+          <Input
+            placeholder="Cari nama atau nomor..."
+            className="pl-10 w-full md:w-64"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setPagination(prev => ({ ...prev, page: 1 }));
+            }}
+          />
         </div>
+
+        <select
+          className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          value={filterStatus}
+          onChange={(e) => {
+            setFilterStatus(e.target.value);
+            setPagination(prev => ({ ...prev, page: 1 }));
+          }}
+        >
+          <option value="">Semua Status</option>
+          <option value="MENUNGGU_PEMBAYARAN">Menunggu Pembayaran</option>
+          <option value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi</option>
+          <option value="BELUM_LUNAS">Belum Lunas</option>
+          <option value="LUNAS">Lunas</option>
+          <option value="DITOLAK">Ditolak</option>
+        </select>
+
+        <select
+          className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          value={filterProgram}
+          onChange={(e) => {
+            setFilterProgram(e.target.value);
+            setPagination(prev => ({ ...prev, page: 1 }));
+          }}
+        >
+          <option value="">Semua Program</option>
+          {programs.map(p => (
+            <option key={p.id} value={p.id}>{p.nama}</option>
+          ))}
+        </select>
       </div>
 
       <div className="bg-surface rounded-lg shadow-sm border border-muted/20 overflow-hidden">
@@ -185,7 +340,7 @@ export default function SisyaList() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-primary/5 border-b border-muted/20">
-                <th 
+                <th
                   className="p-4 font-semibold text-sm text-text cursor-pointer hover:bg-primary/10 transition-colors"
                   onClick={() => handleSort('nomorPendaftaran')}
                 >
@@ -193,7 +348,7 @@ export default function SisyaList() {
                     No. Pendaftaran {getSortIcon('nomorPendaftaran')}
                   </div>
                 </th>
-                <th 
+                <th
                   className="p-4 font-semibold text-sm text-text cursor-pointer hover:bg-primary/10 transition-colors"
                   onClick={() => handleSort('namaLengkap')}
                 >
@@ -202,7 +357,7 @@ export default function SisyaList() {
                   </div>
                 </th>
                 <th className="p-4 font-semibold text-sm text-text">Program</th>
-                <th 
+                <th
                   className="p-4 font-semibold text-sm text-text cursor-pointer hover:bg-primary/10 transition-colors"
                   onClick={() => handleSort('createdAt')}
                 >
@@ -225,7 +380,7 @@ export default function SisyaList() {
                 </tr>
               ) : (
                 sisyas.map(sisya => (
-                  <tr key={sisya.id} className="hover:bg-bg/50 transition-colors">
+                  <tr key={sisya.id} className={`transition-colors ${sisya.status === 'TIDAK_AKTIF' ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-bg/50'}`}>
                     <td className="p-4 text-sm font-mono font-medium text-primary">{sisya.nomorPendaftaran}</td>
                     <td className="p-4 text-sm font-medium">
                       <div className="flex flex-col">
@@ -264,7 +419,7 @@ export default function SisyaList() {
             </tbody>
           </table>
         </div>
-        
+
         {/* Pagination Controls */}
         {!isLoading && pagination.totalPages > 1 && (
           <div className="p-4 border-t border-muted/20 flex items-center justify-between">
@@ -272,9 +427,9 @@ export default function SisyaList() {
               Menampilkan {sisyas.length} dari {pagination.total} data
             </p>
             <div className="flex items-center space-x-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
               >
@@ -285,8 +440,8 @@ export default function SisyaList() {
                   const pageNum = i + 1;
                   // Only show current page, first, last, and pages around current
                   if (
-                    pageNum === 1 || 
-                    pageNum === pagination.totalPages || 
+                    pageNum === 1 ||
+                    pageNum === pagination.totalPages ||
                     (pageNum >= pagination.page - 1 && pageNum <= pagination.page + 1)
                   ) {
                     return (
@@ -309,9 +464,9 @@ export default function SisyaList() {
                   return null;
                 })}
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.totalPages}
               >
