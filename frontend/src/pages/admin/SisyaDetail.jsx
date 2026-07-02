@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2, Download, Edit2, Upload } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2, Download, Edit2, Upload, BookOpen, AlertTriangle } from 'lucide-react';
 import api from '../../lib/axios';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -66,6 +66,14 @@ export default function SisyaDetail() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState(null);
   const [uploadKeterangan, setUploadKeterangan] = useState('');
+
+  // Edit Program Ajahan state (Super Admin)
+  const [showEditProgramModal, setShowEditProgramModal] = useState(false);
+  const [allPrograms, setAllPrograms] = useState([]);
+  const [selectedPrograms, setSelectedPrograms] = useState([]);
+  const [isLoadingPrograms, setIsLoadingPrograms] = useState(false);
+  const [showConfirmProgramEdit, setShowConfirmProgramEdit] = useState(false);
+  const [isSavingPrograms, setIsSavingPrograms] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
@@ -158,6 +166,83 @@ export default function SisyaDetail() {
       toast.error('Gagal memperbarui nomor registrasi');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  // ---- Edit Program Ajahan Handlers ----
+  const handleOpenEditProgramModal = async () => {
+    setIsLoadingPrograms(true);
+    try {
+      const res = await api.get('/program-ajahan');
+      if (res.data.success) {
+        setAllPrograms(res.data.data);
+        // Pre-select programs the sisya is already enrolled in
+        const current = sisya.programSisyas.map(sp => ({
+          programAjahanId: sp.programAjahanId,
+          isPasangan: sp.isPasangan
+        }));
+        setSelectedPrograms(current);
+        setShowEditProgramModal(true);
+      }
+    } catch (err) {
+      toast.error('Gagal memuat daftar program ajahan');
+    } finally {
+      setIsLoadingPrograms(false);
+    }
+  };
+
+  const isProgramSelected = (programId) => {
+    return selectedPrograms.some(p => p.programAjahanId === programId);
+  };
+
+  const toggleProgramSelection = (programId) => {
+    if (isProgramSelected(programId)) {
+      setSelectedPrograms(prev => prev.filter(p => p.programAjahanId !== programId));
+    } else {
+      setSelectedPrograms(prev => [...prev, { programAjahanId: programId, isPasangan: false }]);
+    }
+  };
+
+  const toggleProgramPasangan = (programId) => {
+    setSelectedPrograms(prev => prev.map(p =>
+      p.programAjahanId === programId ? { ...p, isPasangan: !p.isPasangan } : p
+    ));
+  };
+
+  const calculateNewTotalPunia = () => {
+    return selectedPrograms.reduce((total, sp) => {
+      const prog = allPrograms.find(p => p.id === sp.programAjahanId);
+      if (!prog) return total;
+      const isPasangan = sp.isPasangan && prog.isPasanganTersedia;
+      const price = (isPasangan && prog.puniaPasangan) ? prog.puniaPasangan : prog.puniaNormal;
+      return total + price;
+    }, 0);
+  };
+
+  const handleConfirmProgramEdit = () => {
+    if (selectedPrograms.length === 0) {
+      toast.error('Minimal harus memilih 1 program ajahan');
+      return;
+    }
+    setShowConfirmProgramEdit(true);
+  };
+
+  const handleSaveProgramEdit = async () => {
+    setIsSavingPrograms(true);
+    try {
+      const res = await api.patch(`/sisya/${id}/programs`, {
+        programs: selectedPrograms
+      });
+      if (res.data.success) {
+        toast.success('Program ajahan berhasil diperbarui');
+        setShowEditProgramModal(false);
+        setShowConfirmProgramEdit(false);
+        fetchSisyaDetail();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal memperbarui program ajahan');
+    } finally {
+      setIsSavingPrograms(false);
     }
   };
 
@@ -776,7 +861,23 @@ export default function SisyaDetail() {
           </div>
 
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
-            <h4 className="font-bold text-lg border-b border-muted/20 pb-3 mb-4 text-primary">Program Ajahan Dipilih</h4>
+            <div className="flex justify-between items-center border-b border-muted/20 pb-3 mb-4">
+              <h4 className="font-bold text-lg text-primary flex items-center gap-2">
+                <BookOpen size={20} /> Program Ajahan Dipilih
+              </h4>
+              {isSuperAdmin && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs font-bold"
+                  onClick={handleOpenEditProgramModal}
+                  disabled={isLoadingPrograms}
+                >
+                  {isLoadingPrograms ? <Loader2 className="animate-spin mr-1" size={14} /> : <Edit2 size={14} className="mr-1" />}
+                  Edit Program
+                </Button>
+              )}
+            </div>
             <div className="space-y-3">
               {sisya.programSisyas.map(sp => (
                 <div key={sp.id} className={`p-3 border rounded-md shadow-sm ${getProgramBadgeStyle(sp.programAjahan.nama)}`}>
@@ -1146,6 +1247,132 @@ export default function SisyaDetail() {
         confirmLabel={isUpdating ? "Memproses..." : "Nonaktifkan"}
         variant="danger"
         isLoading={isUpdating}
+      />
+
+      {/* Edit Program Ajahan Modal (Super Admin) */}
+      {showEditProgramModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-surface w-full max-w-lg rounded-xl shadow-2xl overflow-hidden border border-muted/20 my-8">
+            <div className="p-6 border-b border-muted/10 flex justify-between items-center bg-primary/5">
+              <h3 className="font-bold text-lg text-primary flex items-center gap-2">
+                <BookOpen size={20} /> Edit Program Ajahan
+              </h3>
+              <button onClick={() => setShowEditProgramModal(false)} className="text-muted hover:text-text">✕</button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-muted">Centang program yang ingin diikuti oleh <span className="font-bold text-text">{sisya.namaLengkap}</span>. Perubahan akan menghitung ulang total punia.</p>
+
+              <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
+                {allPrograms.map(prog => {
+                  const isSelected = isProgramSelected(prog.id);
+                  const selectedProg = selectedPrograms.find(p => p.programAjahanId === prog.id);
+                  const isPas = selectedProg?.isPasangan && prog.isPasanganTersedia;
+                  const price = (isPas && prog.puniaPasangan) ? prog.puniaPasangan : prog.puniaNormal;
+
+                  return (
+                    <div
+                      key={prog.id}
+                      className={`p-4 border rounded-lg transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-primary bg-primary/5 shadow-sm'
+                          : 'border-muted/20 bg-bg/50 hover:border-muted/40'
+                      }`}
+                      onClick={() => toggleProgramSelection(prog.id)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                          isSelected ? 'bg-primary border-primary' : 'border-muted/40'
+                        }`}>
+                          {isSelected && (
+                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-start">
+                            <span className="font-bold text-sm">{prog.nama}</span>
+                            <span className="text-sm font-mono font-semibold text-primary ml-2 flex-shrink-0">
+                              {formatRupiah(price)}
+                            </span>
+                          </div>
+                          {prog.deskripsi && (
+                            <p className="text-xs text-muted mt-0.5">{prog.deskripsi}</p>
+                          )}
+                          {isSelected && prog.isPasanganTersedia && (
+                            <label
+                              className="flex items-center gap-2 mt-2 text-xs cursor-pointer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isPas}
+                                onChange={() => toggleProgramPasangan(prog.id)}
+                                className="rounded border-muted/40 text-primary focus:ring-primary h-3.5 w-3.5"
+                              />
+                              <span className="text-muted">
+                                Termasuk Pasangan
+                                {prog.puniaPasangan && (
+                                  <span className="font-mono ml-1">({formatRupiah(prog.puniaPasangan)})</span>
+                                )}
+                              </span>
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Summary */}
+              <div className="bg-bg/80 rounded-lg p-4 border border-muted/10 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted">Program dipilih</span>
+                  <span className="font-bold">{selectedPrograms.length} program</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted">Total Punia Sebelumnya</span>
+                  <span className="font-mono">{formatRupiah(sisya.totalPunia)}</span>
+                </div>
+                <div className={`flex justify-between text-sm font-bold pt-1 border-t border-muted/10 ${
+                  calculateNewTotalPunia() !== sisya.totalPunia ? 'text-amber-600' : 'text-text'
+                }`}>
+                  <span>Total Punia Baru</span>
+                  <span className="font-mono">{formatRupiah(calculateNewTotalPunia())}</span>
+                </div>
+                {calculateNewTotalPunia() !== sisya.totalPunia && (
+                  <p className="text-[10px] text-amber-600 flex items-center gap-1">
+                    <AlertTriangle size={10} />
+                    Total punia akan berubah. Status pembayaran akan dihitung ulang.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowEditProgramModal(false)}>Batal</Button>
+                <Button
+                  onClick={handleConfirmProgramEdit}
+                  disabled={selectedPrograms.length === 0}
+                >
+                  Simpan Perubahan
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Edit Program Dialog */}
+      <ConfirmDialog
+        open={showConfirmProgramEdit}
+        onCancel={() => setShowConfirmProgramEdit(false)}
+        title="Konfirmasi Perubahan Program"
+        message={`Anda akan mengubah program ajahan untuk ${sisya.namaLengkap}. Total punia akan berubah dari ${formatRupiah(sisya.totalPunia)} menjadi ${formatRupiah(calculateNewTotalPunia())}. Status pembayaran akan dihitung ulang. Lanjutkan?`}
+        onConfirm={handleSaveProgramEdit}
+        confirmLabel={isSavingPrograms ? 'Menyimpan...' : 'Ya, Simpan'}
+        variant="warning"
+        isLoading={isSavingPrograms}
       />
     </div>
   );

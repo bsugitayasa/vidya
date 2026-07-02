@@ -509,6 +509,185 @@ const updateProgramRegistrasi = async (req, res) => {
   }
 };
 
+const updateProgramsSisya = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { programs } = req.body;
+    // programs = [{ programAjahanId: number, isPasangan: boolean }, ...]
+
+    if (!programs || !Array.isArray(programs) || programs.length === 0) {
+      return res.status(400).json({ success: false, message: 'Minimal harus memilih 1 program ajahan' });
+    }
+
+    const sisyaId = parseInt(id);
+
+    // Verify sisya exists
+    const existingSisya = await prisma.sisya.findUnique({
+      where: { id: sisyaId },
+      include: {
+        programSisyas: { include: { programAjahan: true } },
+        pembayarans: true
+      }
+    });
+
+    if (!existingSisya) {
+      return res.status(404).json({ success: false, message: 'Data Sisya tidak ditemukan' });
+    }
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const romanMonth = getRomanMonth(now.getMonth());
+
+    // Fetch all requested program details from DB
+    const requestedProgramIds = programs.map(p => parseInt(p.programAjahanId));
+    const dbPrograms = await prisma.programAjahan.findMany({
+      where: { id: { in: requestedProgramIds } }
+    });
+
+    if (dbPrograms.length !== requestedProgramIds.length) {
+      return res.status(400).json({ success: false, message: 'Beberapa program ajahan tidak ditemukan' });
+    }
+
+    // Build a map for quick lookup
+    const dbProgramMap = {};
+    for (const p of dbPrograms) {
+      dbProgramMap[p.id] = p;
+    }
+
+    // Determine which existing SisyaPrograms to keep, delete, or add
+    const existingProgramIds = existingSisya.programSisyas.map(sp => sp.programAjahanId);
+    const toDelete = existingSisya.programSisyas.filter(sp => !requestedProgramIds.includes(sp.programAjahanId));
+    const toKeepIds = existingProgramIds.filter(pid => requestedProgramIds.includes(pid));
+    const toAddProgramIds = requestedProgramIds.filter(pid => !existingProgramIds.includes(pid));
+
+    // Execute in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Delete removed programs
+      if (toDelete.length > 0) {
+        await tx.sisyaProgram.deleteMany({
+          where: {
+            id: { in: toDelete.map(sp => sp.id) }
+          }
+        });
+      }
+
+      // 2. Update isPasangan for existing programs that are kept
+      for (const prog of programs) {
+        const progId = parseInt(prog.programAjahanId);
+        if (toKeepIds.includes(progId)) {
+          const existingSp = existingSisya.programSisyas.find(sp => sp.programAjahanId === progId);
+          if (existingSp) {
+            const dbProg = dbProgramMap[progId];
+            const newIsPasangan = prog.isPasangan && dbProg.isPasanganTersedia;
+            const newPunia = (newIsPasangan && dbProg.puniaPasangan) ? dbProg.puniaPasangan : dbProg.puniaNormal;
+
+            if (existingSp.isPasangan !== newIsPasangan || existingSp.puniaProgram !== newPunia) {
+              await tx.sisyaProgram.update({
+                where: { id: existingSp.id },
+                data: {
+                  isPasangan: newIsPasangan,
+                  puniaProgram: newPunia
+                }
+              });
+            }
+          }
+        }
+      }
+
+      // 3. Add new programs
+      for (const progId of toAddProgramIds) {
+        const progInput = programs.find(p => parseInt(p.programAjahanId) === progId);
+        const dbProg = dbProgramMap[progId];
+        const isPasangan = progInput.isPasangan && dbProg.isPasanganTersedia;
+        const punia = (isPasangan && dbProg.puniaPasangan) ? dbProg.puniaPasangan : dbProg.puniaNormal;
+
+        // Generate nomor registrasi
+        const programSequenceCount = await tx.sisyaProgram.count({
+          where: {
+            programAjahanId: progId,
+            createdAt: {
+              gte: new Date(year, 0, 1),
+              lt: new Date(year + 1, 0, 1)
+            }
+          }
+        });
+        const sequence = String(programSequenceCount + 1).padStart(3, '0');
+        const prefix = dbProg.kodeSertifikat || 'GENERIC/PDPN';
+        const nomorRegistrasi = `${sequence}/${prefix}/${romanMonth}/${year}`;
+
+        await tx.sisyaProgram.create({
+          data: {
+            sisyaId,
+            programAjahanId: progId,
+            isPasangan,
+            puniaProgram: punia,
+            nomorRegistrasi
+          }
+        });
+      }
+
+      // 4. Recalculate totalPunia from all remaining programs
+      const updatedPrograms = await tx.sisyaProgram.findMany({
+        where: { sisyaId }
+      });
+      const newTotalPunia = updatedPrograms.reduce((sum, sp) => sum + sp.puniaProgram, 0);
+
+      // 5. Calculate totalTerbayar from verified payments
+      const verifiedPayments = await tx.pembayaran.findMany({
+        where: { sisyaId, status: 'VERIFIKASI' }
+      });
+      const totalTerbayar = verifiedPayments.reduce((sum, p) => sum + p.nominal, 0);
+
+      // 6. Determine new statusPembayaran
+      let newStatus;
+      if (totalTerbayar >= newTotalPunia) {
+        newStatus = 'LUNAS';
+      } else if (totalTerbayar > 0) {
+        newStatus = 'BELUM_LUNAS';
+      } else {
+        // Keep existing status if no payments
+        const hasPendingPayments = await tx.pembayaran.count({
+          where: { sisyaId, status: 'MENUNGGU' }
+        });
+        newStatus = hasPendingPayments > 0 ? 'MENUNGGU_VERIFIKASI' : 'MENUNGGU_PEMBAYARAN';
+      }
+
+      // 7. Update sisya record
+      const updatedSisya = await tx.sisya.update({
+        where: { id: sisyaId },
+        data: {
+          totalPunia: newTotalPunia,
+          totalTerbayar,
+          statusPembayaran: newStatus
+        },
+        include: {
+          programSisyas: {
+            include: { programAjahan: true }
+          },
+          pembayarans: {
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      });
+
+      return updatedSisya;
+    });
+
+    res.json({
+      success: true,
+      message: 'Program ajahan sisya berhasil diperbarui',
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Update Programs Sisya Error:', error);
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, message: 'Data tidak ditemukan' });
+    }
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan saat mengupdate program ajahan' });
+  }
+};
+
 const softDelete = async (req, res) => {
   try {
     const { id } = req.params;
@@ -539,5 +718,6 @@ module.exports = {
   updateAcademicStatus,
   updateSisya,
   updateProgramRegistrasi,
+  updateProgramsSisya,
   softDelete
 };
