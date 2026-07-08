@@ -112,6 +112,7 @@ model SesiAbsensi {
   tanggal         DateTime
   pertemuan       Int
   topik           String?
+  narawakya       String?
   dokSisyaPath    String?
   dokNarawakPath  String?
   dokPanitiaPath  String?

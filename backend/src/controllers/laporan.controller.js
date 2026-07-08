@@ -768,6 +768,128 @@ const exportLaporanAbsensi = async (req, res) => {
   }
 };
 
+const getProgramAjahanRekap = async (req, res) => {
+  try {
+    const programs = await prisma.programAjahan.findMany({
+      where: { isAktif: true },
+      orderBy: { urutan: 'asc' },
+      include: {
+        mataKuliahs: {
+          orderBy: { semester: 'asc' },
+          include: {
+            sesiAbsensis: {
+              orderBy: { pertemuan: 'asc' }
+            }
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: programs
+    });
+  } catch (error) {
+    console.error('Get Program Ajahan Rekap Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal mengambil rekapitulasi program ajahan' });
+  }
+};
+
+const exportProgramAjahanRekap = async (req, res) => {
+  try {
+    const programs = await prisma.programAjahan.findMany({
+      where: { isAktif: true },
+      orderBy: { urutan: 'asc' },
+      include: {
+        mataKuliahs: {
+          orderBy: { semester: 'asc' },
+          include: {
+            sesiAbsensis: {
+              orderBy: { pertemuan: 'asc' }
+            }
+          }
+        }
+      }
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    
+    for (const program of programs) {
+      const safeName = program.nama.replace(/[:\\/?*[\]]/g, '').substring(0, 31);
+      const worksheet = workbook.addWorksheet(safeName);
+
+      const headerStyle = {
+        font: { bold: true, color: { argb: 'FFFFFFFF' } },
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0D9488' } },
+        alignment: { vertical: 'middle', horizontal: 'center' },
+        border: {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        }
+      };
+
+      worksheet.columns = [
+        { header: 'Semester', key: 'semester', width: 10 },
+        { header: 'Ajahan (Tingkat)', key: 'mataKuliah', width: 30 },
+        { header: 'Pertemuan', key: 'pertemuan', width: 12 },
+        { header: 'Tanggal', key: 'tanggal', width: 15 },
+        { header: 'Narawakya', key: 'narawakya', width: 30 },
+        { header: 'Topik', key: 'topik', width: 40 }
+      ];
+
+      worksheet.getRow(1).eachCell((cell) => {
+        cell.style = headerStyle;
+      });
+
+      program.mataKuliahs.forEach(mk => {
+        if (mk.sesiAbsensis.length === 0) {
+          const row = worksheet.addRow({
+            semester: mk.semester,
+            mataKuliah: mk.nama,
+            pertemuan: '-',
+            tanggal: '-',
+            narawakya: '-',
+            topik: 'Belum ada jadwal'
+          });
+          row.eachCell((cell) => {
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            cell.alignment = { vertical: 'middle' };
+          });
+        } else {
+          mk.sesiAbsensis.forEach((sesi, idx) => {
+            const row = worksheet.addRow({
+              semester: idx === 0 ? mk.semester : '',
+              mataKuliah: idx === 0 ? mk.nama : '',
+              pertemuan: sesi.pertemuan,
+              tanggal: new Date(sesi.tanggal).toLocaleDateString('id-ID'),
+              narawakya: sesi.narawakya || '-',
+              topik: sesi.topik || '-'
+            });
+            row.eachCell((cell) => {
+              cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+              cell.alignment = { vertical: 'middle' };
+            });
+          });
+        }
+      });
+    }
+
+    if (workbook.worksheets.length === 0) {
+      return res.status(404).json({ success: false, message: 'Tidak ada data program ajahan' });
+    }
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Rekap-Program-Ajahan-${new Date().getTime()}.xlsx`);
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Export Program Ajahan Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal mengekspor data program ajahan' });
+  }
+};
+
 module.exports = {
   getLaporanSisya,
   exportSisya,
@@ -776,5 +898,7 @@ module.exports = {
   getLaporanPuniaDashboard,
   exportPuniaRange,
   getLaporanAbsensi,
-  exportLaporanAbsensi
+  exportLaporanAbsensi,
+  getProgramAjahanRekap,
+  exportProgramAjahanRekap
 };

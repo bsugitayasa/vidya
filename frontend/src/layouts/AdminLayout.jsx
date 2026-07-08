@@ -55,6 +55,7 @@ export default function AdminLayout() {
         { path: '/admin/laporan/punia-range', label: 'Detail Punia' },
         { path: '/admin/laporan/punia-bulanan', label: 'Rekap Bulanan' },
         { path: '/admin/laporan/absensi', label: 'Rekap Absensi' },
+        { path: '/admin/laporan/program-ajahan', label: 'Program Ajahan' },
       ]
     },
     {

@@ -17,6 +17,9 @@ export default function SisyaList() {
   const [filterProgram, setFilterProgram] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [sort, setSort] = useState({ sortBy: 'createdAt', sortOrder: 'desc' });
+  const [filterGriya, setFilterGriya] = useState('');
+  const [filterDesa, setFilterDesa] = useState('');
+  const [locationSuggestions, setLocationSuggestions] = useState({ griya: [], desa: [] });
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -27,12 +30,24 @@ export default function SisyaList() {
   });
 
   useEffect(() => {
-    fetchPrograms();
-  }, []);
+    fetchSisyas();
+  }, [pagination.page, filterStatus, filterProgram, searchTerm, sort, showInactive, filterGriya, filterDesa]);
+
+  const fetchLocationSuggestions = async () => {
+    try {
+      const res = await api.get('/sisya/locations/suggestions');
+      if (res.data.success) {
+        setLocationSuggestions(res.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching location suggestions:', error);
+    }
+  };
 
   useEffect(() => {
-    fetchSisyas();
-  }, [pagination.page, filterStatus, filterProgram, searchTerm, sort, showInactive]);
+    fetchPrograms();
+    fetchLocationSuggestions();
+  }, []);
 
   const fetchPrograms = async () => {
     try {
@@ -54,6 +69,8 @@ export default function SisyaList() {
         status: filterStatus,
         programId: filterProgram,
         search: searchTerm,
+        griya: filterGriya,
+        desa: filterDesa,
         sortBy: sort.sortBy,
         sortOrder: sort.sortOrder,
         ...(showInactive && { showInactive: 'true' })
@@ -303,6 +320,38 @@ export default function SisyaList() {
             }}
           />
         </div>
+
+        <Input
+          placeholder="Filter Griya"
+          list="griya-suggestions"
+          className="w-full sm:w-40"
+          value={filterGriya}
+          onChange={(e) => {
+            setFilterGriya(e.target.value);
+            setPagination(prev => ({ ...prev, page: 1 }));
+          }}
+        />
+        <datalist id="griya-suggestions">
+          {locationSuggestions.griya.map((g, idx) => (
+            <option key={idx} value={g} />
+          ))}
+        </datalist>
+
+        <Input
+          placeholder="Filter Desa"
+          list="desa-suggestions"
+          className="w-full sm:w-40"
+          value={filterDesa}
+          onChange={(e) => {
+            setFilterDesa(e.target.value);
+            setPagination(prev => ({ ...prev, page: 1 }));
+          }}
+        />
+        <datalist id="desa-suggestions">
+          {locationSuggestions.desa.map((d, idx) => (
+            <option key={idx} value={d} />
+          ))}
+        </datalist>
 
         <select
           className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"

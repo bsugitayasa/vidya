@@ -83,7 +83,7 @@ export default function RekapAbsensiSisya() {
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-primary/5 border-b border-muted/20">
-                <th className="p-4 font-semibold text-sm text-text">Mata Kuliah</th>
+                <th className="p-4 font-semibold text-sm text-text">Ajahan (Tingkat)</th>
                 <th className="p-4 font-semibold text-sm text-text">Program</th>
                 <th className="p-4 font-semibold text-sm text-text text-center">Smt</th>
                 <th className="p-4 font-semibold text-sm text-text text-center">Sesi</th>

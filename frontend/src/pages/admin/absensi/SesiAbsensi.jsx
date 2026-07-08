@@ -37,6 +37,11 @@ export default function SesiAbsensi() {
   const [editTopik, setEditTopik] = useState('');
   const [isSavingTopik, setIsSavingTopik] = useState(false);
 
+  // Edit narawakya state (Super Admin)
+  const [isEditingNarawakya, setIsEditingNarawakya] = useState(false);
+  const [editNarawakya, setEditNarawakya] = useState('');
+  const [isSavingNarawakya, setIsSavingNarawakya] = useState(false);
+
   useEffect(() => {
     fetchSesiDetail();
   }, [sesiId]);
@@ -147,6 +152,23 @@ export default function SesiAbsensi() {
     }
   };
 
+  const handleSaveNarawakya = async () => {
+    setIsSavingNarawakya(true);
+    try {
+      const res = await api.patch(`/absensi/sesi/${sesiId}`, { narawakya: editNarawakya });
+      if (res.data.success) {
+        setMessage({ type: 'success', text: 'Narawakya sesi berhasil diperbarui' });
+        setIsEditingNarawakya(false);
+        fetchSesiDetail();
+      }
+    } catch (error) {
+      const msg = error.response?.data?.message || 'Gagal memperbarui narawakya';
+      setMessage({ type: 'error', text: msg });
+    } finally {
+      setIsSavingNarawakya(false);
+    }
+  };
+
   const handleDokUploadSuccess = (data) => {
     setSesiData(prev => ({
       ...prev,
@@ -220,7 +242,7 @@ export default function SesiAbsensi() {
 
     y += 6;
     doc.setFont('helvetica', 'bold');
-    doc.text('Mata Ajah', margin, y);
+    doc.text('Ajahan (Tingkat)', margin, y);
     doc.setFont('helvetica', 'normal');
     doc.text(`: ${sesiData.mataKuliah.nama} (${sesiData.mataKuliah.kode || ''})`, margin + 42, y);
 
@@ -238,6 +260,12 @@ export default function SesiAbsensi() {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
     });
     doc.text(`: ${tanggalStr}`, margin + 42, y);
+
+    y += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Narawakya', margin, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`: ${sesiData.narawakya || '-'}`, margin + 42, y);
 
     y += 6;
     doc.setFont('helvetica', 'bold');
@@ -554,6 +582,48 @@ export default function SesiAbsensi() {
                     }}
                     className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200 transition-colors"
                     title="Edit Topik"
+                  >
+                    <Edit2 size={10} /> Edit
+                  </button>
+                )}
+              </span>
+            )}
+            {isEditingNarawakya ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={editNarawakya}
+                  onChange={(e) => setEditNarawakya(e.target.value)}
+                  placeholder="Nama Pengajar..."
+                  className="text-sm border border-muted/30 rounded-md px-2 py-1 focus:ring-2 focus:ring-primary/20 outline-none min-w-[200px]"
+                />
+                <button
+                  onClick={handleSaveNarawakya}
+                  disabled={isSavingNarawakya}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-green-100 text-green-700 hover:bg-green-200 transition-colors disabled:opacity-50"
+                  title="Simpan"
+                >
+                  {isSavingNarawakya ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                </button>
+                <button
+                  onClick={() => setIsEditingNarawakya(false)}
+                  className="w-7 h-7 rounded-md flex items-center justify-center bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                  title="Batal"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ) : (
+              <span className="text-sm text-muted">
+                Narawakya: <strong className="text-text">{sesiData.narawakya || '-'}</strong>
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => {
+                      setEditNarawakya(sesiData.narawakya || '');
+                      setIsEditingNarawakya(true);
+                    }}
+                    className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200 transition-colors"
+                    title="Edit Narawakya"
                   >
                     <Edit2 size={10} /> Edit
                   </button>

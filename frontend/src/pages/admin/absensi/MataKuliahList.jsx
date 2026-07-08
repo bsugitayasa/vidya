@@ -119,14 +119,11 @@ export default function MataKuliahList() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
         <div>
-          <h2 className="text-2xl font-bold font-heading text-primary flex items-center gap-2">
-            <BookOpen size={28} />
-            Kelola Absensi
-          </h2>
-          <p className="text-sm text-muted mt-1">Manajemen mata kuliah dan absensi per program ajahan</p>
+          <h2 className="text-2xl font-bold font-heading text-primary">Manajemen Ajahan (Tingkat) & Jadwal</h2>
+          <p className="text-sm text-muted mt-1">Kelola data ajahan dan jadwal absensi per program</p>
         </div>
         <Button onClick={openAddModal} className="flex items-center gap-2">
-          <Plus size={18} /> Tambah Program Ajahan
+          <Plus size={18} /> Tambah Ajahan
         </Button>
       </div>
 
@@ -162,7 +159,7 @@ export default function MataKuliahList() {
             <thead>
               <tr className="bg-primary/5 border-b border-muted/20">
                 <th className="p-4 font-semibold text-sm text-text">Kode</th>
-                <th className="p-4 font-semibold text-sm text-text">Nama Mata Kuliah</th>
+                <th className="p-4 font-semibold text-sm text-text">Ajahan (Tingkat)</th>
                 <th className="p-4 font-semibold text-sm text-text text-center">SKS</th>
                 <th className="p-4 font-semibold text-sm text-text text-center">Semester</th>
                 <th className="p-4 font-semibold text-sm text-text">Program</th>
@@ -175,13 +172,13 @@ export default function MataKuliahList() {
                 <tr>
                   <td colSpan="7" className="p-8 text-center text-muted">
                     <Loader2 className="animate-spin inline mr-2" size={16} />
-                    Memuat data mata kuliah...
+                    Memuat data ajahan...
                   </td>
                 </tr>
               ) : !mataKuliahs || mataKuliahs.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="p-8 text-center text-muted">
-                    Belum ada mata kuliah. Klik "Tambah Mata Kuliah" untuk memulai.
+                    Tidak ada data ajahan. Klik "Tambah Ajahan" untuk membuat baru.
                   </td>
                 </tr>
               ) : (
@@ -211,9 +208,9 @@ export default function MataKuliahList() {
                           <Pencil size={15} />
                         </button>
                         <button
-                          onClick={() => setConfirmDelete({ open: true, mk })}
+                          onClick={(e) => { e.stopPropagation(); setConfirmDelete({ open: true, id: mk.id }); }}
                           className="p-1.5 rounded hover:bg-red-50 text-red-500 transition-colors"
-                          title="Hapus"
+                          title="Hapus Ajahan"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -233,7 +230,7 @@ export default function MataKuliahList() {
           <div className="bg-surface rounded-lg shadow-xl w-full max-w-md">
             <div className="flex items-center justify-between p-5 border-b border-muted/20">
               <h3 className="text-lg font-semibold font-heading">
-                {editingId ? 'Edit Mata Kuliah' : 'Tambah Mata Kuliah'}
+                {editingId ? 'Edit Ajahan' : 'Tambah Ajahan Baru'}
               </h3>
               <button onClick={() => setShowModal(false)} className="text-muted hover:text-text">
                 <X size={20} />
@@ -249,7 +246,7 @@ export default function MataKuliahList() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-text">Nama Mata Kuliah <span className="text-red-500">*</span></label>
+                <label className="text-sm font-medium text-text">Nama Ajahan <span className="text-red-500">*</span></label>
                 <Input
                   value={form.nama}
                   onChange={(e) => setForm({ ...form, nama: e.target.value })}
@@ -304,13 +301,13 @@ export default function MataKuliahList() {
 
       <ConfirmDialog
         open={confirmDelete.open}
-        title="Hapus Mata Kuliah?"
-        message={`Mata kuliah "${confirmDelete.mk?.nama || ''}" akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.`}
+        title="Hapus Ajahan?"
+        message="Data ajahan ini akan dihapus secara permanen. Pastikan tidak ada jadwal absensi yang terikat."
         confirmLabel="Ya, Hapus"
         variant="danger"
         isLoading={isDeleting}
         onConfirm={handleDelete}
-        onCancel={() => setConfirmDelete({ open: false, mk: null })}
+        onCancel={() => setConfirmDelete({ open: false, id: null })}
       />
     </div>
   );
