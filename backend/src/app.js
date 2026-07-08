@@ -8,6 +8,9 @@ const { authLimiter, registrationLimiter, statusCheckLimiter } = require('./midd
 
 const app = express();
 
+// Trust proxy settings (required for express-rate-limit behind reverse proxy/Docker)
+app.set('trust proxy', 1);
+
 // Security Middleware
 app.use(helmet()); // Sets various security-related HTTP headers
 const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : '*';
