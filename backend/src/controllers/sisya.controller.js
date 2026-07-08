@@ -184,6 +184,8 @@ const getAll = async (req, res) => {
       status, 
       search, 
       showInactive,
+      griya,
+      desa,
       sortBy = 'createdAt', 
       sortOrder = 'desc' 
     } = req.query;
@@ -215,8 +217,18 @@ const getAll = async (req, res) => {
     if (search) {
       where.OR = [
         { namaLengkap: { contains: search, mode: 'insensitive' } },
-        { nomorPendaftaran: { contains: search, mode: 'insensitive' } }
+        { nomorPendaftaran: { contains: search, mode: 'insensitive' } },
+        { namaGriya: { contains: search, mode: 'insensitive' } },
+        { namaDesa: { contains: search, mode: 'insensitive' } }
       ];
+    }
+
+    if (griya) {
+      where.namaGriya = { contains: griya, mode: 'insensitive' };
+    }
+    
+    if (desa) {
+      where.namaDesa = { contains: desa, mode: 'insensitive' };
     }
 
     const [sisyas, total] = await prisma.$transaction([
@@ -707,6 +719,32 @@ const softDelete = async (req, res) => {
   }
 };
 
+const getLocations = async (req, res) => {
+  try {
+    const griyaList = await prisma.sisya.findMany({
+      distinct: ['namaGriya'],
+      select: { namaGriya: true },
+      where: { namaGriya: { not: '' } }
+    });
+    const desaList = await prisma.sisya.findMany({
+      distinct: ['namaDesa'],
+      select: { namaDesa: true },
+      where: { namaDesa: { not: '' } }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        griya: griyaList.map(g => g.namaGriya).filter(Boolean),
+        desa: desaList.map(d => d.namaDesa).filter(Boolean)
+      }
+    });
+  } catch (error) {
+    console.error('Get Locations Error:', error);
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan pada server' });
+  }
+};
+
 module.exports = {
   register,
   getAll,
@@ -719,5 +757,6 @@ module.exports = {
   updateSisya,
   updateProgramRegistrasi,
   updateProgramsSisya,
-  softDelete
+  softDelete,
+  getLocations
 };

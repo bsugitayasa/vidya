@@ -22,6 +22,7 @@ const Laporan = lazy(() => import('./pages/admin/Laporan'));
 const LaporanPuniaRange = lazy(() => import('./pages/admin/LaporanPuniaRange'));
 const LaporanPuniaBulanan = lazy(() => import('./pages/admin/LaporanPuniaBulanan'));
 const LaporanAbsensi = lazy(() => import('./pages/admin/LaporanAbsensi'));
+const LaporanProgramAjahan = lazy(() => import('./pages/admin/LaporanProgramAjahan'));
 const MataKuliahList = lazy(() => import('./pages/admin/absensi/MataKuliahList'));
 const MataKuliahDetail = lazy(() => import('./pages/admin/absensi/MataKuliahDetail'));
 const SesiAbsensi = lazy(() => import('./pages/admin/absensi/SesiAbsensi'));
@@ -75,6 +76,7 @@ function App() {
               <Route path="laporan/punia-range" element={<LaporanPuniaRange />} />
               <Route path="laporan/punia-bulanan" element={<LaporanPuniaBulanan />} />
               <Route path="laporan/absensi" element={<LaporanAbsensi />} />
+              <Route path="laporan/program-ajahan" element={<LaporanProgramAjahan />} />
               <Route path="absensi" element={<MataKuliahList />} />
               <Route path="absensi/sesi/:sesiId" element={<SesiAbsensi />} />
               <Route path="absensi/rekap/:sisyaId" element={<RekapAbsensiSisya />} />

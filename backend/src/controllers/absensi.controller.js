@@ -163,6 +163,7 @@ const getSesiList = async (req, res) => {
         tanggal: sesi.tanggal,
         pertemuan: sesi.pertemuan,
         topik: sesi.topik,
+        narawakya: sesi.narawakya,
         createdAt: sesi.createdAt,
         totalSisya: total,
         totalHadir: hadir
@@ -179,7 +180,7 @@ const getSesiList = async (req, res) => {
 // POST /api/absensi/sesi
 const createSesi = async (req, res) => {
   try {
-    const { mataKuliahId, tanggal, pertemuan, topik } = req.body;
+    const { mataKuliahId, tanggal, pertemuan, topik, narawakya } = req.body;
 
     if (!mataKuliahId || !tanggal || !pertemuan) {
       return res.status(400).json({ success: false, message: 'Field wajib: mataKuliahId, tanggal, pertemuan' });
@@ -205,7 +206,8 @@ const createSesi = async (req, res) => {
         mataKuliahId: parseInt(mataKuliahId),
         tanggal: new Date(tanggal),
         pertemuan: parseInt(pertemuan),
-        topik: topik || null
+        topik: topik || null,
+        narawakya: narawakya || null
       },
       include: {
         mataKuliah: {
@@ -288,6 +290,7 @@ const getSesiDetail = async (req, res) => {
         tanggal: sesi.tanggal,
         pertemuan: sesi.pertemuan,
         topik: sesi.topik,
+        narawakya: sesi.narawakya,
         dokSisyaPath: sesi.dokSisyaPath,
         dokNarawakPath: sesi.dokNarawakPath,
         dokPanitiaPath: sesi.dokPanitiaPath,
@@ -709,7 +712,7 @@ const exportAbsensi = async (req, res) => {
 const updateSesi = async (req, res) => {
   try {
     const { sesiId } = req.params;
-    const { tanggal, topik } = req.body;
+    const { tanggal, topik, narawakya } = req.body;
 
     const existing = await prisma.sesiAbsensi.findUnique({
       where: { id: parseInt(sesiId) }
@@ -722,6 +725,7 @@ const updateSesi = async (req, res) => {
     const updateData = {};
     if (tanggal) updateData.tanggal = new Date(tanggal);
     if (topik !== undefined) updateData.topik = topik || null;
+    if (narawakya !== undefined) updateData.narawakya = narawakya || null;
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ success: false, message: 'Tidak ada data yang diubah' });

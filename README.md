@@ -1,6 +1,6 @@
 # VIDYA - Visualisasi Data dan Sisya Administrasi Pesraman
 
-Sistem Informasi Akademik untuk pengelolaan pendaftaran dan statistik siswa (Sisya) di Yayasan Hindu / Perkumpulan Dharmopadesa Pusat Nusantara.
+Sistem Informasi Akademik untuk pengelolaan pendaftaran dan statistik siswa (Sisya) di Perkumpulan Dharmopadesa Pusat Nusantara.
 
 ## Fitur Utama
 - Pendaftaran Sisya Online

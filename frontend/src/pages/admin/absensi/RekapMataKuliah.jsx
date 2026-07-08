@@ -93,7 +93,7 @@ export default function RekapMataKuliah() {
           </button>
           <h2 className="text-2xl font-bold font-heading text-primary flex items-center gap-2">
             <BarChart3 size={28} />
-            Rekap Absensi
+            Rekap Absensi: {mataKuliah.nama}
           </h2>
         </div>
         <Button
@@ -117,7 +117,7 @@ export default function RekapMataKuliah() {
         </div>
         <h3 className="text-xl font-bold text-text">{mataKuliah.nama}</h3>
         <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted">
-          <span>Kode: <strong className="text-text">{mataKuliah.kode}</strong></span>
+          <span className="text-sm text-muted">Kode Ajahan: <strong className="text-text">{mataKuliah.kode}</strong></span>
           <span>SKS: <strong className="text-text">{mataKuliah.sks}</strong></span>
           <span>Semester: <strong className="text-text">{mataKuliah.semester}</strong></span>
           <span>Total Sesi: <strong className="text-text">{totalSesi}</strong></span>

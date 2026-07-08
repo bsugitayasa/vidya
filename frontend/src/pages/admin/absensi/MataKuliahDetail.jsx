@@ -16,7 +16,7 @@ export default function MataKuliahDetail() {
   const [showModal, setShowModal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [sesiForm, setSesiForm] = useState({ tanggal: '', pertemuan: '', topik: '' });
+  const [sesiForm, setSesiForm] = useState({ tanggal: '', pertemuan: '', topik: '', narawakya: '' });
 
   useEffect(() => {
     fetchData();
@@ -41,7 +41,7 @@ export default function MataKuliahDetail() {
   const openAddSesi = () => {
     const nextPertemuan = (sesiList && sesiList.length > 0) ? Math.max(...sesiList.map(s => s.pertemuan)) + 1 : 1;
     const today = new Date().toISOString().split('T')[0];
-    setSesiForm({ tanggal: today, pertemuan: String(nextPertemuan), topik: '' });
+    setSesiForm({ tanggal: today, pertemuan: String(nextPertemuan), topik: '', narawakya: '' });
     setShowModal(true);
   };
 
@@ -58,7 +58,8 @@ export default function MataKuliahDetail() {
         mataKuliahId: parseInt(mkId),
         tanggal: sesiForm.tanggal,
         pertemuan: parseInt(sesiForm.pertemuan),
-        topik: sesiForm.topik || null
+        topik: sesiForm.topik || null,
+        narawakya: sesiForm.narawakya || null
       });
       setShowModal(false);
       setMessage({ type: 'success', text: `Sesi pertemuan ke-${sesiForm.pertemuan} berhasil dibuat` });
@@ -168,6 +169,7 @@ export default function MataKuliahDetail() {
               <tr className="bg-primary/5 border-b border-muted/20">
                 <th className="p-4 font-semibold text-sm text-text text-center">Pertemuan</th>
                 <th className="p-4 font-semibold text-sm text-text">Tanggal</th>
+                <th className="p-4 font-semibold text-sm text-text">Narawakya</th>
                 <th className="p-4 font-semibold text-sm text-text">Topik</th>
                 <th className="p-4 font-semibold text-sm text-text text-center">Kehadiran</th>
                 <th className="p-4 font-semibold text-sm text-text text-center">Aksi</th>
@@ -200,6 +202,7 @@ export default function MataKuliahDetail() {
                         })}
                       </div>
                     </td>
+                    <td className="p-4 text-sm text-muted">{sesi.narawakya || '—'}</td>
                     <td className="p-4 text-sm text-muted">{sesi.topik || '—'}</td>
                     <td className="p-4 text-sm text-center">
                       {sesi.totalSisya > 0 ? (
@@ -253,6 +256,14 @@ export default function MataKuliahDetail() {
                     onChange={(e) => setSesiForm({ ...sesiForm, tanggal: e.target.value })}
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-text">Narawakya (Pengajar)</label>
+                <Input
+                  value={sesiForm.narawakya}
+                  onChange={(e) => setSesiForm({ ...sesiForm, narawakya: e.target.value })}
+                  placeholder="Contoh: Ida Pedanda Gede"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-text">Topik / Materi</label>

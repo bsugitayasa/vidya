@@ -1,7 +1,7 @@
 {
   "name": "vidya",
   "version": "1.0.0",
-  "description": "Sistem Informasi Akademik untuk pengelolaan pendaftaran dan statistik siswa (Sisya) di Yayasan Hindu / Perkumpulan Dharmopadesa Pusat Nusantara.",
+  "description": "Sistem Informasi Akademik untuk pengelolaan pendaftaran dan statistik siswa (Sisya) di Perkumpulan Dharmopadesa Pusat Nusantara.",
   "main": "index.js",
   "directories": {
     "doc": "docs"

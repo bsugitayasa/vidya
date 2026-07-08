@@ -24,6 +24,12 @@ router.get('/absensi', requireAuth, requireAdmin, laporanController.getLaporanAb
 // GET /api/laporan/absensi/export
 router.get('/absensi/export', requireAuth, requireAdmin, laporanController.exportLaporanAbsensi);
 
+// GET /api/laporan/program-ajahan-rekap
+router.get('/program-ajahan-rekap', requireAuth, requireAdmin, laporanController.getProgramAjahanRekap);
+
+// GET /api/laporan/program-ajahan-rekap/export
+router.get('/program-ajahan-rekap/export', requireAuth, requireAdmin, laporanController.exportProgramAjahanRekap);
+
 // GET /api/laporan/export
 router.get('/export', requireAuth, requireAdmin, laporanController.exportSisya);
 

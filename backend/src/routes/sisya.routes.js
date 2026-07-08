@@ -26,6 +26,9 @@ router.post('/register', registrationLimiter, upload.fields([
 // GET /api/sisya/files/:filename (Protected - for viewing documents)
 router.get('/files/:filename', requireAuth, requireAdmin, sisyaController.serveFile);
 
+// GET /api/sisya/locations/suggestions
+router.get('/locations/suggestions', requireAuth, requireAdmin, sisyaController.getLocations);
+
 // GET /api/sisya/:id
 router.get('/:id', requireAuth, requireAdmin, sisyaController.getById);
 
