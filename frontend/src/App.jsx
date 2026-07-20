@@ -11,6 +11,7 @@ const SuksesRegistrasi = lazy(() => import('./pages/public/SuksesRegistrasi'));
 const CekStatus = lazy(() => import('./pages/public/CekStatus'));
 const LengkapiBerkas = lazy(() => import('./pages/public/LengkapiBerkas'));
 const VerifikasiDokumenPublic = lazy(() => import('./pages/public/VerifikasiDokumenPublic'));
+const InputAbsensiPublic = lazy(() => import('./pages/public/InputAbsensiPublic'));
 
 // Admin Pages (Lazy Loaded)
 const Login = lazy(() => import('./pages/admin/Login'));
@@ -60,6 +61,8 @@ function App() {
               <Route path="daftar/sukses" element={<SuksesRegistrasi />} />
               <Route path="cek-status" element={<CekStatus />} />
               <Route path="lengkapi-berkas" element={<LengkapiBerkas />} />
+              <Route path="verifikasi-dokumen/:token" element={<VerifikasiDokumenPublic />} />
+              <Route path="input-absensi" element={<InputAbsensiPublic />} />
             </Route>
 
             {/* Admin Auth Route */}
