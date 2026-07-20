@@ -17,7 +17,7 @@ const getAll = async (req, res) => {
 const updateProgram = async (req, res) => {
   try {
     const { id } = req.params;
-    const { puniaNormal, puniaPasangan, kodeSertifikat, nama, urutan, isPasanganTersedia, isAktif } = req.body;
+    const { puniaNormal, puniaPasangan, kodeSertifikat, nama, urutan, isPasanganTersedia, isAktif, pinKoordinator } = req.body;
 
     const oldProgram = await prisma.programAjahan.findUnique({
       where: { id: parseInt(id) }
@@ -34,6 +34,7 @@ const updateProgram = async (req, res) => {
         puniaNormal: puniaNormal !== undefined ? parseInt(puniaNormal) : oldProgram.puniaNormal,
         puniaPasangan: puniaPasangan !== undefined ? (puniaPasangan ? parseInt(puniaPasangan) : null) : oldProgram.puniaPasangan,
         kodeSertifikat: kodeSertifikat !== undefined ? kodeSertifikat : oldProgram.kodeSertifikat,
+        pinKoordinator: pinKoordinator !== undefined ? pinKoordinator : oldProgram.pinKoordinator,
         urutan: urutan !== undefined ? parseInt(urutan) : oldProgram.urutan,
         isPasanganTersedia: isPasanganTersedia !== undefined ? isPasanganTersedia : oldProgram.isPasanganTersedia,
         isAktif: isAktif !== undefined ? isAktif : oldProgram.isAktif

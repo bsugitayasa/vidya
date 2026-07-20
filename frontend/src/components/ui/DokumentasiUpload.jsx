@@ -16,7 +16,9 @@ export default function DokumentasiUpload({
   sesiId,
   onUploadSuccess,
   onDeleteSuccess,
-  isSuperAdmin = false
+  isSuperAdmin = false,
+  uploadEndpoint = null,
+  previewEndpointBase = '/sisya/files'
 }) {
   const fileInputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -45,7 +47,7 @@ export default function DokumentasiUpload({
     const fetchPreview = async () => {
       try {
         const filename = existingPath.split('/').pop();
-        const response = await api.get(`/sisya/files/${filename}`, {
+        const response = await api.get(`${previewEndpointBase}/${filename}`, {
           responseType: 'blob'
         });
         const blobUrl = URL.createObjectURL(response.data);
@@ -63,7 +65,7 @@ export default function DokumentasiUpload({
         URL.revokeObjectURL(previewUrl);
       }
     };
-  }, [existingPath]);
+  }, [existingPath, previewEndpointBase]);
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -82,7 +84,8 @@ export default function DokumentasiUpload({
       const formData = new FormData();
       formData.append(fieldName, file);
 
-      const res = await api.post(`/absensi/sesi/${sesiId}/upload-dokumentasi`, formData, {
+      const endpoint = uploadEndpoint || `/absensi/sesi/${sesiId}/upload-dokumentasi`;
+      const res = await api.post(endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 

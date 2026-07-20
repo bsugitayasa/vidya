@@ -43,7 +43,8 @@ export default function TarifConfig() {
     try {
       const res = await api.patch(`/program-ajahan/${programId}`, {
         puniaNormal: program.puniaNormal,
-        puniaPasangan: program.puniaPasangan
+        puniaPasangan: program.puniaPasangan,
+        pinKoordinator: program.pinKoordinator
       });
       if (res.data.success) {
         toast.success(`Tarif ${program.nama} berhasil diperbarui.`);
@@ -102,6 +103,17 @@ export default function TarifConfig() {
                   />
                 </div>
               )}
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-text uppercase tracking-wider">PIN Koordinator</label>
+                <Input 
+                  type="text"
+                  placeholder="Contoh: 123456"
+                  value={program.pinKoordinator || ''}
+                  onChange={(e) => handleProgramChange(program.id, 'pinKoordinator', e.target.value)}
+                />
+                <p className="text-[10px] text-muted italic">*PIN untuk akses absensi koordinator</p>
+              </div>
             </div>
           </div>
         ))}

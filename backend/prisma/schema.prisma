@@ -35,6 +35,7 @@ model ProgramAjahan {
   isAktif            Boolean        @default(true)
   urutan             Int            @default(0)
   kodeSertifikat     String?
+  pinKoordinator     String?
   mataKuliahs        MataKuliah[]
   sisyaPrograms      SisyaProgram[]
 }

@@ -42,6 +42,8 @@ app.use('/api/auth/login', authLimiter);
 app.use('/api/sisya/register', registrationLimiter);
 app.use('/api/sisya/cek-status', statusCheckLimiter);
 
+app.use('/api/open/absensi', require('./routes/openAbsensi.routes'));
+
 app.use('/api/auth', authRoutes);
 app.use('/api/sisya', sisyaRoutes);
 app.use('/api/program-ajahan', programAjahanRoutes);
