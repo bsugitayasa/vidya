@@ -76,6 +76,19 @@ export default function SisyaDetail() {
   const [isSavingPrograms, setIsSavingPrograms] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // Link Partner state (Super Admin)
+  const [showLinkPartnerModal, setShowLinkPartnerModal] = useState(false);
+  const [partnerQuery, setPartnerQuery] = useState('');
+  const [partnerResults, setPartnerResults] = useState([]);
+  const [isSearchingPartner, setIsSearchingPartner] = useState(false);
+  const [selectedPartner, setSelectedPartner] = useState(null);
+  const [isLinking, setIsLinking] = useState(false);
+
+  const [showEditPembayaranModal, setShowEditPembayaranModal] = useState(false);
+  const [selectedEditPembayaran, setSelectedEditPembayaran] = useState(null);
+  const [editNominal, setEditNominal] = useState('');
+  const [editKeterangan, setEditKeterangan] = useState('');
+
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
     resolver: zodResolver(sisyaUpdateSchema),
     mode: 'onTouched'
@@ -104,6 +117,35 @@ export default function SisyaDetail() {
       setValue('tanggalLahir', `${year}-${month}-${day}`, { shouldValidate: true });
     } else {
       setValue('tanggalLahir', '', { shouldValidate: true });
+    }
+  };
+
+  const handleOpenEditPembayaranModal = (p) => {
+    setSelectedEditPembayaran(p);
+    setEditNominal(p.nominal.toString());
+    setEditKeterangan(p.keterangan || '');
+    setShowEditPembayaranModal(true);
+  };
+
+  const handleEditPembayaranSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedEditPembayaran || isUpdating) return;
+    
+    setIsUpdating(true);
+    try {
+      const response = await api.patch(`/pembayaran/${selectedEditPembayaran.id}/edit`, {
+        nominal: parseFloat(editNominal),
+        keterangan: editKeterangan
+      });
+      
+      toast.success(response.data.message || 'Pembayaran berhasil diupdate');
+      setShowEditPembayaranModal(false);
+      fetchSisyaDetail();
+    } catch (error) {
+      console.error('Error updating pembayaran:', error);
+      toast.error(error.response?.data?.message || 'Gagal mengupdate pembayaran');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -491,6 +533,53 @@ export default function SisyaDetail() {
     }
   };
 
+  const handleSearchPartner = async (query) => {
+    setPartnerQuery(query);
+    if (!query || query.length < 3) {
+      setPartnerResults([]);
+      return;
+    }
+    setIsSearchingPartner(true);
+    try {
+      const res = await api.get(`/sisya?search=${query}&limit=10`);
+      if (res.data.success) {
+        // Filter out current sisya and those not in Kawikon
+        const filtered = res.data.data.filter(s => 
+          s.id !== sisya.id && 
+          s.programSisyas.some(p => p.programAjahan.kode === 'KAWIKON')
+        );
+        setPartnerResults(filtered);
+      }
+    } catch (error) {
+      console.error('Error searching partner:', error);
+    } finally {
+      setIsSearchingPartner(false);
+    }
+  };
+
+  const handleLinkPartner = async () => {
+    if (!selectedPartner) {
+      toast.error('Pilih pasangan terlebih dahulu');
+      return;
+    }
+    setIsLinking(true);
+    try {
+      const res = await api.post(`/sisya/${id}/link-partner`, { partnerId: selectedPartner.id });
+      if (res.data.success) {
+        toast.success('Berhasil menautkan pasangan');
+        setShowLinkPartnerModal(false);
+        setPartnerQuery('');
+        setPartnerResults([]);
+        setSelectedPartner(null);
+        fetchSisyaDetail();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Gagal menautkan pasangan');
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
   const handleOpenVerifyModal = (pembayaran) => {
     setSelectedPembayaran(pembayaran);
     setNominalVerifikasi(pembayaran.nominal || '');
@@ -614,6 +703,9 @@ export default function SisyaDetail() {
   }
 
   const formatRupiah = (number) => {
+    if (number < 0) {
+      return `Rp. (${new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0 }).format(Math.abs(number))})`;
+    }
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
 
@@ -841,16 +933,23 @@ export default function SisyaDetail() {
                           </span>
                         </td>
                         <td className="py-3 text-right">
-                          {p.status === 'MENUNGGU' && (
-                            <div className="flex gap-2 justify-end">
-                              <Button size="sm" className="h-7 text-xs" onClick={() => handleOpenVerifyModal(p)}>
-                                Verifikasi
+                          <div className="flex gap-2 justify-end">
+                            {p.status === 'MENUNGGU' && (
+                              <>
+                                <Button size="sm" className="h-7 text-xs" onClick={() => handleOpenVerifyModal(p)}>
+                                  Verifikasi
+                                </Button>
+                                <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500" onClick={() => setConfirmDelete({ open: true, id: p.id })}>
+                                  <Trash2 size={14} />
+                                </Button>
+                              </>
+                            )}
+                            {isSuperAdmin && (
+                              <Button size="sm" variant="outline" className="h-7 w-7 p-0 text-blue-500 border-blue-200 hover:bg-blue-50" onClick={() => handleOpenEditPembayaranModal(p)} title="Edit Pembayaran">
+                                <Edit2 size={14} />
                               </Button>
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500" onClick={() => setConfirmDelete({ open: true, id: p.id })}>
-                                <Trash2 size={14} />
-                              </Button>
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -908,6 +1007,50 @@ export default function SisyaDetail() {
               ))}
             </div>
           </div>
+
+          {/* Section Pasangan */}
+          {(sisya.programSisyas.some(p => p.programAjahan.kode === 'KAWIKON')) && (
+            <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
+              <div className="flex justify-between items-center border-b border-muted/20 pb-3 mb-4">
+                <h4 className="font-bold text-lg text-primary flex items-center gap-2">
+                  <User size={20} /> Informasi Pasangan
+                </h4>
+                {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && !sisya.partner && !sisya.partnerOf && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs font-bold"
+                    onClick={() => setShowLinkPartnerModal(true)}
+                  >
+                    Link Pasangan
+                  </Button>
+                )}
+              </div>
+              
+              {sisya.partner || sisya.partnerOf ? (
+                <div className="p-4 border rounded-md shadow-sm bg-blue-50/50 border-blue-100 flex justify-between items-center">
+                  <div>
+                    <span className="text-xs text-muted block mb-1">Pasangan yang Ditautkan:</span>
+                    <span className="font-bold text-lg text-blue-900">
+                      {(sisya.partner || sisya.partnerOf).namaLengkap}
+                    </span>
+                    <span className="text-xs text-blue-700 block mt-1">
+                      ID Pendaftaran: {(sisya.partner || sisya.partnerOf).nomorPendaftaran}
+                    </span>
+                  </div>
+                  <Link to={`/admin/sisya/${(sisya.partner || sisya.partnerOf).id}`}>
+                    <Button variant="outline" size="sm" className="font-bold border-blue-300 text-blue-600 hover:bg-blue-50 hover:text-blue-700 bg-white">
+                      <ExternalLink size={14} className="mr-2" /> Lihat Profil
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="p-4 border border-dashed border-muted rounded-md text-center text-sm text-muted bg-bg/50">
+                  Belum ada pasangan yang ditautkan.
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
             <h4 className="font-bold text-lg border-b border-muted/20 pb-3 mb-4 text-primary">Dokumen Identitas</h4>
@@ -973,6 +1116,60 @@ export default function SisyaDetail() {
         </div>
 
       </div>
+
+      {/* Edit Pembayaran Modal */}
+      {showEditPembayaranModal && selectedEditPembayaran && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface w-full max-w-md rounded-xl shadow-2xl overflow-hidden border border-muted/20">
+            <div className="p-6 border-b border-muted/10 flex justify-between items-center bg-primary/5">
+              <h3 className="font-bold text-lg text-primary">Edit Pembayaran</h3>
+              <button type="button" onClick={() => setShowEditPembayaranModal(false)} className="text-muted hover:text-text">✕</button>
+            </div>
+            <form onSubmit={handleEditPembayaranSubmit}>
+              <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted uppercase">Nominal (Rp)</label>
+                  <Input
+                    type="number"
+                    placeholder="Contoh: 1500000"
+                    value={editNominal}
+                    onChange={(e) => setEditNominal(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted uppercase">Catatan / Keterangan</label>
+                  <Input
+                    placeholder="Catatan..."
+                    value={editKeterangan}
+                    onChange={(e) => setEditKeterangan(e.target.value)}
+                  />
+                </div>
+
+                <div className="pt-4 flex justify-end gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowEditPembayaranModal(false)}
+                    disabled={isUpdating}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    disabled={isUpdating}
+                  >
+                    {isUpdating ? <Loader2 size={18} className="animate-spin mr-2" /> : <CheckCircle size={18} className="mr-2" />}
+                    Simpan Perubahan
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Verification Modal */}
       {showVerifyModal && (
@@ -1374,6 +1571,79 @@ export default function SisyaDetail() {
         variant="warning"
         isLoading={isSavingPrograms}
       />
+      {/* Link Partner Modal */}
+      {showLinkPartnerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden border border-muted/20">
+            <div className="p-6 border-b border-muted/10 flex justify-between items-center bg-primary/5">
+              <h3 className="font-bold text-lg text-primary">Tautkan Pasangan (Kawikon)</h3>
+              <button onClick={() => setShowLinkPartnerModal(false)} className="text-muted hover:text-text">✕</button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-muted mb-4">Cari data Sisya yang akan ditautkan sebagai pasangan. Keduanya harus sudah terdaftar di program Kawikon.</p>
+              
+              <div className="flex gap-2 mb-6">
+                <Input 
+                  placeholder="Cari berdasarkan nama atau no pendaftaran..." 
+                  value={partnerQuery}
+                  onChange={(e) => handleSearchPartner(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+
+              {isSearchingPartner ? (
+                <div className="text-center py-4 text-muted flex justify-center items-center gap-2">
+                  <Loader2 className="animate-spin" size={16} /> Mencari...
+                </div>
+              ) : partnerResults.length > 0 ? (
+                <div className="border border-muted/20 rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-bg text-muted uppercase text-xs font-bold text-left sticky top-0">
+                      <tr>
+                        <th className="p-3">No. Daftar</th>
+                        <th className="p-3">Nama</th>
+                        <th className="p-3 text-center">Pilih</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-muted/10">
+                      {partnerResults.map(p => (
+                        <tr key={p.id} className="hover:bg-bg/50">
+                          <td className="p-3 font-mono text-xs">{p.nomorPendaftaran}</td>
+                          <td className="p-3 font-semibold">{p.namaLengkap}</td>
+                          <td className="p-3 text-center">
+                            <input 
+                              type="radio" 
+                              name="partnerSelect" 
+                              checked={selectedPartner?.id === p.id}
+                              onChange={() => setSelectedPartner(p)}
+                              className="w-4 h-4 text-primary"
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : partnerQuery.length >= 3 ? (
+                <div className="text-center py-4 text-muted text-sm border border-dashed rounded-lg">
+                  Tidak ditemukan Sisya Kawikon yang sesuai.
+                </div>
+              ) : null}
+
+              <div className="mt-6 flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowLinkPartnerModal(false)}>Batal</Button>
+                <Button 
+                  onClick={handleLinkPartner}
+                  disabled={!selectedPartner || isLinking}
+                >
+                  {isLinking ? <Loader2 className="animate-spin mr-1" size={14} /> : null}
+                  Tautkan
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

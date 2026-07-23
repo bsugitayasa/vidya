@@ -16,4 +16,5 @@ router.patch('/:id/verifikasi', requireAuth, requireAdmin, pembayaranController.
 // Admin hapus (jika belum diverifikasi)
 router.delete('/:id', requireAuth, requireAdmin, pembayaranController.deletePembayaran);
 
+router.patch('/:id/edit', requireAuth, requireSuperAdmin, pembayaranController.editPembayaran);
 module.exports = router;

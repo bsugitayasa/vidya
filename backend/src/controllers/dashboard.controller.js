@@ -25,9 +25,9 @@ const getStats = async (req, res) => {
       }
     });
     
-    // Total Punia
+    // Total Punia (Hindari double count untuk pasangan Kawikon, partnerId harus null)
     const result = await prisma.sisya.aggregate({
-      where: activeFilter,
+      where: { ...activeFilter, partnerId: null },
       _sum: { totalPunia: true },
     });
     
@@ -82,7 +82,8 @@ const getStats = async (req, res) => {
       },
       select: {
         createdAt: true,
-        totalPunia: true
+        totalPunia: true,
+        partnerId: true
       }
     });
 
@@ -99,7 +100,10 @@ const getStats = async (req, res) => {
       const dateStr = new Date(s.createdAt).toLocaleDateString('id-ID', { month: 'short', day: 'numeric' });
       if (chartMap[dateStr]) {
         chartMap[dateStr].pendaftar += 1;
-        chartMap[dateStr].punia += s.totalPunia;
+        // Hanya hitung punia jika bukan "child" partner (untuk menghindari double count)
+        if (s.partnerId === null) {
+          chartMap[dateStr].punia += s.totalPunia;
+        }
       }
     });
 
