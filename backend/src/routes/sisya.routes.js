@@ -57,6 +57,9 @@ router.patch('/program/:spId', requireAuth, requireAdmin, sisyaController.update
 // PATCH /api/sisya/:id/programs (Update program ajahan enrollment - SUPER_ADMIN only)
 router.patch('/:id/programs', requireAuth, requireSuperAdmin, sisyaController.updateProgramsSisya);
 
+// POST /api/sisya/:id/link-partner (Link two Sisya as partners - SUPER_ADMIN only)
+router.post('/:id/link-partner', requireAuth, requireAdmin, sisyaController.linkPartner);
+
 // DELETE /api/sisya/:id/soft-delete (Soft delete by changing status to TIDAK_AKTIF)
 router.delete('/:id/soft-delete', requireAuth, requireSuperAdmin, sisyaController.softDelete);
 

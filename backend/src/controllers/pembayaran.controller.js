@@ -27,32 +27,37 @@ const verifikasiPembayaran = async (req, res) => {
         }
       });
 
-      // 2. Hitung ulang total terbayar untuk Sisya
+      // 2. Ambil data Sisya beserta partner
+      const sisya = await tx.sisya.findUnique({
+        where: { id: updatedPembayaran.sisyaId },
+        include: { partner: true, partnerOf: true }
+      });
+
+      const isLinked = !!(sisya.partnerId || sisya.partnerOf);
+      const partnerId = sisya.partnerId || sisya.partnerOf?.id;
+      const sisyaIds = isLinked ? [sisya.id, partnerId] : [sisya.id];
+
+      // 3. Hitung ulang total terbayar untuk Sisya (dan partner jika ada)
       const allVerified = await tx.pembayaran.findMany({
         where: {
-          sisyaId: updatedPembayaran.sisyaId,
+          sisyaId: { in: sisyaIds },
           status: 'VERIFIKASI'
         }
       });
 
       const totalTerbayar = allVerified.reduce((acc, curr) => acc + curr.nominal, 0);
 
-      // 3. Ambil data Sisya untuk bandingkan dengan total tagihan
-      const sisya = await tx.sisya.findUnique({
-        where: { id: updatedPembayaran.sisyaId }
+      // Cek apakah masih ada bukti yang menunggu verifikasi (dari keduanya jika dilink)
+      const pendingCount = await tx.pembayaran.count({
+        where: {
+          sisyaId: { in: sisyaIds },
+          status: 'MENUNGGU'
+        }
       });
 
       // 4. Tentukan status pembayaran Sisya
       let statusPembayaranSisya = 'MENUNGGU_PEMBAYARAN';
       
-      // Cek apakah masih ada bukti yang menunggu verifikasi
-      const pendingCount = await tx.pembayaran.count({
-        where: {
-          sisyaId: updatedPembayaran.sisyaId,
-          status: 'MENUNGGU'
-        }
-      });
-
       if (totalTerbayar >= sisya.totalPunia) {
         statusPembayaranSisya = 'LUNAS';
       } else if (totalTerbayar > 0) {
@@ -63,8 +68,9 @@ const verifikasiPembayaran = async (req, res) => {
         statusPembayaranSisya = 'DITOLAK';
       }
 
-      await tx.sisya.update({
-        where: { id: updatedPembayaran.sisyaId },
+      // 5. Update Sisya dan Partner
+      await tx.sisya.updateMany({
+        where: { id: { in: sisyaIds } },
         data: {
           totalTerbayar,
           statusPembayaran: statusPembayaranSisya
@@ -104,9 +110,17 @@ const uploadBuktiBayar = async (req, res) => {
         }
       });
 
-      // Update status sisya menjadi MENUNGGU_VERIFIKASI
-      await tx.sisya.update({
+      // Update status sisya (dan partner) menjadi MENUNGGU_VERIFIKASI
+      const sisya = await tx.sisya.findUnique({
         where: { id: parseInt(sisyaId) },
+        include: { partner: true, partnerOf: true }
+      });
+      const isLinked = !!(sisya.partnerId || sisya.partnerOf);
+      const partnerId = sisya.partnerId || sisya.partnerOf?.id;
+      const sisyaIds = isLinked ? [sisya.id, partnerId] : [sisya.id];
+
+      await tx.sisya.updateMany({
+        where: { id: { in: sisyaIds } },
         data: { statusPembayaran: 'MENUNGGU_VERIFIKASI' }
       });
 
@@ -155,8 +169,80 @@ const deletePembayaran = async (req, res) => {
     }
 }
 
+const editPembayaran = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nominal, keterangan } = req.body;
+
+    const updatedPembayaran = await prisma.$transaction(async (tx) => {
+      // Update nominal and keterangan of the pembayaran
+      const pembayaran = await tx.pembayaran.update({
+        where: { id: parseInt(id) },
+        data: {
+          nominal: parseInt(nominal),
+          keterangan,
+        },
+      });
+
+      // Fetch related sisya (and partner if linked)
+      const sisya = await tx.sisya.findUnique({
+        where: { id: pembayaran.sisyaId },
+        include: { partner: true, partnerOf: true },
+      });
+
+      const isLinked = !!(sisya.partnerId || sisya.partnerOf);
+      const partnerId = sisya.partnerId || sisya.partnerOf?.id;
+      const sisyaIds = isLinked ? [sisya.id, partnerId] : [sisya.id];
+
+      // Recalculate total terbayar from verified payments
+      const allVerified = await tx.pembayaran.findMany({
+        where: {
+          sisyaId: { in: sisyaIds },
+          status: 'VERIFIKASI',
+        },
+      });
+      const totalTerbayar = allVerified.reduce((acc, cur) => acc + cur.nominal, 0);
+
+      // Count pending payments (still awaiting verification)
+      const pendingCount = await tx.pembayaran.count({
+        where: {
+          sisyaId: { in: sisyaIds },
+          status: 'MENUNGGU',
+        },
+      });
+
+      // Determine new status pembayaran for sisya
+      let statusPembayaranSisya = 'MENUNGGU_PEMBAYARAN';
+      if (totalTerbayar >= sisya.totalPunia) {
+        statusPembayaranSisya = 'LUNAS';
+      } else if (totalTerbayar > 0) {
+        statusPembayaranSisya = pendingCount > 0 ? 'MENUNGGU_VERIFIKASI' : 'BELUM_LUNAS';
+      } else if (pendingCount > 0) {
+        statusPembayaranSisya = 'MENUNGGU_VERIFIKASI';
+      }
+
+      // Update sisya (and partner) with new totals and status
+      await tx.sisya.updateMany({
+        where: { id: { in: sisyaIds } },
+        data: {
+          totalTerbayar,
+          statusPembayaran: statusPembayaranSisya,
+        },
+      });
+
+      return pembayaran;
+    });
+
+    res.json({ success: true, message: 'Pembayaran berhasil diedit', data: updatedPembayaran });
+  } catch (error) {
+    console.error('Edit Pembayaran Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal mengedit pembayaran' });
+  }
+};
+
 module.exports = {
   verifikasiPembayaran,
   uploadBuktiBayar,
-    deletePembayaran
+  deletePembayaran,
+  editPembayaran
 };

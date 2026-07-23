@@ -81,6 +81,10 @@ model Sisya {
   programSisyas       SisyaProgram[]
   statusKelulusan     OverrideKelulusan @default(AUTO)
   prosesiKelulusan    ProsesiKelulusan?
+  
+  partnerId           Int?             @unique
+  partner             Sisya?           @relation("PartnerRelation", fields: [partnerId], references: [id])
+  partnerOf           Sisya?           @relation("PartnerRelation")
 }
 
 model Pembayaran {

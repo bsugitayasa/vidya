@@ -355,12 +355,29 @@ const exportSisya = async (req, res) => {
         // Handle Program Names & Registration Numbers
         let displayPrograms = "";
         let displayRegNos = "";
+        let displayPunia = sisya.totalPunia;
+        let displayTerbayar = sisya.totalTerbayar || 0;
 
         if (targetProgramId) {
           // Specific program sheet
           const targetProg = sisya.programSisyas.find(sp => sp.programAjahanId === targetProgramId);
           displayPrograms = targetProg ? `${targetProg.programAjahan.nama}${targetProg.isPasangan ? ' (+Pasangan)' : ''}` : "";
           displayRegNos = targetProg ? targetProg.nomorRegistrasi : "";
+          
+          if (targetProg) {
+            displayPunia = targetProg.puniaProgram;
+            // Allocate payment sequentially based on programId to avoid double counting across sheets
+            let allocated = sisya.totalTerbayar || 0;
+            const sortedProgs = [...sisya.programSisyas].sort((a, b) => a.programAjahanId - b.programAjahanId);
+            for (const sp of sortedProgs) {
+              let amount = Math.min(sp.puniaProgram, allocated);
+              if (sp.programAjahanId === targetProgramId) {
+                displayTerbayar = amount;
+                break;
+              }
+              allocated -= amount;
+            }
+          }
         } else {
           // "Semua Sisya" sheet
           displayPrograms = sisya.programSisyas
@@ -371,7 +388,7 @@ const exportSisya = async (req, res) => {
             .join(', ');
         }
 
-        const sisaPunia = sisya.totalPunia - (sisya.totalTerbayar || 0);
+        const sisaPunia = displayPunia - displayTerbayar;
 
         const row = worksheet.addRow({
           no: index + 1,
@@ -384,9 +401,9 @@ const exportSisya = async (req, res) => {
           griya: sisya.namaGriya,
           desa: sisya.namaDesa,
           program: displayPrograms,
-          punia: sisya.totalPunia,
-          terbayar: sisya.totalTerbayar || 0,
-          sisa: sisaPunia,
+          punia: sisya.partnerId ? '' : displayPunia,
+          terbayar: sisya.partnerId ? '' : displayTerbayar,
+          sisa: sisya.partnerId ? '' : sisaPunia,
           statusBayar: sisya.statusPembayaran.replace(/_/g, ' '),
           statusAkademik: sisya.status,
           tglDiksan: sisya.tanggalDiksan ? new Date(sisya.tanggalDiksan).toLocaleDateString('id-ID') : '-'

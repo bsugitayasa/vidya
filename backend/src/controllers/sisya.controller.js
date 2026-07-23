@@ -280,7 +280,9 @@ const getById = async (req, res) => {
         },
         pembayarans: {
           orderBy: { createdAt: 'desc' }
-        }
+        },
+        partner: true,
+        partnerOf: true
       }
     });
 
@@ -745,6 +747,127 @@ const getLocations = async (req, res) => {
   }
 };
 
+const linkPartner = async (req, res) => {
+  try {
+    const { id } = req.params; // ID Sisya A (yg di-link)
+    const { partnerId } = req.body; // ID Sisya B (pasangannya)
+
+    if (parseInt(id) === parseInt(partnerId)) {
+      return res.status(400).json({ success: false, message: 'Tidak dapat menautkan dengan diri sendiri' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const sisyaA = await tx.sisya.findUnique({
+        where: { id: parseInt(id) },
+        include: { programSisyas: { include: { programAjahan: true } } }
+      });
+      const sisyaB = await tx.sisya.findUnique({
+        where: { id: parseInt(partnerId) },
+        include: { programSisyas: { include: { programAjahan: true } } }
+      });
+
+      if (!sisyaA || !sisyaB) {
+        throw new Error('Data Sisya tidak ditemukan');
+      }
+
+      if (sisyaA.partnerId || sisyaB.partnerId || sisyaA.partnerOf || sisyaB.partnerOf) {
+        // Technically Prisma doesn't return `partnerOf` automatically unless included, 
+        // but we can check if they are already linked by checking if their partnerId is set,
+        // or by explicitly querying. Let's do a safe check.
+      }
+      
+      const checkLinkA = await tx.sisya.findUnique({ where: { id: sisyaA.id }, include: { partner: true, partnerOf: true }});
+      const checkLinkB = await tx.sisya.findUnique({ where: { id: sisyaB.id }, include: { partner: true, partnerOf: true }});
+
+      if (checkLinkA.partnerId || checkLinkA.partnerOf || checkLinkB.partnerId || checkLinkB.partnerOf) {
+        throw new Error('Salah satu atau kedua Sisya sudah memiliki pasangan yang tertaut');
+      }
+
+      const kawikonA = sisyaA.programSisyas.find(p => p.programAjahan.kode === 'KAWIKON');
+      const kawikonB = sisyaB.programSisyas.find(p => p.programAjahan.kode === 'KAWIKON');
+
+      if (!kawikonA || !kawikonB) {
+        throw new Error('Kedua Sisya harus terdaftar di program KAWIKON');
+      }
+
+      // Hubungkan mereka
+      const updatedSisyaA = await tx.sisya.update({
+        where: { id: sisyaA.id },
+        data: { partnerId: sisyaB.id }
+      });
+
+      // Hitung ulang total terbayar gabungan
+      const allVerified = await tx.pembayaran.findMany({
+        where: {
+          sisyaId: { in: [sisyaA.id, sisyaB.id] },
+          status: 'VERIFIKASI'
+        }
+      });
+      const totalTerbayar = allVerified.reduce((acc, curr) => acc + curr.nominal, 0);
+
+      // Keduanya sekarang berbagi tagihan 1.500.000 untuk Kawikon (Pasangan)
+      const combinedPunia = 1500000;
+      
+      let newStatus = 'MENUNGGU_PEMBAYARAN';
+      
+      const pendingCount = await tx.pembayaran.count({
+        where: {
+          sisyaId: { in: [sisyaA.id, sisyaB.id] },
+          status: 'MENUNGGU'
+        }
+      });
+
+      if (totalTerbayar >= combinedPunia) {
+        newStatus = 'LUNAS';
+      } else if (totalTerbayar > 0) {
+        newStatus = pendingCount > 0 ? 'MENUNGGU_VERIFIKASI' : 'BELUM_LUNAS';
+      } else if (pendingCount > 0) {
+        newStatus = 'MENUNGGU_VERIFIKASI';
+      }
+
+      // Update both A and B
+      await tx.sisya.update({
+        where: { id: sisyaA.id },
+        data: {
+          totalPunia: combinedPunia,
+          totalTerbayar,
+          statusPembayaran: newStatus
+        }
+      });
+
+      await tx.sisya.update({
+        where: { id: sisyaB.id },
+        data: {
+          totalPunia: combinedPunia, // Asumsi Sisya B juga di-set ke punia gabungan agar seimbang
+          totalTerbayar,
+          statusPembayaran: newStatus
+        }
+      });
+
+      // Pastikan isPasangan diset ke true untuk program Kawikon mereka
+      if (!kawikonA.isPasangan) {
+        await tx.sisyaProgram.update({
+          where: { id: kawikonA.id },
+          data: { isPasangan: true, puniaProgram: 1500000 }
+        });
+      }
+      if (!kawikonB.isPasangan) {
+        await tx.sisyaProgram.update({
+          where: { id: kawikonB.id },
+          data: { isPasangan: true, puniaProgram: 1500000 }
+        });
+      }
+
+      return updatedSisyaA;
+    });
+
+    res.json({ success: true, message: 'Berhasil menautkan pasangan', data: result });
+  } catch (error) {
+    console.error('Link Partner Error:', error);
+    res.status(400).json({ success: false, message: error.message || 'Gagal menautkan pasangan' });
+  }
+};
+
 module.exports = {
   register,
   getAll,
@@ -758,5 +881,6 @@ module.exports = {
   updateProgramRegistrasi,
   updateProgramsSisya,
   softDelete,
-  getLocations
+  getLocations,
+  linkPartner
 };
