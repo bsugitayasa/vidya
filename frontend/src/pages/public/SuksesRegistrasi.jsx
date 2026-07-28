@@ -56,7 +56,7 @@ export default function SuksesRegistrasi() {
             <div className="space-y-4">
               <h3 className="font-bold text-lg border-b pb-2">Langkah Selanjutnya</h3>
               <ol className="list-decimal pl-5 space-y-3 text-sm">
-                <li>Bagi yang belum melampirkan bukti transfer, silakan lakukan transfer ke rekening PDPN DIKJAR POLEKSOSDA.</li>
+                <li>Bagi yang belum melampirkan bukti transfer, silakan lakukan transfer ke rekening <b>PDPN DIKJAR POLEKSOSDA Bank BPD Bali 018.02.02.31507-5</b>.</li>
                 <li>Simpan bukti transfer dalam format JPG/PNG/PDF.</li>
                 <li>Admin akan memverifikasi data dan dokumen Anda dalam waktu 1x24 jam kerja.</li>
                 <li>Hubungi admin via WhatsApp jika ada kendala.</li>
