@@ -26,7 +26,7 @@ export default function CekStatus() {
 
   const handleSearch = async (nomorToSearch = nomorPendaftaran, isRefresh = false) => {
     if (!nomorToSearch) return;
-    
+
     setIsLoading(true);
     setError(null);
     if (!isRefresh) {
@@ -119,16 +119,16 @@ export default function CekStatus() {
               <div className="space-y-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" size={18} />
-                  <Input 
-                    placeholder="Contoh: PDPN-2026-0001" 
+                  <Input
+                    placeholder="Contoh: PDPN-2026-0001"
                     className="pl-10"
                     value={nomorPendaftaran}
                     onChange={(e) => setNomorPendaftaran(e.target.value.toUpperCase())}
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   />
                 </div>
-                <Button 
-                  className="w-full font-bold" 
+                <Button
+                  className="w-full font-bold"
                   onClick={() => handleSearch()}
                   disabled={isLoading}
                 >
@@ -145,6 +145,9 @@ export default function CekStatus() {
             </h4>
             <p className="text-xs text-muted leading-relaxed">
               Lupa nomor pendaftaran? Silakan hubungi admin melalui WhatsApp dengan menyebutkan nama lengkap dan tanggal lahir Anda.
+            </p>
+            <p className="text-xs text-muted leading-relaxed mt-2">
+              Bagi yang belum melampirkan bukti transfer, silakan lakukan transfer ke rekening <b>PDPN DIKJAR POLEKSOSDA Bank BPD Bali 018.02.02.31507-5</b>
             </p>
           </div>
         </div>
@@ -202,7 +205,7 @@ export default function CekStatus() {
                         <h4 className="text-sm font-semibold text-muted uppercase tracking-wider mb-4">
                           {sisyaData.statusPembayaran === 'MENUNGGU_VERIFIKASI' ? 'Perbarui/Tambah Bukti Pembayaran' : 'Unggah Bukti Pembayaran'}
                         </h4>
-                        
+
                         {uploadSuccess && (
                           <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-md text-sm mb-4 flex items-center">
                             <CheckCircle2 size={16} className="mr-2" /> Bukti pembayaran berhasil dikirim! Tim kami akan memverifikasi segera.
@@ -211,14 +214,14 @@ export default function CekStatus() {
 
                         <div className="flex flex-col md:flex-row gap-4">
                           <div className="flex-1 relative">
-                            <input 
-                              type="file" 
-                              id="file-upload" 
-                              className="hidden" 
+                            <input
+                              type="file"
+                              id="file-upload"
+                              className="hidden"
                               accept="image/*,application/pdf"
                               onChange={handleFileChange}
                             />
-                            <label 
+                            <label
                               htmlFor="file-upload"
                               className="flex items-center justify-center border-2 border-dashed border-muted rounded-lg p-4 h-full cursor-pointer hover:bg-muted/10 transition-colors"
                             >
@@ -231,8 +234,8 @@ export default function CekStatus() {
                               </div>
                             </label>
                           </div>
-                          <Button 
-                            className="md:w-32 h-auto py-4 font-bold" 
+                          <Button
+                            className="md:w-32 h-auto py-4 font-bold"
                             disabled={!file || isUploading}
                             onClick={handleUpload}
                           >
@@ -256,6 +259,6 @@ export default function CekStatus() {
           ) : null}
         </div>
       </div>
-    </div>
+    </div >
   );
 }
