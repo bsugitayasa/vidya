@@ -236,6 +236,9 @@ export default function Laporan() {
                   </div>
                 </th>
                 <th className="p-4 font-semibold text-sm text-text">Program</th>
+                <th className="p-4 font-semibold text-sm text-text text-center" title="Foto">📷</th>
+                <th className="p-4 font-semibold text-sm text-text text-center" title="KTP/KK">🪪</th>
+                <th className="p-4 font-semibold text-sm text-text text-center" title="Surat Rekomendasi">📄</th>
                 <th 
                   className="p-4 font-semibold text-sm text-text text-right cursor-pointer hover:bg-primary/10 transition-colors"
                   onClick={() => handleSort('totalPunia')}
@@ -250,11 +253,11 @@ export default function Laporan() {
             <tbody className="divide-y divide-muted/10">
               {isLoading ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-muted">Memuat data laporan...</td>
+                  <td colSpan="8" className="p-8 text-center text-muted">Memuat data laporan...</td>
                 </tr>
               ) : sisyas.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="p-8 text-center text-muted">Tidak ada data yang sesuai filter.</td>
+                  <td colSpan="8" className="p-8 text-center text-muted">Tidak ada data yang sesuai filter.</td>
                 </tr>
               ) : (
                 sisyas.map(sisya => (
@@ -274,6 +277,15 @@ export default function Laporan() {
                           </span>
                         ))}
                       </div>
+                    </td>
+                    <td className="p-4 text-sm text-center">
+                      {sisya.fileFotoPath ? <span className="text-green-600 font-bold">✓</span> : <span className="text-muted">-</span>}
+                    </td>
+                    <td className="p-4 text-sm text-center">
+                      {sisya.fileIdentitasPath ? <span className="text-green-600 font-bold">✓</span> : <span className="text-muted">-</span>}
+                    </td>
+                    <td className="p-4 text-sm text-center">
+                      {sisya.fileRekomendasiPath ? <span className="text-green-600 font-bold">✓</span> : <span className="text-muted">-</span>}
                     </td>
                     <td className="p-4 text-sm font-mono text-right font-medium">
                       Rp {sisya.totalPunia.toLocaleString('id-ID')}
