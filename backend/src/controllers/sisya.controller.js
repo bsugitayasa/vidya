@@ -54,7 +54,8 @@ const checkDuplicate = async (req, res) => {
       where: {
         namaLengkap: { equals: namaLengkap.trim(), mode: 'insensitive' },
         tanggalLahir: { gte: startOfDay, lte: endOfDay },
-        noHp: normalizedNoHp
+        noHp: normalizedNoHp,
+        status: { not: 'TIDAK_AKTIF' }
       },
       select: {
         nomorPendaftaran: true,
