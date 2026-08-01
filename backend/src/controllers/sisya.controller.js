@@ -31,6 +31,53 @@ const generateNomorPendaftaran = async () => {
   return `PDPN-${year}-${sequence}`;
 };
 
+// Cek duplikat pendaftaran berdasarkan nama, tanggal lahir, dan no HP
+const checkDuplicate = async (req, res) => {
+  try {
+    const { namaLengkap, tanggalLahir, noHp } = req.body;
+
+    if (!namaLengkap || !tanggalLahir || !noHp) {
+      return res.status(400).json({ success: false, message: 'Nama, tanggal lahir, dan no HP harus diisi' });
+    }
+
+    // Normalize noHp
+    let normalizedNoHp = noHp.replace(/\D/g, '');
+    if (normalizedNoHp.startsWith('62')) normalizedNoHp = '0' + normalizedNoHp.substring(2);
+
+    const startOfDay = new Date(tanggalLahir);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(tanggalLahir);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Cari sisya dengan kombinasi nama (case-insensitive), tanggal lahir, dan noHp
+    const existing = await prisma.sisya.findFirst({
+      where: {
+        namaLengkap: { equals: namaLengkap.trim(), mode: 'insensitive' },
+        tanggalLahir: { gte: startOfDay, lte: endOfDay },
+        noHp: normalizedNoHp
+      },
+      select: {
+        nomorPendaftaran: true,
+        namaLengkap: true
+      }
+    });
+
+    if (existing) {
+      return res.json({
+        success: true,
+        isDuplicate: true,
+        nomorPendaftaran: existing.nomorPendaftaran,
+        namaLengkap: existing.namaLengkap
+      });
+    }
+
+    return res.json({ success: true, isDuplicate: false });
+  } catch (error) {
+    console.error('Check Duplicate Error:', error);
+    res.status(500).json({ success: false, message: 'Terjadi kesalahan pada server' });
+  }
+};
+
 const register = async (req, res) => {
   try {
     const data = req.body;
@@ -481,10 +528,11 @@ const updateSisya = async (req, res) => {
     const { id } = req.params;
     const updateData = req.body;
 
+    // Tidak lagi menormalisasi nama/gelar - simpan apa adanya sesuai input SUPER_ADMIN
     const updatedSisya = await prisma.sisya.update({
       where: { id: parseInt(id) },
       data: {
-        namaLengkap: normalizeName(updateData.namaLengkap),
+        namaLengkap: updateData.namaLengkap,
         tempatLahir: updateData.tempatLahir,
         tanggalLahir: updateData.tanggalLahir ? new Date(updateData.tanggalLahir) : undefined,
         jenisKelamin: updateData.jenisKelamin,
@@ -882,5 +930,6 @@ module.exports = {
   updateProgramsSisya,
   softDelete,
   getLocations,
-  linkPartner
+  linkPartner,
+  checkDuplicate
 };
