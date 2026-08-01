@@ -56,8 +56,8 @@ const getLaporanSisya = async (req, res) => {
       prisma.sisya.count({ where: whereClause })
     ]);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       data: sisyas,
       pagination: {
         total,
@@ -74,15 +74,15 @@ const getLaporanSisya = async (req, res) => {
 
 const getLaporanPuniaRange = async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      startDate, 
-      endDate, 
-      sortBy = 'tanggalBayar', 
-      sortOrder = 'desc' 
+    const {
+      page = 1,
+      limit = 10,
+      startDate,
+      endDate,
+      sortBy = 'tanggalBayar',
+      sortOrder = 'desc'
     } = req.query;
-    
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
@@ -218,7 +218,7 @@ const getLaporanPuniaDashboard = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
 
-    const where = { 
+    const where = {
       status: 'VERIFIKASI',
       sisya: { status: { not: 'TIDAK_AKTIF' } }
     };
@@ -344,7 +344,10 @@ const exportSisya = async (req, res) => {
         { header: 'Sisa Punia', key: 'sisa', width: 12 },
         { header: 'Status Pembayaran', key: 'statusBayar', width: 15 },
         { header: 'Status Akademik', key: 'statusAkademik', width: 15 },
-        { header: 'Tgl Pediksaan', key: 'tglDiksan', width: 15 }
+        { header: 'Tgl Pediksaan', key: 'tglDiksan', width: 15 },
+        { header: 'Foto', key: 'fileFotoPath', width: 15 },
+        { header: 'KTP/KK/Ijasah', key: 'fileIdentitasPath', width: 15 },
+        { header: 'Surat Rekomendasi', key: 'fileRekomendasiPath', width: 15 }
       ];
 
       worksheet.getRow(1).eachCell((cell) => {
@@ -363,7 +366,7 @@ const exportSisya = async (req, res) => {
           const targetProg = sisya.programSisyas.find(sp => sp.programAjahanId === targetProgramId);
           displayPrograms = targetProg ? `${targetProg.programAjahan.nama}${targetProg.isPasangan ? ' (+Pasangan)' : ''}` : "";
           displayRegNos = targetProg ? targetProg.nomorRegistrasi : "";
-          
+
           if (targetProg) {
             displayPunia = targetProg.puniaProgram;
             // Allocate payment sequentially based on programId to avoid double counting across sheets
@@ -406,7 +409,10 @@ const exportSisya = async (req, res) => {
           sisa: sisya.partnerId ? '' : sisaPunia,
           statusBayar: sisya.statusPembayaran.replace(/_/g, ' '),
           statusAkademik: sisya.status,
-          tglDiksan: sisya.tanggalDiksan ? new Date(sisya.tanggalDiksan).toLocaleDateString('id-ID') : '-'
+          tglDiksan: sisya.tanggalDiksan ? new Date(sisya.tanggalDiksan).toLocaleDateString('id-ID') : '-',
+          fileFotoPath: sisya.fileFotoPath !== null ? 'Sudah' : 'Belum',
+          fileIdentitasPath: sisya.fileIdentitasPath !== null ? 'Sudah' : 'Belum',
+          fileRekomendasiPath: sisya.fileRekomendasiPath !== null ? 'Sudah' : 'Belum'
         });
 
         row.eachCell((cell) => {
@@ -440,10 +446,10 @@ const exportSisya = async (req, res) => {
 
     // 2. Sheet per Program
     programsData.forEach(program => {
-      const filteredSisyas = sisyas.filter(s => 
+      const filteredSisyas = sisyas.filter(s =>
         s.programSisyas.some(sp => sp.programAjahanId === program.id)
       );
-      
+
       if (filteredSisyas.length > 0) {
         fillWorksheet(program.nama, filteredSisyas, program.id);
       }
@@ -593,7 +599,7 @@ const exportPuniaRange = async (req, res) => {
 const getLaporanAbsensi = async (req, res) => {
   try {
     const { programId, page = 1, limit = 10, sortBy = 'namaLengkap', sortOrder = 'asc' } = req.query;
-    
+
     if (!programId || programId === 'SEMUA') {
       return res.status(400).json({ success: false, message: 'Pilih Program Ajahan terlebih dahulu' });
     }
@@ -635,7 +641,7 @@ const getLaporanAbsensi = async (req, res) => {
 
     // 3. Kalkulasi rekap per sisya dan summary program
     const globalSummary = { HADIR: 0, IZIN: 0, SAKIT: 0, ALPHA: 0 };
-    
+
     let rekapData = sisyas.map(s => {
       const counts = { HADIR: 0, IZIN: 0, SAKIT: 0, ALPHA: 0 };
       s.absensiSisyas.forEach(a => {
@@ -694,7 +700,7 @@ const exportLaporanAbsensi = async (req, res) => {
 
     for (const program of programs) {
       const progId = program.id;
-      
+
       // Hitung total sesi di program ini
       const totalSesi = await prisma.sesiAbsensi.count({
         where: { mataKuliah: { programAjahanId: progId } }
@@ -702,9 +708,9 @@ const exportLaporanAbsensi = async (req, res) => {
 
       // Ambil sisya di program ini
       const sisyas = await prisma.sisya.findMany({
-        where: { 
+        where: {
           status: { not: 'TIDAK_AKTIF' },
-          programSisyas: { some: { programAjahanId: progId } } 
+          programSisyas: { some: { programAjahanId: progId } }
         },
         include: {
           absensiSisyas: {
@@ -830,7 +836,7 @@ const exportProgramAjahanRekap = async (req, res) => {
     });
 
     const workbook = new ExcelJS.Workbook();
-    
+
     for (const program of programs) {
       const safeName = program.nama.replace(/[:\\/?*[\]]/g, '').substring(0, 31);
       const worksheet = workbook.addWorksheet(safeName);
