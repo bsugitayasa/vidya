@@ -15,6 +15,9 @@ router.get('/', requireAuth, requireAdmin, sisyaController.getAll);
 // GET /api/sisya/cari (Public - for checking status)
 router.get('/cari', statusCheckLimiter, sisyaController.findByNomor);
 
+// POST /api/sisya/check-duplicate (Public - for checking if already registered)
+router.post('/check-duplicate', statusCheckLimiter, sisyaController.checkDuplicate);
+
 // POST /api/sisya/register
 router.post('/register', registrationLimiter, upload.fields([
   { name: 'fileIdentitas', maxCount: 1 },

@@ -9,7 +9,7 @@ const path = require('path');
 const verifikasiPembayaran = async (req, res) => {
   try {
     const { id } = req.params; // ID Pembayaran
-    const { nominal, status, keterangan } = req.body;
+    const { nominal, status, keterangan, tanggalBayar } = req.body;
 
     if (!['VERIFIKASI', 'DITOLAK'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Status tidak valid' });
@@ -23,6 +23,7 @@ const verifikasiPembayaran = async (req, res) => {
           nominal: status === 'VERIFIKASI' ? parseInt(nominal) : 0,
           status,
           keterangan,
+          tanggalBayar: tanggalBayar ? new Date(tanggalBayar) : undefined,
           verifiedAt: new Date()
         }
       });
@@ -172,7 +173,7 @@ const deletePembayaran = async (req, res) => {
 const editPembayaran = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nominal, keterangan } = req.body;
+    const { nominal, keterangan, tanggalBayar } = req.body;
 
     const updatedPembayaran = await prisma.$transaction(async (tx) => {
       // Update nominal and keterangan of the pembayaran
@@ -181,6 +182,7 @@ const editPembayaran = async (req, res) => {
         data: {
           nominal: parseInt(nominal),
           keterangan,
+          tanggalBayar: tanggalBayar ? new Date(tanggalBayar) : undefined,
         },
       });
 

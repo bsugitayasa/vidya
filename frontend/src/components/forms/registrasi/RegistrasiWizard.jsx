@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../ui/button';
 import { Card, CardContent } from '../../ui/card';
-import { ArrowRight, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, CheckCircle2, AlertCircle, Copy, Check } from 'lucide-react';
 import Step1DataPribadi from './Step1DataPribadi';
 import Step2DataAjahan from './Step2DataAjahan';
 import api from '../../../lib/axios';
@@ -49,6 +49,9 @@ export default function RegistrasiWizard() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [isLoadingPrograms, setIsLoadingPrograms] = useState(true);
+  const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+  const [duplicateModal, setDuplicateModal] = useState({ open: false, nomorPendaftaran: '', namaLengkap: '' });
+  const [copied, setCopied] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, trigger, getValues, setValue, watch } = useForm({
     resolver: zodResolver(step === 1 ? step1Schema : step2Schema),
@@ -92,10 +95,36 @@ export default function RegistrasiWizard() {
 
   const nextStep = async () => {
     const isStepValid = await trigger();
-    if (isStepValid) {
-      setStep(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (!isStepValid) return;
+
+    // Cek duplikat hanya saat dari step 1 ke step 2
+    if (step === 1) {
+      const values = getValues();
+      setIsCheckingDuplicate(true);
+      try {
+        const res = await api.post('/sisya/check-duplicate', {
+          namaLengkap: values.namaLengkap,
+          tanggalLahir: values.tanggalLahir,
+          noHp: values.noHp,
+        });
+        if (res.data.isDuplicate) {
+          setDuplicateModal({
+            open: true,
+            nomorPendaftaran: res.data.nomorPendaftaran,
+            namaLengkap: res.data.namaLengkap
+          });
+          return;
+        }
+      } catch (err) {
+        console.error('Check duplicate error:', err);
+        // Jika gagal cek, lanjutkan saja (fail open)
+      } finally {
+        setIsCheckingDuplicate(false);
+      }
     }
+
+    setStep(prev => prev + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const prevStep = () => {
@@ -224,8 +253,8 @@ export default function RegistrasiWizard() {
               ) : <div></div>}
 
               {step === 1 ? (
-                <Button type="button" onClick={nextStep} className="ml-auto font-bold px-8">
-                  Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
+                <Button type="button" onClick={nextStep} className="ml-auto font-bold px-8" disabled={isCheckingDuplicate}>
+                  {isCheckingDuplicate ? 'Memeriksa...' : 'Selanjutnya'} <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
                 <Button type="submit" className="font-bold px-8 text-lg py-6 shadow-md hover:shadow-lg" disabled={isSubmitting}>
@@ -236,6 +265,65 @@ export default function RegistrasiWizard() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Modal Duplikat Pendaftaran */}
+      {duplicateModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-amber-200 animate-in fade-in zoom-in-95 duration-300">
+            <div className="bg-amber-50 border-b border-amber-100 p-6 text-center">
+              <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                <AlertCircle size={32} className="text-amber-500" />
+              </div>
+              <h3 className="font-bold text-xl text-amber-900">Data Sudah Terdaftar</h3>
+              <p className="text-sm text-amber-700 mt-1">Nama, tanggal lahir, dan no HP sudah pernah didaftarkan</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="text-center space-y-1">
+                <p className="text-sm text-slate-500">Atas nama:</p>
+                <p className="font-bold text-lg text-slate-800">{duplicateModal.namaLengkap}</p>
+              </div>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center space-y-2">
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">No. Registrasi Pendaftaran</p>
+                <div className="flex items-center justify-center gap-3">
+                  <p className="font-mono font-bold text-2xl text-primary tracking-wider">{duplicateModal.nomorPendaftaran}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(duplicateModal.nomorPendaftaran);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="p-1.5 rounded-md hover:bg-slate-200 transition-colors text-slate-500 hover:text-slate-700"
+                    title="Salin nomor pendaftaran"
+                  >
+                    {copied ? <Check size={16} className="text-green-500" /> : <Copy size={16} />}
+                  </button>
+                </div>
+              </div>
+              <p className="text-xs text-slate-400 text-center">
+                Gunakan nomor di atas untuk cek status pendaftaran Anda.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setDuplicateModal({ open: false, nomorPendaftaran: '', namaLengkap: '' })}
+                >
+                  Tutup
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1"
+                  onClick={() => window.open('/cek-status', '_blank')}
+                >
+                  Cek Status
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

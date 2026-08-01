@@ -54,6 +54,7 @@ export default function SisyaDetail() {
   const [selectedPembayaran, setSelectedPembayaran] = useState(null);
   const [nominalVerifikasi, setNominalVerifikasi] = useState('');
   const [keteranganVerifikasi, setKeteranganVerifikasi] = useState('');
+  const [tanggalVerifikasi, setTanggalVerifikasi] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
 
@@ -88,6 +89,7 @@ export default function SisyaDetail() {
   const [selectedEditPembayaran, setSelectedEditPembayaran] = useState(null);
   const [editNominal, setEditNominal] = useState('');
   const [editKeterangan, setEditKeterangan] = useState('');
+  const [editTanggalBayar, setEditTanggalBayar] = useState('');
 
   const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
     resolver: zodResolver(sisyaUpdateSchema),
@@ -124,6 +126,7 @@ export default function SisyaDetail() {
     setSelectedEditPembayaran(p);
     setEditNominal(p.nominal.toString());
     setEditKeterangan(p.keterangan || '');
+    setEditTanggalBayar(p.tanggalBayar ? new Date(p.tanggalBayar).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
     setShowEditPembayaranModal(true);
   };
 
@@ -135,7 +138,8 @@ export default function SisyaDetail() {
     try {
       const response = await api.patch(`/pembayaran/${selectedEditPembayaran.id}/edit`, {
         nominal: parseFloat(editNominal),
-        keterangan: editKeterangan
+        keterangan: editKeterangan,
+        tanggalBayar: editTanggalBayar
       });
       
       toast.success(response.data.message || 'Pembayaran berhasil diupdate');
@@ -167,10 +171,6 @@ export default function SisyaDetail() {
   };
 
   const handleEditSubmit = async (data) => {
-    // Normalize name at submit time to ensure latest value is captured
-    if (data.namaLengkap) {
-      data.namaLengkap = normalizeName(data.namaLengkap);
-    }
     setIsUpdating(true);
     try {
       const res = await api.put(`/sisya/${id}`, data);
@@ -584,6 +584,7 @@ export default function SisyaDetail() {
     setSelectedPembayaran(pembayaran);
     setNominalVerifikasi(pembayaran.nominal || '');
     setKeteranganVerifikasi(pembayaran.keterangan || '');
+    setTanggalVerifikasi(pembayaran.tanggalBayar ? new Date(pembayaran.tanggalBayar).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
     setShowVerifyModal(true);
   };
 
@@ -625,7 +626,8 @@ export default function SisyaDetail() {
       const res = await api.patch(`/pembayaran/${selectedPembayaran.id}/verifikasi`, {
         nominal: nominalVerifikasi,
         status,
-        keterangan: keteranganVerifikasi
+        keterangan: keteranganVerifikasi,
+        tanggalBayar: tanggalVerifikasi
       });
 
       if (res.data.success) {
@@ -1139,6 +1141,16 @@ export default function SisyaDetail() {
                 </div>
 
                 <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted uppercase">Tanggal Transfer *</label>
+                  <Input
+                    type="date"
+                    value={editTanggalBayar}
+                    onChange={(e) => setEditTanggalBayar(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <label className="text-xs font-bold text-muted uppercase">Catatan / Keterangan</label>
                   <Input
                     placeholder="Catatan..."
@@ -1195,6 +1207,16 @@ export default function SisyaDetail() {
               </div>
 
               <div className="space-y-2">
+                <label className="text-xs font-bold text-muted uppercase">Tanggal Transfer *</label>
+                <Input
+                  type="date"
+                  value={tanggalVerifikasi}
+                  onChange={(e) => setTanggalVerifikasi(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-xs font-bold text-muted uppercase">Catatan / Keterangan</label>
                 <Input
                   placeholder="Catatan verifikasi..."
@@ -1241,10 +1263,6 @@ export default function SisyaDetail() {
                     <Input
                       placeholder="Nama lengkap"
                       {...register('namaLengkap')}
-                      onBlur={(e) => {
-                        const normalized = normalizeName(e.target.value);
-                        setValue('namaLengkap', normalized, { shouldValidate: true });
-                      }}
                     />
                     {errors.namaLengkap && <p className="text-sm text-red-500">{errors.namaLengkap.message}</p>}
                   </div>
