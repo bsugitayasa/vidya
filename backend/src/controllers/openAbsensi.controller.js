@@ -4,6 +4,35 @@ const fs = require('fs');
 
 const prisma = new PrismaClient();
 
+const ABSENSI_TIME_ZONE = 'Asia/Makassar';
+
+const getCurrentAbsensiDateKey = () => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: ABSENSI_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(new Date());
+
+  const dateParts = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+};
+
+const getEndOfCurrentAbsensiDate = () =>
+  new Date(`${getCurrentAbsensiDateKey()}T23:59:59.999Z`);
+
+const isFutureAbsensiDate = tanggal =>
+  tanggal.toISOString().slice(0, 10) > getCurrentAbsensiDateKey();
+
+const isFutureAbsensiEnabled = async () => {
+  const config = await prisma.konfigurasiAplikasi.findUnique({
+    where: { kunci: 'absensi_allow_future_date' },
+    select: { nilai: true }
+  });
+
+  return config?.nilai === 'true';
+};
+
 // ─── GET /api/open/absensi/program-ajahan ────────────────────────────────────
 // Daftar program ajahan aktif (tanpa PIN)
 const getPrograms = async (req, res) => {
@@ -119,8 +148,12 @@ const getSesiByMataKuliah = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Mata kuliah tidak ditemukan' });
     }
 
+    const allowFutureDate = await isFutureAbsensiEnabled();
     const sesiList = await prisma.sesiAbsensi.findMany({
-      where: { mataKuliahId: parseInt(mkId) },
+      where: {
+        mataKuliahId: parseInt(mkId),
+        ...(allowFutureDate ? {} : { tanggal: { lte: getEndOfCurrentAbsensiDate() } })
+      },
       include: {
         _count: { select: { absensiSisyas: true } },
         absensiSisyas: {
@@ -179,6 +212,13 @@ const getSesiDetail = async (req, res) => {
 
     if (!sesi) {
       return res.status(404).json({ success: false, message: 'Sesi tidak ditemukan' });
+    }
+
+    if (isFutureAbsensiDate(sesi.tanggal) && !(await isFutureAbsensiEnabled())) {
+      return res.status(403).json({
+        success: false,
+        message: 'Sesi yang akan datang belum dapat diakses'
+      });
     }
 
     // Ambil semua sisya aktif di program ajahan terkait
@@ -256,6 +296,22 @@ const inputAbsensi = async (req, res) => {
       if (!validStatuses.includes(item.status)) {
         return res.status(400).json({ success: false, message: `Status "${item.status}" tidak valid` });
       }
+    }
+
+    const sesi = await prisma.sesiAbsensi.findUnique({
+      where: { id: parseInt(sesiId) },
+      select: { tanggal: true }
+    });
+
+    if (!sesi) {
+      return res.status(404).json({ success: false, message: 'Sesi tidak ditemukan' });
+    }
+
+    if (isFutureAbsensiDate(sesi.tanggal) && !(await isFutureAbsensiEnabled())) {
+      return res.status(403).json({
+        success: false,
+        message: 'Absensi untuk sesi yang akan datang belum dapat diinput'
+      });
     }
 
     // Upsert batch menggunakan transaksi

@@ -122,7 +122,7 @@ export default function Pengaturan() {
             <h3 className="font-bold text-text">Informasi Pembayaran</h3>
           </div>
           
-          {Object.keys(configs).filter(k => k !== 'tanggal_kelulusan' && k !== 'musik_kelulusan' && k !== 'persentase_kelulusan' && k !== 'admin_idle_timeout').map(key => (
+          {Object.keys(configs).filter(k => k !== 'tanggal_kelulusan' && k !== 'musik_kelulusan' && k !== 'persentase_kelulusan' && k !== 'admin_idle_timeout' && k !== 'absensi_allow_future_date').map(key => (
             <div key={key} className="space-y-1.5">
               <label className="text-xs font-bold text-muted uppercase tracking-wider">{configs[key].label}</label>
               <Input 
@@ -230,6 +230,50 @@ export default function Pengaturan() {
               </div>
               <p className="text-[10px] text-muted italic mt-2">
                 *Durasi waktu tidak aktif (idle) sebelum sistem otomatis melakukan logout dari halaman admin. Minimum 1 menit, maksimum 60 menit.
+              </p>
+            </div>
+          )}
+
+          {configs.absensi_allow_future_date && (
+            <div className="pt-4 border-t border-muted/10 space-y-2">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <label
+                    htmlFor="absensi-allow-future-date"
+                    className="text-xs font-bold text-muted uppercase tracking-wider"
+                  >
+                    {configs.absensi_allow_future_date.label}
+                  </label>
+                  <p className="text-[10px] text-muted italic mt-1">
+                    Jika aktif, sesi setelah hari ini dapat tampil dan diinput melalui halaman absensi publik.
+                  </p>
+                </div>
+                <button
+                  id="absensi-allow-future-date"
+                  type="button"
+                  role="switch"
+                  aria-checked={configs.absensi_allow_future_date.nilai === 'true'}
+                  onClick={() => handleConfigChange(
+                    'absensi_allow_future_date',
+                    configs.absensi_allow_future_date.nilai === 'true' ? 'false' : 'true'
+                  )}
+                  className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${
+                    configs.absensi_allow_future_date.nilai === 'true' ? 'bg-primary' : 'bg-muted/30'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                      configs.absensi_allow_future_date.nilai === 'true' ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <p className={`text-xs font-bold ${
+                configs.absensi_allow_future_date.nilai === 'true' ? 'text-amber-600' : 'text-emerald-600'
+              }`}>
+                {configs.absensi_allow_future_date.nilai === 'true'
+                  ? 'Aktif — sesi masa depan diizinkan'
+                  : 'Nonaktif — hanya sesi hari ini dan sebelumnya'}
               </p>
             </div>
           )}
