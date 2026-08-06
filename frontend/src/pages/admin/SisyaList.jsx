@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Search, Eye, Filter, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, XCircle, Info, ArrowUpDown, ArrowUp, ArrowDown, FileDown } from 'lucide-react';
 import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
@@ -9,11 +9,12 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 export default function SisyaList() {
+  const [searchParams] = useSearchParams();
   const [sisyas, setSisyas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [programs, setPrograms] = useState([]);
-  const [filterStatus, setFilterStatus] = useState('');
+  const [filterStatus, setFilterStatus] = useState(() => searchParams.get('status') || '');
   const [filterProgram, setFilterProgram] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [sort, setSort] = useState({ sortBy: 'createdAt', sortOrder: 'desc' });

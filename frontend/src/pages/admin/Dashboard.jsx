@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import api from '../../lib/axios';
 import { Users, UserCheck, CreditCard, Filter, UserRound, UserRoundSearch, AlertCircle } from 'lucide-react';
@@ -105,7 +106,11 @@ export default function Dashboard() {
         </div>
         
         {/* Waiting Verification Card */}
-        <div className="flex flex-col bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
+        <Link
+          to="/admin/sisya?status=MENUNGGU_VERIFIKASI"
+          aria-label={`Lihat ${stats.menungguVerifikasi} sisya yang menunggu verifikasi`}
+          className="flex flex-col bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:border-amber-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 transition-all"
+        >
           <div className="flex items-center gap-3">
             <div className="bg-amber-500/10 w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
               <UserCheck size={20} />
@@ -119,7 +124,7 @@ export default function Dashboard() {
               <div className="bg-amber-500 h-full transition-all duration-1000" style={{ width: `${(stats.menungguVerifikasi / (stats.totalSisya || 1)) * 100}%` }}></div>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Belum Lunas Card */}
         <div className="flex flex-col bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
