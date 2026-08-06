@@ -9,13 +9,13 @@ import api from '../lib/axios';
  * @returns {string|null} Blob URL atau null jika sedang loading/error
  */
 export default function useFileUrl(filePath) {
-  const [url, setUrl] = useState(null);
+  const [fileState, setFileState] = useState({ filePath: null, url: null });
 
   useEffect(() => {
-    if (!filePath) {
-      setUrl(null);
-      return;
-    }
+    if (!filePath) return;
+
+    let blobUrl = null;
+    let cancelled = false;
 
     const fetchFile = async () => {
       try {
@@ -26,27 +26,29 @@ export default function useFileUrl(filePath) {
           responseType: 'blob'
         });
 
-        const blobUrl = URL.createObjectURL(response.data);
-        setUrl(blobUrl);
+        blobUrl = URL.createObjectURL(response.data);
+        if (cancelled) {
+          URL.revokeObjectURL(blobUrl);
+          blobUrl = null;
+          return;
+        }
 
-        // Cleanup function
-        return () => URL.revokeObjectURL(blobUrl);
+        setFileState({ filePath, url: blobUrl });
       } catch (error) {
         if (error.response && error.response.status !== 404) {
           console.error('Failed to fetch protected file:', error);
         }
-        setUrl(null);
+        if (!cancelled) setFileState({ filePath, url: null });
       }
     };
 
-    const cleanup = fetchFile();
+    fetchFile();
     
     return () => {
-      if (cleanup && typeof cleanup === 'function') {
-        cleanup();
-      }
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
   }, [filePath]);
 
-  return url;
+  return fileState.filePath === filePath ? fileState.url : null;
 }

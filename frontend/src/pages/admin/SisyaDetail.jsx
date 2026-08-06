@@ -499,14 +499,13 @@ export default function SisyaDetail() {
     }
   }, [sisya]);
 
-  const handleDownload = (blobUrl, label) => {
+  const handleDownload = (blobUrl, label, filePath) => {
     if (!blobUrl) return;
 
-    const extension = blobUrl.includes('image/png') ? 'png' :
-      blobUrl.includes('image/jpeg') ? 'jpg' :
-        blobUrl.includes('application/pdf') ? 'pdf' : 'jpg';
+    const pathExtension = filePath?.split('?')[0].split('.').pop()?.toLowerCase();
+    const extension = ['jpg', 'jpeg', 'png', 'pdf'].includes(pathExtension) ? pathExtension : 'jpg';
 
-    const fileName = `${label}_${sisya.namaLengkap.replace(/\s+/g, '_')}`;
+    const fileName = `${label}_${sisya.namaLengkap.replace(/\s+/g, '_')}.${extension}`;
 
     const link = document.createElement('a');
     link.href = blobUrl;
@@ -775,7 +774,7 @@ export default function SisyaDetail() {
                   variant="outline"
                   size="sm"
                   className="mb-4 h-8 text-[10px] font-bold uppercase tracking-wider"
-                  onClick={() => handleDownload(fotoUrl, 'Foto')}
+                  onClick={() => handleDownload(fotoUrl, 'Foto', sisya.fileFotoPath)}
                 >
                   <Download size={14} className="mr-1" /> Download Foto
                 </Button>
@@ -1059,25 +1058,16 @@ export default function SisyaDetail() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <span className="block text-xs font-bold text-muted uppercase tracking-wider">KTP / KK</span>
-                {ktpUrl ? (
-                  <div className="group relative border border-muted/20 rounded-lg overflow-hidden bg-bg aspect-video flex items-center justify-center">
-                    <img src={ktpUrl} alt="KTP" className="max-w-full max-h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <a href={ktpUrl} target="_blank" rel="noopener noreferrer">
-                        <Button variant="secondary" size="sm" className="font-bold">
-                          <ExternalLink size={14} className="mr-1" /> Lihat
-                        </Button>
-                      </a>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="font-bold"
-                        onClick={() => handleDownload(ktpUrl, 'KTP')}
-                      >
-                        <Download size={14} className="mr-1" /> Download
-                      </Button>
-                    </div>
-                  </div>
+                {sisya.fileIdentitasPath && ktpUrl ? (
+                  <DocumentPreview
+                    url={ktpUrl}
+                    filePath={sisya.fileIdentitasPath}
+                    alt="KTP / KK"
+                    downloadLabel="KTP"
+                    onDownload={handleDownload}
+                  />
+                ) : sisya.fileIdentitasPath ? (
+                  <DocumentLoading />
                 ) : (
                   <div className="h-32 border border-dashed border-muted rounded-lg flex items-center justify-center text-sm text-muted bg-bg/50">
                     KTP tidak dilampirkan
@@ -1087,25 +1077,16 @@ export default function SisyaDetail() {
 
               <div className="space-y-2">
                 <span className="block text-xs font-bold text-muted uppercase tracking-wider">Surat Rekomendasi</span>
-                {rekomendasiUrl ? (
-                  <div className="group relative border border-muted/20 rounded-lg overflow-hidden bg-bg aspect-video flex items-center justify-center">
-                    <img src={rekomendasiUrl} alt="Surat Rekomendasi" className="max-w-full max-h-full object-contain" />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <a href={rekomendasiUrl} target="_blank" rel="noopener noreferrer">
-                        <Button variant="secondary" size="sm" className="font-bold">
-                          <ExternalLink size={14} className="mr-1" /> Lihat
-                        </Button>
-                      </a>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="font-bold"
-                        onClick={() => handleDownload(rekomendasiUrl, 'Rekomendasi')}
-                      >
-                        <Download size={14} className="mr-1" /> Download
-                      </Button>
-                    </div>
-                  </div>
+                {sisya.fileRekomendasiPath && rekomendasiUrl ? (
+                  <DocumentPreview
+                    url={rekomendasiUrl}
+                    filePath={sisya.fileRekomendasiPath}
+                    alt="Surat Rekomendasi"
+                    downloadLabel="Rekomendasi"
+                    onDownload={handleDownload}
+                  />
+                ) : sisya.fileRekomendasiPath ? (
+                  <DocumentLoading />
                 ) : (
                   <div className="h-32 border border-dashed border-muted rounded-lg flex items-center justify-center text-sm text-muted bg-bg/50">
                     Surat rekomendasi tidak dilampirkan
@@ -1662,6 +1643,63 @@ export default function SisyaDetail() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DocumentPreview({ url, filePath, alt, downloadLabel, onDownload }) {
+  const isPdf = filePath?.split('?')[0].toLowerCase().endsWith('.pdf');
+  const pdfPreviewUrl = `${url}#page=1&view=FitH&toolbar=0&navpanes=0&scrollbar=0`;
+
+  return (
+    <div className="group relative border border-muted/20 rounded-lg overflow-hidden bg-bg aspect-video flex items-center justify-center">
+      {isPdf ? (
+        <>
+          <object
+            data={pdfPreviewUrl}
+            type="application/pdf"
+            title={`Pratinjau ${alt}`}
+            className="w-full h-full bg-white pointer-events-none"
+          >
+            <div className="w-full h-full flex flex-col items-center justify-center text-muted gap-2">
+              <FileText size={32} className="text-red-500" />
+              <span className="text-xs font-bold">Dokumen PDF</span>
+            </div>
+          </object>
+          <span className="absolute top-2 left-2 z-10 px-2 py-1 rounded bg-red-600 text-white text-[10px] font-black shadow-sm pointer-events-none">
+            PDF
+          </span>
+        </>
+      ) : (
+        <img src={url} alt={alt} className="max-w-full max-h-full object-contain" />
+      )}
+
+      <div className="absolute inset-0 bg-black/40 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex h-9 items-center justify-center rounded-md px-3 bg-secondary text-white hover:bg-secondary/80 text-sm font-bold transition-colors"
+        >
+          <ExternalLink size={14} className="mr-1" /> Lihat
+        </a>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="font-bold"
+          onClick={() => onDownload(url, downloadLabel, filePath)}
+        >
+          <Download size={14} className="mr-1" /> Download
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DocumentLoading() {
+  return (
+    <div className="h-32 border border-muted/20 rounded-lg flex items-center justify-center gap-2 text-sm text-muted bg-bg/50 animate-pulse">
+      <Loader2 size={16} className="animate-spin" /> Memuat dokumen...
     </div>
   );
 }
