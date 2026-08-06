@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import api from '../../lib/axios';
 import { Users, UserCheck, CreditCard, Filter, UserRound, UserRoundSearch, AlertCircle } from 'lucide-react';
@@ -6,6 +6,9 @@ import { Users, UserCheck, CreditCard, Filter, UserRound, UserRoundSearch, Alert
 export default function Dashboard() {
   const [stats, setStats] = useState({
     totalSisya: 0,
+    totalKepesertaanProgram: 0,
+    totalSisyaMultiProgram: 0,
+    totalKepesertaanTambahan: 0,
     menungguVerifikasi: 0,
     belumLunas: 0,
     totalEstimasiPunia: 0,
@@ -15,27 +18,30 @@ export default function Dashboard() {
     programList: []
   });
   const [selectedProgram, setSelectedProgram] = useState('all');
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const fetchStats = async (programId) => {
-    try {
-      setIsLoading(true);
-      const url = programId === 'all' ? '/dashboard/stats' : `/dashboard/stats?programId=${programId}`;
-      const res = await api.get(url);
-      if (res.data.success) {
-        setStats(res.data.data);
-      }
-    } catch (err) {
-      setError('Gagal memuat data statistik');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchStats(selectedProgram);
+    let cancelled = false;
+
+    const fetchStats = async () => {
+      try {
+        const url = selectedProgram === 'all' ? '/dashboard/stats' : `/dashboard/stats?programId=${selectedProgram}`;
+        const res = await api.get(url);
+        if (res.data.success && !cancelled) {
+          setStats(res.data.data);
+          setError('');
+        }
+      } catch (err) {
+        if (!cancelled) setError('Gagal memuat data statistik');
+        console.error(err);
+      }
+    };
+
+    fetchStats();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedProgram]);
 
   const formatRupiah = (number) => {
@@ -71,67 +77,83 @@ export default function Dashboard() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Sisya Card */}
-        <div className="bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-blue-500/10 w-12 h-12 rounded-xl flex items-center justify-center text-blue-600 shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
-              <Users size={22} />
+        {/* Sisya & Program Participation Card */}
+        <div className="flex flex-col bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-blue-500/10 w-10 h-10 rounded-xl flex items-center justify-center text-blue-600 shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
+              <Users size={20} />
             </div>
-            <div>
-              <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Total Sisya</h3>
+            <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider">Sisya & Kepesertaan</h3>
+          </div>
+
+          <div className="grid grid-cols-2 divide-x divide-muted/15">
+            <div className="pr-3">
               <p className="text-2xl font-black text-text">{stats.totalSisya}</p>
+              <p className="text-[10px] font-bold text-muted uppercase tracking-wide mt-0.5">Sisya Unik</p>
+            </div>
+            <div className="pl-3">
+              <p className="text-2xl font-black text-violet-600">{stats.totalKepesertaanProgram}</p>
+              <p className="text-[10px] font-bold text-muted uppercase tracking-wide mt-0.5">Kepesertaan</p>
             </div>
           </div>
-          <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-blue-500 h-full w-full"></div>
-          </div>
+          {stats.totalSisyaMultiProgram > 0 && (
+            <p className="text-[10px] text-muted leading-relaxed mt-auto pt-3 border-t border-muted/10">
+              {stats.totalSisyaMultiProgram} sisya multi-program
+              {stats.totalKepesertaanTambahan > 0 && ` • +${stats.totalKepesertaanTambahan} kepesertaan tambahan`}
+            </p>
+          )}
         </div>
         
         {/* Waiting Verification Card */}
-        <div className="bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-amber-500/10 w-12 h-12 rounded-xl flex items-center justify-center text-amber-600 shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-              <UserCheck size={22} />
+        <div className="flex flex-col bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-3">
+            <div className="bg-amber-500/10 w-10 h-10 rounded-xl flex items-center justify-center text-amber-600 shrink-0 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
+              <UserCheck size={20} />
             </div>
-            <div>
-              <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Menunggu Verifikasi</h3>
-              <p className="text-2xl font-black text-amber-600">{stats.menungguVerifikasi}</p>
-            </div>
+            <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider">Menunggu Verifikasi</h3>
           </div>
-          <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-amber-500 h-full transition-all duration-1000" style={{ width: `${(stats.menungguVerifikasi / (stats.totalSisya || 1)) * 100}%` }}></div>
+          <p className="text-2xl font-black text-amber-600 mt-3">{stats.menungguVerifikasi}</p>
+          <div className="mt-auto pt-4">
+            <p className="text-[10px] text-muted mb-2">{stats.menungguVerifikasi} dari {stats.totalSisya} sisya</p>
+            <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-amber-500 h-full transition-all duration-1000" style={{ width: `${(stats.menungguVerifikasi / (stats.totalSisya || 1)) * 100}%` }}></div>
+            </div>
           </div>
         </div>
 
         {/* Belum Lunas Card */}
-        <div className="bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-rose-500/10 w-12 h-12 rounded-xl flex items-center justify-center text-rose-600 shrink-0 group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
-              <AlertCircle size={22} />
+        <div className="flex flex-col bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-3">
+            <div className="bg-rose-500/10 w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 shrink-0 group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
+              <AlertCircle size={20} />
             </div>
-            <div>
-              <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Belum Lunas</h3>
-              <p className="text-2xl font-black text-rose-600">{stats.belumLunas || 0}</p>
-            </div>
+            <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider">Belum Lunas</h3>
           </div>
-          <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-rose-500 h-full transition-all duration-1000" style={{ width: `${((stats.belumLunas || 0) / (stats.totalSisya || 1)) * 100}%` }}></div>
+          <p className="text-2xl font-black text-rose-600 mt-3">{stats.belumLunas || 0}</p>
+          <div className="mt-auto pt-4">
+            <p className="text-[10px] text-muted mb-2">{stats.belumLunas || 0} dari {stats.totalSisya} sisya</p>
+            <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-rose-500 h-full transition-all duration-1000" style={{ width: `${((stats.belumLunas || 0) / (stats.totalSisya || 1)) * 100}%` }}></div>
+            </div>
           </div>
         </div>
 
         {/* Estimated Punia Card */}
-        <div className="bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="bg-emerald-500/10 w-12 h-12 rounded-xl flex items-center justify-center text-emerald-600 shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300">
-              <CreditCard size={22} />
+        <div className="min-w-0 overflow-hidden flex flex-col bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
+          <div className="flex items-center gap-3">
+            <div className="bg-emerald-500/10 w-10 h-10 rounded-xl flex items-center justify-center text-emerald-600 shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300">
+              <CreditCard size={20} />
             </div>
-            <div>
-              <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider mb-0.5">Estimasi Punia</h3>
-              <p className="text-xl font-black text-emerald-600">{formatRupiah(stats.totalEstimasiPunia)}</p>
-            </div>
+            <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider">Estimasi Punia</h3>
           </div>
-          <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-emerald-500 h-full w-full"></div>
+          <p className="text-lg 2xl:text-xl leading-tight font-black text-emerald-600 break-all mt-3">
+            {formatRupiah(stats.totalEstimasiPunia)}
+          </p>
+          <div className="mt-auto pt-4">
+            <p className="text-[10px] text-muted mb-2">Akumulasi estimasi punia aktif</p>
+            <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
+              <div className="bg-emerald-500 h-full w-full"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -204,7 +226,13 @@ export default function Dashboard() {
 
         {/* Program Stats */}
         <div className="lg:col-span-2 bg-surface p-6 rounded-xl shadow-sm border border-muted/10">
-          <h3 className="text-lg font-bold font-heading text-primary mb-6">Pendaftar per Program</h3>
+          <div className="mb-6">
+            <h3 className="text-lg font-bold font-heading text-primary">Pendaftar per Program</h3>
+            <p className="text-xs text-muted mt-1">
+              {stats.totalKepesertaanProgram} kepesertaan dari {stats.totalSisya} sisya unik
+              {stats.totalSisyaMultiProgram > 0 && ` • ${stats.totalSisyaMultiProgram} sisya mengikuti lebih dari satu program`}
+            </p>
+          </div>
           <div className="space-y-4">
             {stats.programStats.map((p, idx) => {
               const getProgramColor = (name) => {
@@ -235,6 +263,11 @@ export default function Dashboard() {
               <div className="text-center py-12 text-muted italic">Belum ada data program ajahan.</div>
             )}
           </div>
+          {stats.programStats.length > 0 && (
+            <p className="text-[10px] text-muted italic mt-5 pt-4 border-t border-muted/10">
+              *Seorang sisya dapat tercatat pada beberapa program, sehingga akumulasi per program dapat lebih besar daripada Total Sisya.
+            </p>
+          )}
         </div>
       </div>
 

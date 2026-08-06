@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { getProgramParticipationSummary } = require('../services/pendaftarStats.service');
 
 const prisma = new PrismaClient();
 
@@ -48,25 +49,9 @@ const getStats = async (req, res) => {
       where: { ...genderFilter, jenisKelamin: 'PEREMPUAN' }
     });
 
-    // Program Stats (exclude TIDAK_AKTIF sisya)
-    const programsData = await prisma.programAjahan.findMany({
-      where: { isAktif: true },
-      select: {
-        id: true,
-        nama: true,
-      },
-      orderBy: { urutan: 'asc' }
-    });
-
-    const programStats = await Promise.all(programsData.map(async (p) => {
-      const total = await prisma.sisyaProgram.count({
-        where: {
-          programAjahanId: p.id,
-          sisya: activeFilter
-        }
-      });
-      return { id: p.id, nama: p.nama, total };
-    }));
+    // Kepesertaan program dihitung terpisah dari jumlah orang unik.
+    const participationSummary = await getProgramParticipationSummary(prisma);
+    const programStats = participationSummary.perProgram.map(({ id, nama, total }) => ({ id, nama, total }));
 
     // Ambil data pendaftar 7 hari terakhir untuk grafik
     const sevenDaysAgo = new Date();
@@ -113,6 +98,9 @@ const getStats = async (req, res) => {
       success: true,
       data: {
         totalSisya,
+        totalKepesertaanProgram: participationSummary.totalKepesertaanProgram,
+        totalSisyaMultiProgram: participationSummary.totalSisyaMultiProgram,
+        totalKepesertaanTambahan: participationSummary.totalKepesertaanTambahan,
         menungguVerifikasi,
         belumLunas,
         totalEstimasiPunia: totalPunia,
@@ -122,7 +110,7 @@ const getStats = async (req, res) => {
           perempuan: femaleCount
         },
         programStats,
-        programList: programsData.map(p => ({ id: p.id, nama: p.nama }))
+        programList: participationSummary.perProgram.map(({ id, nama }) => ({ id, nama }))
       }
     });
 
