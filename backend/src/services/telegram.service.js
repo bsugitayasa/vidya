@@ -74,17 +74,21 @@ const formatNotifikasiBuktiPunia = (sisya) => {
  */
 const formatSummaryMessage = (data) => {
   const prodiLines = data.perProgram
-    .map(p => `<b>${p.nama}</b>\n♂️ Laki-laki: ${p.lakiLaki}\n♀️ Perempuan: ${p.perempuan}`)
+    .map(p => `<b>${p.nama}</b>\n👥 Total: ${p.total}\n♂️ Laki-laki: ${p.lakiLaki}\n♀️ Perempuan: ${p.perempuan}`)
     .join('\n\n');
 
   return `
-📊 <b>Summary Sisya Baru per Program</b>
+📊 <b>Summary Pendaftar per Program</b>
 ━━━━━━━━━━━━━━━━━━━━━
 ${prodiLines}
 
-👥 <b>Total Keseluruhan</b>: ${data.total}
-📅 <b>Bulan Ini</b>: ${data.bulanIni}
-📆 <b>Hari Ini</b>: ${data.hariIni}
+👤 <b>Total Sisya Unik</b>: ${data.total}
+📚 <b>Total Kepesertaan Program</b>: ${data.totalKepesertaanProgram}
+🔀 <b>Sisya Multi-program</b>: ${data.totalSisyaMultiProgram}
+➕ <b>Kepesertaan Tambahan</b>: ${data.totalKepesertaanTambahan}
+
+📅 <b>Sisya Unik Bulan Ini</b>: ${data.bulanIni}
+📆 <b>Sisya Unik Hari Ini</b>: ${data.hariIni}
 
 🕐 <i>Data per ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Makassar' })} WITA</i>
 `.trim();

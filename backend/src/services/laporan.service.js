@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { getProgramParticipationSummary } = require('./pendaftarStats.service');
 const prisma = new PrismaClient();
 
 /**
@@ -30,38 +31,16 @@ const getSummaryForBot = async () => {
     }
   });
 
-  // Data per Program dan Jenis Kelamin
-  const programs = await prisma.programAjahan.findMany({
-    where: { isAktif: true },
-    include: {
-      sisyaPrograms: {
-        where: {
-          sisya: {
-            status: { not: 'TIDAK_AKTIF' }
-          }
-        },
-        include: {
-          sisya: true
-        }
-      }
-    }
-  });
-
-  const perProgram = programs.map(p => {
-    const lakiLaki = p.sisyaPrograms.filter(sp => sp.sisya.jenisKelamin === 'LAKI_LAKI').length;
-    const perempuan = p.sisyaPrograms.filter(sp => sp.sisya.jenisKelamin === 'PEREMPUAN').length;
-    return {
-      nama: p.nama,
-      lakiLaki,
-      perempuan
-    };
-  });
+  const participationSummary = await getProgramParticipationSummary(prisma);
 
   return {
     total,
     bulanIni,
     hariIni,
-    perProgram
+    perProgram: participationSummary.perProgram,
+    totalKepesertaanProgram: participationSummary.totalKepesertaanProgram,
+    totalSisyaMultiProgram: participationSummary.totalSisyaMultiProgram,
+    totalKepesertaanTambahan: participationSummary.totalKepesertaanTambahan
   };
 };
 
