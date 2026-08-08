@@ -299,6 +299,12 @@ const exportSisya = async (req, res) => {
       include: {
         programSisyas: {
           include: { programAjahan: true }
+        },
+        partner: {
+          select: { id: true, nomorPendaftaran: true, namaLengkap: true }
+        },
+        partnerOf: {
+          select: { id: true, nomorPendaftaran: true, namaLengkap: true }
         }
       }
     });
@@ -330,24 +336,35 @@ const exportSisya = async (req, res) => {
 
       worksheet.columns = [
         { header: 'No', key: 'no', width: 5 },
+        { header: 'ID Sisya', key: 'id', width: 10 },
         { header: 'Tgl Daftar', key: 'tgl', width: 12 },
+        { header: 'Terakhir Diperbarui', key: 'updatedAt', width: 18 },
         { header: 'No. Pendaftaran', key: 'noDaftar', width: 18 },
         { header: 'No. Registrasi', key: 'noReg', width: 25 },
         { header: 'Nama Lengkap', key: 'nama', width: 25 },
+        { header: 'Tempat Lahir', key: 'tempatLahir', width: 18 },
+        { header: 'Tanggal Lahir', key: 'tanggalLahir', width: 15 },
         { header: 'L/P', key: 'jk', width: 5 },
+        { header: 'Alamat', key: 'alamat', width: 35 },
         { header: 'No. HP', key: 'hp', width: 15 },
+        { header: 'Email', key: 'email', width: 25 },
         { header: 'Griya', key: 'griya', width: 20 },
-        { header: 'Desa', key: 'desa', width: 15 },
+        { header: 'Desa / Kecamatan', key: 'desa', width: 20 },
+        { header: 'Kabupaten / Kota', key: 'kabupaten', width: 22 },
         { header: 'Program', key: 'program', width: 25 },
+        { header: 'ID Pasangan', key: 'partnerId', width: 12 },
+        { header: 'No. Pendaftaran Pasangan', key: 'partnerNoDaftar', width: 24 },
+        { header: 'Nama Pasangan', key: 'partnerNama', width: 25 },
         { header: 'Total Punia', key: 'punia', width: 12 },
         { header: 'Terbayar', key: 'terbayar', width: 12 },
         { header: 'Sisa Punia', key: 'sisa', width: 12 },
         { header: 'Status Pembayaran', key: 'statusBayar', width: 15 },
         { header: 'Status Akademik', key: 'statusAkademik', width: 15 },
+        { header: 'Status Kelulusan', key: 'statusKelulusan', width: 18 },
         { header: 'Tgl Pediksaan', key: 'tglDiksan', width: 15 },
-        { header: 'Foto', key: 'fileFotoPath', width: 15 },
-        { header: 'KTP/KK/Ijasah', key: 'fileIdentitasPath', width: 15 },
-        { header: 'Surat Rekomendasi', key: 'fileRekomendasiPath', width: 15 }
+        { header: 'File Foto', key: 'fileFotoPath', width: 35 },
+        { header: 'File KTP/KK/Ijasah', key: 'fileIdentitasPath', width: 35 },
+        { header: 'File Surat Rekomendasi', key: 'fileRekomendasiPath', width: 35 }
       ];
 
       worksheet.getRow(1).eachCell((cell) => {
@@ -392,27 +409,39 @@ const exportSisya = async (req, res) => {
         }
 
         const sisaPunia = displayPunia - displayTerbayar;
+        const linkedPartner = sisya.partner || sisya.partnerOf;
 
         const row = worksheet.addRow({
           no: index + 1,
+          id: sisya.id,
           tgl: new Date(sisya.createdAt).toLocaleDateString('id-ID'),
+          updatedAt: new Date(sisya.updatedAt).toLocaleString('id-ID'),
           noDaftar: sisya.nomorPendaftaran,
           noReg: displayRegNos,
           nama: sisya.namaLengkap,
+          tempatLahir: sisya.tempatLahir,
+          tanggalLahir: new Date(sisya.tanggalLahir).toLocaleDateString('id-ID'),
           jk: sisya.jenisKelamin === 'LAKI_LAKI' ? 'L' : 'P',
+          alamat: sisya.alamat,
           hp: sisya.noHp,
+          email: sisya.email || '-',
           griya: sisya.namaGriya,
           desa: sisya.namaDesa,
+          kabupaten: sisya.namaKabupaten || 'Belum ditentukan',
           program: displayPrograms,
+          partnerId: linkedPartner?.id || '',
+          partnerNoDaftar: linkedPartner?.nomorPendaftaran || '',
+          partnerNama: linkedPartner?.namaLengkap || '',
           punia: sisya.partnerId ? '' : displayPunia,
           terbayar: sisya.partnerId ? '' : displayTerbayar,
           sisa: sisya.partnerId ? '' : sisaPunia,
           statusBayar: sisya.statusPembayaran.replace(/_/g, ' '),
           statusAkademik: sisya.status,
+          statusKelulusan: sisya.statusKelulusan,
           tglDiksan: sisya.tanggalDiksan ? new Date(sisya.tanggalDiksan).toLocaleDateString('id-ID') : '-',
-          fileFotoPath: sisya.fileFotoPath !== null ? 'Sudah' : 'Belum',
-          fileIdentitasPath: sisya.fileIdentitasPath !== null ? 'Sudah' : 'Belum',
-          fileRekomendasiPath: sisya.fileRekomendasiPath !== null ? 'Sudah' : 'Belum'
+          fileFotoPath: sisya.fileFotoPath || 'Belum tersedia',
+          fileIdentitasPath: sisya.fileIdentitasPath || 'Belum tersedia',
+          fileRekomendasiPath: sisya.fileRekomendasiPath || 'Belum tersedia'
         });
 
         row.eachCell((cell) => {

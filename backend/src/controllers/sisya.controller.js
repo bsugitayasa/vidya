@@ -171,6 +171,7 @@ const register = async (req, res) => {
           email: data.email || null,
           namaGriya: data.namaGriya,
           namaDesa: data.namaDesa,
+          namaKabupaten: data.namaKabupaten,
           fileIdentitasPath: fileKtpPath,
           fileFotoPath,
           fileRekomendasiPath,
@@ -267,7 +268,8 @@ const getAll = async (req, res) => {
         { namaLengkap: { contains: search, mode: 'insensitive' } },
         { nomorPendaftaran: { contains: search, mode: 'insensitive' } },
         { namaGriya: { contains: search, mode: 'insensitive' } },
-        { namaDesa: { contains: search, mode: 'insensitive' } }
+        { namaDesa: { contains: search, mode: 'insensitive' } },
+        { namaKabupaten: { contains: search, mode: 'insensitive' } }
       ];
     }
 
@@ -542,6 +544,7 @@ const updateSisya = async (req, res) => {
         email: updateData.email,
         namaGriya: updateData.namaGriya,
         namaDesa: updateData.namaDesa,
+        namaKabupaten: updateData.namaKabupaten,
       }
     });
 
@@ -782,12 +785,18 @@ const getLocations = async (req, res) => {
       select: { namaDesa: true },
       where: { namaDesa: { not: '' } }
     });
+    const kabupatenList = await prisma.sisya.findMany({
+      distinct: ['namaKabupaten'],
+      select: { namaKabupaten: true },
+      where: { namaKabupaten: { not: null } }
+    });
 
     res.json({
       success: true,
       data: {
         griya: griyaList.map(g => g.namaGriya).filter(Boolean),
-        desa: desaList.map(d => d.namaDesa).filter(Boolean)
+        desa: desaList.map(d => d.namaDesa).filter(Boolean),
+        kabupaten: kabupatenList.map(k => k.namaKabupaten).filter(Boolean)
       }
     });
   } catch (error) {

@@ -66,6 +66,7 @@ model Sisya {
   email               String?
   namaGriya           String
   namaDesa            String
+  namaKabupaten       String?
   totalPunia          Int
   totalTerbayar       Int              @default(0)
   statusPembayaran    StatusPembayaran @default(MENUNGGU_PEMBAYARAN)
