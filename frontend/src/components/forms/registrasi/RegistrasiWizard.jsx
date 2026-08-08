@@ -31,6 +31,7 @@ const step1Schema = z.object({
 const step2Schema = z.object({
   namaGriya: z.string().min(3, "Nama Griya harus diisi"),
   namaDesa: z.string().min(3, "Nama Desa/Kecamatan harus diisi"),
+  namaKabupaten: z.string().min(2, "Nama Kabupaten/Kota harus diisi"),
 });
 
 export default function RegistrasiWizard() {
@@ -241,6 +242,8 @@ export default function RegistrasiWizard() {
                 onProgramChange={handleProgramChange}
                 onFileSelected={handleFileSelected}
                 isLoading={isLoadingPrograms}
+                watch={watch}
+                setValue={setValue}
               />
             )}
 

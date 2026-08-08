@@ -49,6 +49,35 @@ const getStats = async (req, res) => {
       where: { ...genderFilter, jenisKelamin: 'PEREMPUAN' }
     });
 
+    // Persebaran sisya unik berdasarkan kabupaten/kota, mengikuti filter program aktif.
+    const locationSisyas = await prisma.sisya.findMany({
+      where: genderFilter,
+      select: { namaKabupaten: true }
+    });
+
+    // Gabungkan variasi kapitalisasi/spasi agar satu kabupaten tidak terpecah menjadi beberapa baris.
+    const locationMap = new Map();
+    locationSisyas.forEach(({ namaKabupaten }) => {
+      const label = namaKabupaten?.trim() || 'Belum ditentukan';
+
+      const key = label.toLocaleLowerCase('id-ID');
+      const current = locationMap.get(key) || { namaKabupaten: label, total: 0 };
+      current.total += 1;
+      locationMap.set(key, current);
+    });
+
+    const sortedLocationStats = Array.from(locationMap.values()).sort((a, b) =>
+      b.total - a.total || a.namaKabupaten.localeCompare(b.namaKabupaten, 'id-ID')
+    );
+    const locationStats = sortedLocationStats.slice(0, 10);
+
+    if (sortedLocationStats.length > 10) {
+      locationStats.push({
+        namaKabupaten: 'Kabupaten/Kota lainnya',
+        total: sortedLocationStats.slice(10).reduce((sum, item) => sum + item.total, 0)
+      });
+    }
+
     // Kepesertaan program dihitung terpisah dari jumlah orang unik.
     const participationSummary = await getProgramParticipationSummary(prisma);
     const programStats = participationSummary.perProgram.map(({ id, nama, total }) => ({ id, nama, total }));
@@ -105,6 +134,7 @@ const getStats = async (req, res) => {
         belumLunas,
         totalEstimasiPunia: totalPunia,
         chartData,
+        locationStats,
         genderStats: {
           lakiLaki: maleCount,
           perempuan: femaleCount

@@ -18,6 +18,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Loader2 } from 'lucide-react';
+import KabupatenField from '../../components/forms/KabupatenField';
 
 const sisyaUpdateSchema = z.object({
   namaLengkap: z.string().min(3, 'Nama lengkap minimal 3 karakter'),
@@ -37,7 +38,8 @@ const sisyaUpdateSchema = z.object({
     .refine(val => val.length >= 10, "Nomor HP minimal 10 digit"),
   email: z.string().email('Format email tidak valid').optional().or(z.literal('')),
   namaGriya: z.string().min(2, 'Nama Griya wajib diisi'),
-  namaDesa: z.string().min(2, 'Nama Desa wajib diisi')
+  namaDesa: z.string().min(2, 'Nama Desa wajib diisi'),
+  namaKabupaten: z.string().min(2, 'Nama Kabupaten/Kota wajib diisi')
 });
 
 export default function SisyaDetail() {
@@ -164,6 +166,7 @@ export default function SisyaDetail() {
       email: sisya.email || '',
       namaGriya: sisya.namaGriya,
       namaDesa: sisya.namaDesa,
+      namaKabupaten: sisya.namaKabupaten || '',
     });
     const d = new Date(sisya.tanggalLahir);
     setSelectedDate(d);
@@ -397,7 +400,8 @@ export default function SisyaDetail() {
           ['Nomor HP', ':', sisya.noHp],
           ['Email', ':', sisya.email || '-'],
           ['Nama Griya', ':', sisya.namaGriya],
-          ['Nama Desa', ':', sisya.namaDesa]
+          ['Nama Desa', ':', sisya.namaDesa],
+          ['Kabupaten / Kota', ':', sisya.namaKabupaten || 'Belum ditentukan']
         ],
         styles: { fontSize: 9, cellPadding: 1 },
         columnStyles: {
@@ -875,8 +879,10 @@ export default function SisyaDetail() {
                 <span className="font-medium">{sisya.alamat}</span>
               </div>
               <div>
-                <span className="text-muted text-xs block">Griya / Desa</span>
-                <span className="font-medium">{sisya.namaGriya} / {sisya.namaDesa}</span>
+                <span className="text-muted text-xs block">Griya / Desa / Kabupaten</span>
+                <span className="font-medium">
+                  {sisya.namaGriya} / {sisya.namaDesa} / {sisya.namaKabupaten || 'Belum ditentukan'}
+                </span>
               </div>
             </div>
           </div>
@@ -1334,6 +1340,13 @@ export default function SisyaDetail() {
                     <Input placeholder="Nama Desa" {...register('namaDesa')} />
                     {errors.namaDesa && <p className="text-sm text-red-500">{errors.namaDesa.message}</p>}
                   </div>
+
+                  <input type="hidden" {...register('namaKabupaten')} />
+                  <KabupatenField
+                    value={watch('namaKabupaten') || ''}
+                    onChange={(value) => setValue('namaKabupaten', value, { shouldDirty: true, shouldValidate: true })}
+                    error={errors.namaKabupaten}
+                  />
                 </div>
 
                 <div className="flex justify-end gap-3 pt-4 mt-6 border-t border-muted/10">

@@ -139,7 +139,7 @@ export default function Laporan() {
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
         <div>
           <h2 className="text-2xl font-bold font-heading text-primary">Laporan Pendaftaran</h2>
-          <p className="text-sm text-muted mt-1">Unduh rekapitulasi data pendaftar dan punia</p>
+          <p className="text-sm text-muted mt-1">Unduh seluruh data pendaftar, wilayah, program, dokumen, dan punia</p>
         </div>
         
         <button 

@@ -19,6 +19,7 @@ const sisyaRegistrationSchema = z.object({
   email: z.string().email('Format email tidak valid').optional().or(z.literal('')),
   namaGriya: z.string().min(2, 'Nama Griya wajib diisi'),
   namaDesa: z.string().min(2, 'Nama Desa wajib diisi'),
+  namaKabupaten: z.string().min(2, 'Nama Kabupaten/Kota wajib diisi'),
   programs: z.string().refine((val) => {
     try {
       const parsed = JSON.parse(val);
@@ -47,7 +48,8 @@ const sisyaUpdateSchema = z.object({
     .refine(val => val.length >= 10, "Nomor HP minimal 10 digit"),
   email: z.string().email('Format email tidak valid').optional().or(z.literal('')),
   namaGriya: z.string().min(2, 'Nama Griya wajib diisi'),
-  namaDesa: z.string().min(2, 'Nama Desa wajib diisi')
+  namaDesa: z.string().min(2, 'Nama Desa wajib diisi'),
+  namaKabupaten: z.string().min(2, 'Nama Kabupaten/Kota wajib diisi')
 });
 
 module.exports = {

@@ -5,6 +5,7 @@ import ProgramAjahanPicker from './ProgramAjahanPicker';
 import RincianPunia from './RincianPunia';
 import FileDropzone from '../../upload/FileDropzone';
 import { usePuniaCalculator } from '../../../hooks/usePuniaCalculator';
+import KabupatenField from '../KabupatenField';
 
 export default function Step2DataAjahan({ 
   register, 
@@ -15,7 +16,9 @@ export default function Step2DataAjahan({
   pasanganOptions,
   onProgramChange,
   onFileSelected,
-  isLoading
+  isLoading,
+  watch,
+  setValue
 }) {
   const puniaCalc = usePuniaCalculator(selectedPrograms, pasanganOptions, programs);
 
@@ -33,7 +36,7 @@ export default function Step2DataAjahan({
       {/* Bagian Informasi Ajahan */}
       <section>
         <h3 className="text-xl font-bold font-heading text-primary border-b border-muted/30 pb-2 mb-4">Informasi Ajahan</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <Label htmlFor="namaGriya">Nama Griya *</Label>
             <Input 
@@ -52,6 +55,12 @@ export default function Step2DataAjahan({
             />
             {errors.namaDesa && <p className="text-sm text-red-500">{errors.namaDesa.message}</p>}
           </div>
+          <input type="hidden" {...register('namaKabupaten')} />
+          <KabupatenField
+            value={watch('namaKabupaten') || ''}
+            onChange={(value) => setValue('namaKabupaten', value, { shouldDirty: true, shouldValidate: true })}
+            error={errors.namaKabupaten}
+          />
         </div>
       </section>
 
