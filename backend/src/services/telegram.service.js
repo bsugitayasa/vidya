@@ -82,13 +82,13 @@ const formatSummaryMessage = (data) => {
 ━━━━━━━━━━━━━━━━━━━━━
 ${prodiLines}
 
-👤 <b>Total Sisya Unik</b>: ${data.total}
+👤 <b>Total Sisya</b>: ${data.total}
 📚 <b>Total Kepesertaan Program</b>: ${data.totalKepesertaanProgram}
 🔀 <b>Sisya Multi-program</b>: ${data.totalSisyaMultiProgram}
 ➕ <b>Kepesertaan Tambahan</b>: ${data.totalKepesertaanTambahan}
 
-📅 <b>Sisya Unik Bulan Ini</b>: ${data.bulanIni}
-📆 <b>Sisya Unik Hari Ini</b>: ${data.hariIni}
+📅 <b>Sisya Bulan Ini</b>: ${data.bulanIni}
+📆 <b>Sisya Hari Ini</b>: ${data.hariIni}
 
 🕐 <i>Data per ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Makassar' })} WITA</i>
 `.trim();

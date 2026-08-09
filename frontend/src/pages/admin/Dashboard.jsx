@@ -71,7 +71,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-2xl font-bold font-heading text-primary">Dashboard</h2>
-        
+
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <button
             type="button"
@@ -100,7 +100,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-      
+
       {error && (
         <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm border border-red-200 flex items-center">
           <span className="mr-2">⚠️</span> {error}
@@ -120,7 +120,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 divide-x divide-muted/15">
             <div className="pr-3">
               <p className="text-2xl font-black text-text">{stats.totalSisya}</p>
-              <p className="text-[10px] font-bold text-muted uppercase tracking-wide mt-0.5">Sisya Unik</p>
+              <p className="text-[10px] font-bold text-muted uppercase tracking-wide mt-0.5">Sisya</p>
             </div>
             <div className="pl-3">
               <p className="text-2xl font-black text-violet-600">{stats.totalKepesertaanProgram}</p>
@@ -134,7 +134,7 @@ export default function Dashboard() {
             </p>
           )}
         </div>
-        
+
         {/* Waiting Verification Card */}
         <Link
           to="/admin/sisya?status=MENUNGGU_VERIFIKASI"
@@ -209,7 +209,7 @@ export default function Dashboard() {
                 if (n.includes('serati')) return 'bg-purple-100 text-purple-700 border-purple-200';
                 return 'bg-muted/10 text-muted';
               };
-              
+
               return (
                 <span className={`text-[10px] font-bold px-2 py-1 rounded border transition-colors ${getBadgeColor(programName)}`}>
                   {programName}
@@ -217,7 +217,7 @@ export default function Dashboard() {
               );
             })()}
           </div>
-          
+
           <div className="flex-1 flex flex-col justify-center space-y-8">
             <div className="space-y-2">
               <div className="flex justify-between items-end">
@@ -228,7 +228,7 @@ export default function Dashboard() {
                 <span className="text-2xl font-black">{stats.genderStats.lakiLaki}</span>
               </div>
               <div className="w-full bg-blue-50 h-4 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="bg-blue-500 h-full transition-all duration-1000 ease-out"
                   style={{ width: `${(stats.genderStats.lakiLaki / (stats.genderStats.lakiLaki + stats.genderStats.perempuan || 1)) * 100}%` }}
                 ></div>
@@ -244,7 +244,7 @@ export default function Dashboard() {
                 <span className="text-2xl font-black">{stats.genderStats.perempuan}</span>
               </div>
               <div className="w-full bg-rose-50 h-4 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="bg-rose-500 h-full transition-all duration-1000 ease-out"
                   style={{ width: `${(stats.genderStats.perempuan / (stats.genderStats.lakiLaki + stats.genderStats.perempuan || 1)) * 100}%` }}
                 ></div>
@@ -264,7 +264,7 @@ export default function Dashboard() {
           <div className="mb-6">
             <h3 className="text-lg font-bold font-heading text-primary">Pendaftar per Program</h3>
             <p className="text-xs text-muted mt-1">
-              {stats.totalKepesertaanProgram} kepesertaan dari {stats.totalSisya} sisya unik
+              {stats.totalKepesertaanProgram} kepesertaan dari {stats.totalSisya} sisya
               {stats.totalSisyaMultiProgram > 0 && ` • ${stats.totalSisyaMultiProgram} sisya mengikuti lebih dari satu program`}
             </p>
           </div>
@@ -278,7 +278,7 @@ export default function Dashboard() {
                 if (n.includes('serati')) return 'bg-purple-500';
                 return idx % 2 === 0 ? 'bg-primary' : 'bg-secondary';
               };
-              
+
               return (
                 <div key={p.id} className="group">
                   <div className="flex justify-between items-center mb-1">
@@ -286,7 +286,7 @@ export default function Dashboard() {
                     <span className="text-sm font-black text-muted">{p.total} Sisya</span>
                   </div>
                   <div className="w-full bg-muted/5 h-3 rounded-full overflow-hidden border border-muted/5">
-                    <div 
+                    <div
                       className={`h-full transition-all duration-1000 ease-out ${getProgramColor(p.nama)}`}
                       style={{ width: `${(p.total / (stats.totalSisya || 1)) * 100}%` }}
                     ></div>
@@ -371,19 +371,19 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }} 
-                  dy={10} 
+                <XAxis
+                  dataKey="date"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }}
+                  dy={10}
                 />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }} 
+                <YAxis
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }}
                 />
-                <Tooltip 
+                <Tooltip
                   cursor={{ fill: '#f9fafb' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
                   labelStyle={{ fontWeight: '800', color: '#111827', marginBottom: '8px', fontSize: '14px' }}

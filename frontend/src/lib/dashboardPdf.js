@@ -85,7 +85,7 @@ export const buildDashboardPdf = (stats, filterLabel = 'Semua Program Ajahan', l
 
   const cardWidth = 42.5;
   const cardGap = 4;
-  drawSummaryCard(pdf, 14, 42, cardWidth, 'Sisya Unik', String(stats.totalSisya || 0), COLORS.blue);
+  drawSummaryCard(pdf, 14, 42, cardWidth, 'Sisya', String(stats.totalSisya || 0), COLORS.blue);
   drawSummaryCard(pdf, 14 + cardWidth + cardGap, 42, cardWidth, 'Kepesertaan', String(stats.totalKepesertaanProgram || 0), COLORS.violet);
   drawSummaryCard(pdf, 14 + (cardWidth + cardGap) * 2, 42, cardWidth, 'Menunggu Verifikasi', String(stats.menungguVerifikasi || 0), COLORS.amber);
   drawSummaryCard(pdf, 14 + (cardWidth + cardGap) * 3, 42, cardWidth, 'Belum Lunas', String(stats.belumLunas || 0), COLORS.rose);
@@ -110,7 +110,7 @@ export const buildDashboardPdf = (stats, filterLabel = 'Semua Program Ajahan', l
   addSectionTitle(pdf, 'Pendaftar per Program', 147);
   autoTable(pdf, {
     startY: 158,
-    head: [['Program Ajahan', 'Jumlah Sisya', 'Persentase dari Sisya Unik']],
+    head: [['Program Ajahan', 'Jumlah Sisya', 'Persentase dari Sisya']],
     body: (stats.programStats || []).map((program) => [
       program.nama,
       program.total,
@@ -128,7 +128,7 @@ export const buildDashboardPdf = (stats, filterLabel = 'Semua Program Ajahan', l
   pdf.setTextColor(...COLORS.muted);
   pdf.setFontSize(7.5);
   pdf.text(
-    'Catatan: satu sisya dapat tercatat pada beberapa program sehingga total kepesertaan dapat melebihi sisya unik.',
+    'Catatan: satu sisya dapat tercatat pada beberapa program sehingga total kepesertaan dapat melebihi sisya.',
     14,
     Math.min(programTableEnd + 7, 282),
   );
