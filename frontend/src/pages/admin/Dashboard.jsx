@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LabelList } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import api from '../../lib/axios';
-import { Users, UserCheck, CreditCard, Filter, UserRound, UserRoundSearch, AlertCircle, FileDown, Loader2 } from 'lucide-react';
-import { saveDashboardPdf } from '../../lib/dashboardPdf';
+import { Users, UserCheck, CreditCard, Filter, UserRound, UserRoundSearch, AlertCircle } from 'lucide-react';
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -15,14 +14,12 @@ export default function Dashboard() {
     belumLunas: 0,
     totalEstimasiPunia: 0,
     chartData: [],
-    locationStats: [],
     genderStats: { lakiLaki: 0, perempuan: 0 },
     programStats: [],
     programList: []
   });
   const [selectedProgram, setSelectedProgram] = useState('all');
   const [error, setError] = useState('');
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,52 +49,25 @@ export default function Dashboard() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
 
-  const handleExportPdf = async () => {
-    setIsExportingPdf(true);
-    try {
-      const filterLabel = selectedProgram === 'all'
-        ? 'Semua Program Ajahan'
-        : stats.programList.find((program) => program.id == selectedProgram)?.nama || 'Program Terpilih';
-      await saveDashboardPdf(stats, filterLabel);
-    } catch (exportError) {
-      console.error('Dashboard PDF Export Error:', exportError);
-      setError('Gagal membuat laporan PDF Dashboard');
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-2xl font-bold font-heading text-primary">Dashboard</h2>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExportPdf}
-            disabled={isExportingPdf || Boolean(error)}
-            className="h-10 inline-flex items-center justify-center gap-2 px-4 rounded-lg bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {isExportingPdf ? <Loader2 size={17} className="animate-spin" /> : <FileDown size={17} />}
-            {isExportingPdf ? 'Membuat PDF...' : 'Export PDF'}
-          </button>
-
-          <div className="flex items-center space-x-2 bg-surface p-1 rounded-lg border border-muted/20 shadow-sm">
-            <div className="p-2 text-muted">
-              <Filter size={18} />
-            </div>
-            <select
-              className="bg-transparent border-none text-sm focus:ring-0 pr-8 cursor-pointer font-medium outline-none"
-              value={selectedProgram}
-              onChange={(e) => setSelectedProgram(e.target.value)}
-            >
-              <option value="all">Semua Program Ajahan</option>
-              {stats.programList.map(p => (
-                <option key={p.id} value={p.id}>{p.nama}</option>
-              ))}
-            </select>
+        <div className="flex items-center space-x-2 bg-surface p-1 rounded-lg border border-muted/20 shadow-sm">
+          <div className="p-2 text-muted">
+            <Filter size={18} />
           </div>
+          <select
+            className="bg-transparent border-none text-sm focus:ring-0 pr-8 cursor-pointer font-medium outline-none"
+            value={selectedProgram}
+            onChange={(e) => setSelectedProgram(e.target.value)}
+          >
+            <option value="all">Semua Program Ajahan</option>
+            {stats.programList.map(p => (
+              <option key={p.id} value={p.id}>{p.nama}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -304,63 +274,6 @@ export default function Dashboard() {
             </p>
           )}
         </div>
-      </div>
-
-      {/* Location Distribution Chart */}
-      <div className="bg-surface p-6 rounded-xl shadow-sm border border-muted/10">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-6">
-          <div>
-            <h3 className="text-lg font-bold font-heading text-primary">Persebaran Sisya Berdasarkan Kabupaten/Kota</h3>
-            <p className="text-xs text-muted mt-1">10 kabupaten/kota dengan jumlah sisya aktif terbanyak; wilayah lainnya digabungkan.</p>
-          </div>
-          <span className="self-start text-[10px] font-bold px-2.5 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-100">
-            {selectedProgram === 'all'
-              ? 'Semua Program'
-              : stats.programList.find(program => program.id == selectedProgram)?.nama || 'Program Terpilih'}
-          </span>
-        </div>
-
-        {stats.locationStats?.length > 0 ? (
-          <div style={{ height: Math.max(280, stats.locationStats.length * 42) }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={stats.locationStats}
-                layout="vertical"
-                margin={{ top: 4, right: 42, left: 8, bottom: 4 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
-                <XAxis
-                  type="number"
-                  allowDecimals={false}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: '#9ca3af', fontWeight: 600 }}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="namaKabupaten"
-                  width={155}
-                  interval={0}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 11, fill: '#4b5563', fontWeight: 700 }}
-                  tickFormatter={(value) => value.length > 20 ? `${value.slice(0, 20)}…` : value}
-                />
-                <Tooltip
-                  cursor={{ fill: '#faf5ff' }}
-                  formatter={(value) => [`${value} Sisya`, 'Jumlah']}
-                  labelStyle={{ fontWeight: 800, color: '#111827', marginBottom: '4px' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="total" name="Jumlah Sisya" fill="#7c3aed" radius={[0, 6, 6, 0]} barSize={22}>
-                  <LabelList dataKey="total" position="right" fill="#6b7280" fontSize={11} fontWeight={800} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <div className="h-48 flex items-center justify-center text-muted italic">Belum ada data kabupaten/kota untuk ditampilkan.</div>
-        )}
       </div>
 
       {/* Main Chart */}
