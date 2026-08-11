@@ -392,6 +392,10 @@ const findByNomor = async (req, res) => {
         id: true,
         nomorPendaftaran: true,
         namaLengkap: true,
+        namaGriya: true,
+        namaDesa: true,
+        namaKabupaten: true,
+        noHp: true,
         statusPembayaran: true,
         totalPunia: true,
         totalTerbayar: true,
@@ -445,6 +449,54 @@ const serveFile = async (req, res) => {
   } catch (error) {
     console.error('Serve File Error:', error);
     res.status(500).json({ success: false, message: 'Gagal mengambil file' });
+  }
+};
+
+// Public preview for the status page. The stored filename is never accepted
+// from the client; it is resolved from a valid registration number instead.
+const servePublicRegistrationFile = async (req, res) => {
+  try {
+    const { nomor, jenis } = req.query;
+    const documentFields = {
+      foto: 'fileFotoPath',
+      identitas: 'fileIdentitasPath',
+      rekomendasi: 'fileRekomendasiPath'
+    };
+    const documentField = documentFields[jenis];
+
+    if (!nomor || !documentField) {
+      return res.status(400).json({ success: false, message: 'Nomor pendaftaran atau jenis berkas tidak valid' });
+    }
+
+    const sisya = await prisma.sisya.findUnique({
+      where: { nomorPendaftaran: nomor },
+      select: { [documentField]: true }
+    });
+    const storedPath = sisya?.[documentField];
+
+    if (!storedPath) {
+      return res.status(404).json({ success: false, message: 'Berkas tidak ditemukan' });
+    }
+
+    const filename = path.basename(storedPath);
+    if (!filename || filename.includes('..')) {
+      return res.status(400).json({ success: false, message: 'Path berkas tidak valid' });
+    }
+
+    const filePath = path.join(__dirname, '../../uploads', filename);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'Berkas tidak ditemukan' });
+    }
+
+    res.set({
+      'Cache-Control': 'private, no-store',
+      'Content-Disposition': 'inline',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error('Serve Public Registration File Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal mengambil berkas' });
   }
 };
 
@@ -932,6 +984,7 @@ module.exports = {
   getById,
   findByNomor,
   serveFile,
+  servePublicRegistrationFile,
   lengkapiBerkas,
   updateStatus,
   updateAcademicStatus,

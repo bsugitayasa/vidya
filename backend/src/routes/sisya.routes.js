@@ -12,6 +12,9 @@ const { registrationLimiter, statusCheckLimiter } = require('../middlewares/rate
 // GET /api/sisya
 router.get('/', requireAuth, requireAdmin, sisyaController.getAll);
 
+// GET /api/sisya/cari/file (Public - preview document by registration number)
+router.get('/cari/file', statusCheckLimiter, sisyaController.servePublicRegistrationFile);
+
 // GET /api/sisya/cari (Public - for checking status)
 router.get('/cari', statusCheckLimiter, sisyaController.findByNomor);
 
