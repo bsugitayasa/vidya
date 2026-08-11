@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Search, Loader2, CheckCircle2, Clock, XCircle, Upload, FileText, ArrowLeft, Info, AlertCircle } from 'lucide-react';
+import {
+  Search, Loader2, CheckCircle2, Clock, XCircle, Upload, FileText, ArrowLeft,
+  Info, AlertCircle, House, MapPin, Phone
+} from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import api from '../../lib/axios';
+import DocumentCompleteness from '../../components/status/DocumentCompleteness';
 
 export default function CekStatus() {
   const location = useLocation();
@@ -98,7 +102,7 @@ export default function CekStatus() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto my-12 px-4 font-sans">
+    <div className="max-w-5xl mx-auto my-8 px-4 font-sans sm:my-12">
       <div className="mb-8">
         <Link to="/" className="text-primary hover:underline flex items-center text-sm font-medium">
           <ArrowLeft size={16} className="mr-1" /> Kembali ke Beranda
@@ -165,8 +169,8 @@ export default function CekStatus() {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <Card className="overflow-hidden border-t-4 border-t-primary">
                 <CardHeader className="bg-muted/30">
-                  <div className="flex justify-between items-start">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
                       <CardTitle className="text-2xl">{sisyaData.namaLengkap}</CardTitle>
                       <CardDescription className="text-primary font-mono font-bold mt-1">
                         {sisyaData.nomorPendaftaran}
@@ -177,6 +181,40 @@ export default function CekStatus() {
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-4">
+                    <section>
+                      <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted">Informasi Sisya</h4>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-muted/30 bg-muted/10 p-3.5">
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                              <House size={18} />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Nama Griya</p>
+                              <p className="mt-0.5 break-words text-sm font-bold text-text">{sisyaData.namaGriya || 'Belum diisi'}</p>
+                              <p className="mt-1 flex items-start gap-1 text-xs leading-relaxed text-muted">
+                                <MapPin size={13} className="mt-0.5 shrink-0" />
+                                <span>{[sisyaData.namaDesa, sisyaData.namaKabupaten].filter(Boolean).join(', ') || 'Lokasi belum diisi'}</span>
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-xl border border-muted/30 bg-muted/10 p-3.5">
+                          <div className="flex items-start gap-3">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                              <Phone size={18} />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Nomor HP</p>
+                              <p className="mt-0.5 break-all text-sm font-bold text-text">{sisyaData.noHp || 'Belum diisi'}</p>
+                              <p className="mt-1 text-xs text-muted">Kontak yang didaftarkan</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+
                     <div>
                       <h4 className="text-sm font-semibold text-muted uppercase tracking-wider mb-2">Program Ajahan</h4>
                       <div className="divide-y border rounded-lg">
@@ -198,6 +236,8 @@ export default function CekStatus() {
                         )}
                       </div>
                     </div>
+
+                    <DocumentCompleteness sisya={sisyaData} />
 
                     {/* Upload Section if needed - Show if not LUNAS */}
                     {sisyaData.statusPembayaran !== 'LUNAS' && (
