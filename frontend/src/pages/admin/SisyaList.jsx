@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, Eye, Filter, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, XCircle, Info, ArrowUpDown, ArrowUp, ArrowDown, FileDown } from 'lucide-react';
+import { Search, Eye, Filter, ChevronLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, XCircle, Info, ArrowUpDown, ArrowUp, ArrowDown, FileDown, Printer, Loader2 } from 'lucide-react';
 import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { getProgramBadgeStyle } from '../../lib/utils';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { drawOrganizationHeader, generateAttendancePdf } from '../../lib/attendancePdf';
 
 export default function SisyaList() {
   const [searchParams] = useSearchParams();
@@ -21,6 +22,7 @@ export default function SisyaList() {
   const [filterGriya, setFilterGriya] = useState('');
   const [filterDesa, setFilterDesa] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState({ griya: [], desa: [] });
+  const [isPrintingAttendance, setIsPrintingAttendance] = useState(false);
 
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -175,26 +177,7 @@ export default function SisyaList() {
         logoBase64 = await getBase64ImageFromUrl('/logo.png');
       } catch (err) { }
 
-      if (logoBase64) {
-        pdf.addImage(logoBase64, 'PNG', 20, 12, 17, 17);
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(12);
-        pdf.text('PERKUMPULAN DHARMOPADESA PUSAT NUSANTARA', 41, 16);
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(7.5);
-        pdf.text('Sekretariat Kantor Pusat: Pasraman Dharma Wasitha, Wantilan Capung Mas, Banjar Batan Ancak,', 41, 20.5);
-        pdf.text('Desa Mas, Kecamatan Ubud, Kabupaten Gianyar, Provinsi Bali, Indonesia - 80571', 41, 24);
-        pdf.setFont('helvetica', 'italic');
-        pdf.setFontSize(7);
-        pdf.setTextColor(100, 100, 100);
-        pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 41, 27.5);
-        pdf.setTextColor(0, 0, 0);
-      }
-
-      pdf.setLineWidth(0.8);
-      pdf.line(20, 33, 190, 33);
-      pdf.setLineWidth(0.2);
-      pdf.line(20, 34, 190, 34);
+      drawOrganizationHeader(pdf, logoBase64);
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(14);
@@ -280,6 +263,25 @@ export default function SisyaList() {
     }
   };
 
+  const handlePrintAttendance = async () => {
+    setIsPrintingAttendance(true);
+
+    try {
+      const [response, logoBase64] = await Promise.all([
+        api.get('/sisya/export/absensi'),
+        getBase64ImageFromUrl('/logo.png')
+      ]);
+      const attendanceSisyas = response.data.data || [];
+      const pdf = generateAttendancePdf(attendanceSisyas, logoBase64);
+
+      pdf.save(`Daftar_Absensi_Sisya_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (error) {
+      console.error('Error generating attendance PDF:', error);
+    } finally {
+      setIsPrintingAttendance(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between md:items-end gap-4">
@@ -288,7 +290,11 @@ export default function SisyaList() {
           <p className="text-sm text-muted mt-1">Kelola data pendaftar dan status verifikasi</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handlePrintAttendance} disabled={isPrintingAttendance}>
+            {isPrintingAttendance ? <Loader2 size={16} className="mr-2 animate-spin" /> : <Printer size={16} className="mr-2" />}
+            {isPrintingAttendance ? 'Membuat PDF...' : 'Print Absensi'}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
             <FileDown size={16} className="mr-2" />
             Download Template
