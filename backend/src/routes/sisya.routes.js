@@ -35,6 +35,9 @@ router.get('/files/:filename', requireAuth, requireAdmin, sisyaController.serveF
 // GET /api/sisya/locations/suggestions
 router.get('/locations/suggestions', requireAuth, requireAdmin, sisyaController.getLocations);
 
+// GET /api/sisya/export/absensi (All active Sisya for attendance PDF)
+router.get('/export/absensi', requireAuth, requireAdmin, sisyaController.getAttendanceExport);
+
 // GET /api/sisya/:id
 router.get('/:id', requireAuth, requireAdmin, sisyaController.getById);
 

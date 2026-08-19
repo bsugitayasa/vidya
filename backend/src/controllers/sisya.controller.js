@@ -452,6 +452,27 @@ const serveFile = async (req, res) => {
   }
 };
 
+const getAttendanceExport = async (req, res) => {
+  try {
+    const sisyas = await prisma.sisya.findMany({
+      where: {
+        status: { not: 'TIDAK_AKTIF' }
+      },
+      orderBy: { nomorPendaftaran: 'asc' },
+      select: {
+        id: true,
+        namaLengkap: true,
+        nomorPendaftaran: true
+      }
+    });
+
+    res.json({ success: true, data: sisyas });
+  } catch (error) {
+    console.error('Get Attendance Export Error:', error);
+    res.status(500).json({ success: false, message: 'Gagal mengambil data absensi Sisya' });
+  }
+};
+
 // Public preview for the status page. The stored filename is never accepted
 // from the client; it is resolved from a valid registration number instead.
 const servePublicRegistrationFile = async (req, res) => {
@@ -981,6 +1002,7 @@ const linkPartner = async (req, res) => {
 module.exports = {
   register,
   getAll,
+  getAttendanceExport,
   getById,
   findByNomor,
   serveFile,
