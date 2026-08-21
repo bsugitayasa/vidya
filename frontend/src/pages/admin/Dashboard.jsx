@@ -157,7 +157,11 @@ export default function Dashboard() {
         </Link>
 
         {/* Belum Lunas Card */}
-        <div className="flex flex-col bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">
+        <Link
+          to="/admin/sisya?status=OUTSTANDING"
+          aria-label={`Lihat ${stats.belumLunas || 0} sisya yang belum lunas`}
+          className="flex flex-col bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:border-rose-300 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 transition-all"
+        >
           <div className="flex items-center gap-3">
             <div className="bg-rose-500/10 w-10 h-10 rounded-xl flex items-center justify-center text-rose-600 shrink-0 group-hover:bg-rose-500 group-hover:text-white transition-colors duration-300">
               <AlertCircle size={20} />
@@ -171,7 +175,7 @@ export default function Dashboard() {
               <div className="bg-rose-500 h-full transition-all duration-1000" style={{ width: `${((stats.belumLunas || 0) / (stats.totalSisya || 1)) * 100}%` }}></div>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Estimated Punia Card */}
         <div className="min-w-0 overflow-hidden flex flex-col bg-surface p-5 rounded-xl shadow-sm border border-muted/10 group hover:shadow-md transition-all">

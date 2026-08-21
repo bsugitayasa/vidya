@@ -1,0 +1,8 @@
+const OUTSTANDING_PAYMENT_STATUSES = Object.freeze([
+  'MENUNGGU_PEMBAYARAN',
+  'BELUM_LUNAS'
+]);
+
+module.exports = {
+  OUTSTANDING_PAYMENT_STATUSES
+};
