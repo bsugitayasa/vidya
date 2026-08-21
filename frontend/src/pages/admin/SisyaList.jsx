@@ -369,9 +369,10 @@ export default function SisyaList() {
           }}
         >
           <option value="">Semua Status</option>
+          <option value="OUTSTANDING">Belum Lunas (Semua)</option>
           <option value="MENUNGGU_PEMBAYARAN">Menunggu Pembayaran</option>
           <option value="MENUNGGU_VERIFIKASI">Menunggu Verifikasi</option>
-          <option value="BELUM_LUNAS">Belum Lunas</option>
+          <option value="BELUM_LUNAS">Belum Lunas (Cicilan)</option>
           <option value="LUNAS">Lunas</option>
           <option value="DITOLAK">Ditolak</option>
         </select>

@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { OUTSTANDING_PAYMENT_STATUSES } = require('../constants/paymentStatus');
 const path = require('path');
 const fs = require('fs');
 
@@ -230,7 +231,7 @@ const getAll = async (req, res) => {
       page = 1, 
       limit = 10, 
       programId, 
-      status, 
+      status,
       search, 
       showInactive,
       griya,
@@ -251,7 +252,11 @@ const getAll = async (req, res) => {
       where.status = { not: 'TIDAK_AKTIF' };
     }
 
-    if (status) {
+    if (status === 'OUTSTANDING') {
+      where.statusPembayaran = {
+        in: OUTSTANDING_PAYMENT_STATUSES
+      };
+    } else if (status) {
       where.statusPembayaran = status;
     }
 

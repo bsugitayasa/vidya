@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { getProgramParticipationSummary } = require('../services/pendaftarStats.service');
+const { OUTSTANDING_PAYMENT_STATUSES } = require('../constants/paymentStatus');
 
 const prisma = new PrismaClient();
 
@@ -21,7 +22,7 @@ const getStats = async (req, res) => {
       where: { 
         ...activeFilter,
         statusPembayaran: {
-          in: ['BELUM_LUNAS', 'MENUNGGU_PEMBAYARAN']
+          in: OUTSTANDING_PAYMENT_STATUSES
         }
       }
     });
