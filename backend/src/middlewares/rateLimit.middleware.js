@@ -36,8 +36,22 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Cukup longgar untuk jaringan kelas yang dipakai bersama, tetapi tetap
+// membatasi spam otomatis. Alamat IP tidak pernah disimpan sebagai jawaban.
+const questionnaireLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 120,
+  message: {
+    success: false,
+    message: 'Terlalu banyak pengiriman kuesioner dari jaringan ini. Silakan coba lagi nanti.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   registrationLimiter,
   statusCheckLimiter,
-  authLimiter
+  authLimiter,
+  questionnaireLimiter
 };

@@ -12,6 +12,7 @@ const CekStatus = lazy(() => import('./pages/public/CekStatus'));
 const LengkapiBerkas = lazy(() => import('./pages/public/LengkapiBerkas'));
 const VerifikasiDokumenPublic = lazy(() => import('./pages/public/VerifikasiDokumenPublic'));
 const InputAbsensiPublic = lazy(() => import('./pages/public/InputAbsensiPublic'));
+const KuesionerPublic = lazy(() => import('./pages/public/KuesionerPublic'));
 
 // Admin Pages (Lazy Loaded)
 const Login = lazy(() => import('./pages/admin/Login'));
@@ -36,6 +37,7 @@ const SertifikatConfig = lazy(() => import('./pages/admin/SertifikatConfig'));
 const TarifConfig = lazy(() => import('./pages/admin/TarifConfig'));
 const VerifikasiDokumenAdmin = lazy(() => import('./pages/admin/VerifikasiDokumenAdmin'));
 const ManajemenUser = lazy(() => import('./pages/admin/ManajemenUser'));
+const KuesionerAdmin = lazy(() => import('./pages/admin/KuesionerAdmin'));
 
 const queryClient = new QueryClient();
 
@@ -63,6 +65,8 @@ function App() {
               <Route path="lengkapi-berkas" element={<LengkapiBerkas />} />
               <Route path="verifikasi-dokumen/:token" element={<VerifikasiDokumenPublic />} />
               <Route path="input-absensi" element={<InputAbsensiPublic />} />
+              <Route path="kuesioner" element={<KuesionerPublic />} />
+              <Route path="kuesioner/:token" element={<KuesionerPublic />} />
             </Route>
 
             {/* Admin Auth Route */}
@@ -92,6 +96,7 @@ function App() {
               <Route path="kelulusan/absensi" element={<AbsensiKelulusan />} />
               <Route path="verifikasi-dokumen" element={<VerifikasiDokumenAdmin />} />
               <Route path="manajemen-user" element={<ManajemenUser />} />
+              <Route path="kuesioner" element={<KuesionerAdmin />} />
             </Route>
 
             {/* Standalone Public Verification Scan Page */}

@@ -8,12 +8,13 @@ const validate = (schema) => (req, res, next) => {
     req.body = schema.parse(req.body);
     next();
   } catch (error) {
-    if (error.name === 'ZodError' || error.errors) {
+    const validationIssues = error.issues || error.errors;
+    if (error.name === 'ZodError' || validationIssues) {
       return res.status(400).json({
         success: false,
         error: 'VALIDATION_ERROR',
         message: 'Data tidak valid',
-        details: (error.errors || []).map(err => ({
+        details: (validationIssues || []).map(err => ({
           path: err.path ? err.path.join('.') : '',
           message: err.message
         }))

@@ -122,7 +122,11 @@ export default function Pengaturan() {
             <h3 className="font-bold text-text">Informasi Pembayaran</h3>
           </div>
           
-          {Object.keys(configs).filter(k => k !== 'tanggal_kelulusan' && k !== 'musik_kelulusan' && k !== 'persentase_kelulusan' && k !== 'admin_idle_timeout' && k !== 'absensi_allow_future_date').map(key => (
+          {Object.keys(configs).filter(k => ![
+            'tanggal_kelulusan', 'musik_kelulusan', 'persentase_kelulusan',
+            'admin_idle_timeout', 'absensi_allow_future_date',
+            'kuesioner_ai_enabled', 'kuesioner_ai_model', 'kuesioner_ai_min_responses'
+          ].includes(k)).map(key => (
             <div key={key} className="space-y-1.5">
               <label className="text-xs font-bold text-muted uppercase tracking-wider">{configs[key].label}</label>
               <Input 
@@ -275,6 +279,49 @@ export default function Pengaturan() {
                   ? 'Aktif — sesi masa depan diizinkan'
                   : 'Nonaktif — hanya sesi hari ini dan sebelumnya'}
               </p>
+            </div>
+          )}
+        </div>
+
+        {/* Analisis AI Kuesioner */}
+        <div className="bg-surface p-6 rounded-xl shadow-sm border border-muted/20 space-y-4">
+          <div className="flex items-center gap-3 border-b border-muted/10 pb-4">
+            <div className="p-2 bg-teal-50 text-teal-600 rounded-lg">AI</div>
+            <div>
+              <h3 className="font-bold text-text">Analisis AI Kuesioner</h3>
+              <p className="text-[10px] text-muted">Hanya SUPER_ADMIN yang dapat mengubah konfigurasi ini.</p>
+            </div>
+          </div>
+
+          {configs.kuesioner_ai_enabled && (
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <label className="text-xs font-bold text-muted uppercase tracking-wider">Aktifkan Analisis AI</label>
+                <p className="text-[10px] text-muted mt-1">Backend tetap memerlukan OPENAI_API_KEY.</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={configs.kuesioner_ai_enabled.nilai === 'true'}
+                onClick={() => handleConfigChange('kuesioner_ai_enabled', configs.kuesioner_ai_enabled.nilai === 'true' ? 'false' : 'true')}
+                className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${configs.kuesioner_ai_enabled.nilai === 'true' ? 'bg-primary' : 'bg-muted/30'}`}
+              >
+                <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${configs.kuesioner_ai_enabled.nilai === 'true' ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          )}
+
+          {configs.kuesioner_ai_model && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Model AI</label>
+              <Input value={configs.kuesioner_ai_model.nilai} onChange={(e) => handleConfigChange('kuesioner_ai_model', e.target.value)} />
+            </div>
+          )}
+          {configs.kuesioner_ai_min_responses && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider">Minimum Respons</label>
+              <Input type="number" min="1" max="100" value={configs.kuesioner_ai_min_responses.nilai} onChange={(e) => handleConfigChange('kuesioner_ai_min_responses', e.target.value)} />
+              <p className="text-[10px] text-muted">Analisis tidak dijalankan bila respons masih di bawah nilai ini.</p>
             </div>
           )}
         </div>

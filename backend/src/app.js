@@ -43,6 +43,7 @@ app.use('/api/sisya/register', registrationLimiter);
 app.use('/api/sisya/cek-status', statusCheckLimiter);
 
 app.use('/api/open/absensi', require('./routes/openAbsensi.routes'));
+app.use('/api/open/kuesioner', require('./routes/openKuesioner.routes'));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/sisya', sisyaRoutes);
@@ -57,6 +58,7 @@ app.use('/api/kelulusan', kelulusanRoutes);
 app.use('/api/qr-document', qrDocumentRoutes);
 app.use('/api/template-penandatangan', templatePenandatanganRoutes);
 app.use('/api/user-management', userManagementRoutes);
+app.use('/api/kuesioner', require('./routes/kuesioner.routes'));
 
 const multer = require('multer');
 

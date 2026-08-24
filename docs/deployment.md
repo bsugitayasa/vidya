@@ -42,7 +42,12 @@ DB_NAME=vidya_db
 
 # Backend
 JWT_SECRET=buat_secret_random_panjang_sekali
+KUESIONER_TOKEN_SECRET=buat_secret_kuesioner_random_panjang_sekali
 VITE_API_URL=https://domain-anda.com/api
+
+# Analisis AI Kuesioner (opsional)
+OPENAI_API_KEY=
+# OPENAI_MODEL=gpt-5-nano
 
 # Telegram (Optional but Recommended)
 TELEGRAM_BOT_TOKEN=8798540841:AAHCWvA7M6S0GEDghEPX2M9xTlFuXafX6d8
@@ -50,6 +55,11 @@ TELEGRAM_CHANNEL_ID=@pdpnVidyaAdmin
 TELEGRAM_WEBHOOK_SECRET=vidya_secret_token_2026
 TELEGRAM_ALLOWED_CHAT_IDS=195257231
 ```
+
+`KUESIONER_TOKEN_SECRET` harus dipertahankan nilainya agar link/QR sesi yang
+sudah dibagikan tetap valid. Jangan memasukkan `OPENAI_API_KEY` melalui halaman
+admin; simpan hanya pada `.env` server. Analisis AI masih harus diaktifkan oleh
+SUPER_ADMIN melalui menu **Pengaturan**.
 
 ---
 
