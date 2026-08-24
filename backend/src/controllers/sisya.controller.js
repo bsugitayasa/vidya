@@ -467,7 +467,19 @@ const getAttendanceExport = async (req, res) => {
       select: {
         id: true,
         namaLengkap: true,
-        nomorPendaftaran: true
+        nomorPendaftaran: true,
+        programSisyas: {
+          select: {
+            programAjahan: {
+              select: {
+                id: true,
+                kode: true,
+                nama: true,
+                urutan: true
+              }
+            }
+          }
+        }
       }
     });
 

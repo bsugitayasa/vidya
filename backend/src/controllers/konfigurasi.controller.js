@@ -10,6 +10,9 @@ const DEFAULT_CONFIGS = [
   { kunci: 'persentase_kelulusan', nilai: '50', label: 'Persentase Minimum Kelulusan (%)' },
   { kunci: 'admin_idle_timeout', nilai: '5', label: 'Auto-logout timeout (menit)' },
   { kunci: 'absensi_allow_future_date', nilai: 'false', label: 'Izinkan Absensi Sesi Masa Depan' },
+  { kunci: 'kuesioner_ai_enabled', nilai: 'false', label: 'Aktifkan Analisis AI Kuesioner' },
+  { kunci: 'kuesioner_ai_model', nilai: 'gpt-5-nano', label: 'Model AI Kuesioner' },
+  { kunci: 'kuesioner_ai_min_responses', nilai: '3', label: 'Minimum Respons untuk Analisis AI' },
 ];
 
 const getAll = async (req, res) => {

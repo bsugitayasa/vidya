@@ -11,7 +11,8 @@ import {
   ClipboardList,
   GraduationCap,
   QrCode,
-  UserCog
+  UserCog,
+  MessageSquareText
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import useIdleTimeout from '../hooks/useIdleTimeout';
@@ -32,6 +33,7 @@ export default function AdminLayout() {
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
     { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400' },
     { path: '/admin/absensi', icon: ClipboardList, label: 'Absensi', color: 'text-violet-400' },
+    { path: '/admin/kuesioner', icon: MessageSquareText, label: 'Kuesioner', color: 'text-teal-400' },
     { path: '/admin/verifikasi-dokumen', icon: QrCode, label: 'Verifikasi Dokumen', color: 'text-cyan-400' },
     { path: '/admin/manajemen-user', icon: UserCog, label: 'Manajemen User', color: 'text-pink-400', superAdminOnly: true },
     {

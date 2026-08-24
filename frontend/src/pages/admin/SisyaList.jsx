@@ -274,7 +274,7 @@ export default function SisyaList() {
       const attendanceSisyas = response.data.data || [];
       const pdf = generateAttendancePdf(attendanceSisyas, logoBase64);
 
-      pdf.save(`Daftar_Absensi_Sisya_${new Date().toISOString().slice(0, 10)}.pdf`);
+      pdf.save(`Daftar_Absensi_Sisya_Per_Program_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (error) {
       console.error('Error generating attendance PDF:', error);
     } finally {

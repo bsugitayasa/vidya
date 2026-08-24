@@ -113,18 +113,43 @@ model MataKuliah {
 }
 
 model SesiAbsensi {
-  id              Int            @id @default(autoincrement())
-  mataKuliahId    Int
-  tanggal         DateTime
-  pertemuan       Int
-  topik           String?
-  narawakya       String?
-  dokSisyaPath    String?
-  dokNarawakPath  String?
-  dokPanitiaPath  String?
-  createdAt       DateTime       @default(now())
-  absensiSisyas   AbsensiSisya[]
-  mataKuliah      MataKuliah     @relation(fields: [mataKuliahId], references: [id])
+  id                Int                @id @default(autoincrement())
+  mataKuliahId      Int
+  tanggal           DateTime
+  pertemuan         Int
+  topik             String?
+  narawakya         String?
+  dokSisyaPath      String?
+  dokNarawakPath    String?
+  dokPanitiaPath    String?
+  createdAt         DateTime           @default(now())
+  absensiSisyas     AbsensiSisya[]
+  kuesionerJawabans KuesionerJawaban[]
+  analisisKuesioner AnalisisKuesioner?
+  mataKuliah        MataKuliah         @relation(fields: [mataKuliahId], references: [id])
+}
+
+model KuesionerJawaban {
+  id            Int         @id @default(autoincrement())
+  sesiAbsensiId Int
+  pesanKesan    String
+  createdAt     DateTime    @default(now())
+  sesiAbsensi   SesiAbsensi @relation(fields: [sesiAbsensiId], references: [id], onDelete: Cascade)
+
+  @@index([sesiAbsensiId, createdAt])
+}
+
+model AnalisisKuesioner {
+  id            Int         @id @default(autoincrement())
+  sesiAbsensiId Int         @unique
+  jumlahRespons Int
+  sourceHash    String
+  hasilAnalisis Json
+  model         String
+  promptVersion String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  sesiAbsensi   SesiAbsensi @relation(fields: [sesiAbsensiId], references: [id], onDelete: Cascade)
 }
 
 model AbsensiSisya {

@@ -45,6 +45,43 @@ Semua endpoint admin membutuhkan header `Authorization: Bearer <TOKEN>`.
 
 ---
 
+## 💬 Kuesioner Anonim
+
+Endpoint publik tidak memerlukan login dan tidak menerima nama atau nomor
+pendaftaran sisya.
+
+### Sesi Hari Ini (Public)
+- **GET** `/api/open/kuesioner/sesi-hari-ini`
+- Mengembalikan sesi aktif pada tanggal hari ini beserta token link sesi.
+
+### Detail Link Sesi (Public)
+- **GET** `/api/open/kuesioner/sesi/:token`
+- Link hanya valid pada tanggal pertemuan.
+
+### Kirim Jawaban (Public)
+- **POST** `/api/open/kuesioner/jawaban`
+- **Body**: `{ token, pesanKesan }`
+- `pesanKesan` minimal 10 dan maksimal 2.000 karakter.
+
+### Daftar Pertemuan (Admin)
+- **GET** `/api/kuesioner?date=YYYY-MM-DD&programId=1`
+
+### Detail Respons (Admin)
+- **GET** `/api/kuesioner/sesi/:id`
+
+### Laporan Per Program Ajahan (Admin)
+- **GET** `/api/kuesioner/laporan/program?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD&programId=1`
+- Merangkum jumlah pertemuan, akumulasi kehadiran, jumlah respons, rasio
+  respons, serta seluruh jawaban anonim yang dikelompokkan per program dan
+  pertemuan.
+
+### Analisis AI (Admin)
+- **POST** `/api/kuesioner/sesi/:id/analisis-ai`
+- Memerlukan `OPENAI_API_KEY`, konfigurasi AI aktif oleh SUPER_ADMIN, dan
+  jumlah respons minimum sesuai pengaturan.
+
+---
+
 ## 🤖 Telegram Bot (Admin Only)
 - **POST** `/api/telegram/hook` (Webhook)
 - **Commands**: `/summary`, `/menunggu`, `/bantuan`
