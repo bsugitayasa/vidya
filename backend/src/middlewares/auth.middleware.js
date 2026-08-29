@@ -36,8 +36,24 @@ const requireSuperAdmin = (req, res, next) => {
   }
 };
 
+const requireFinanceAccess = (req, res, next) => {
+  if (req.user && ['ADMIN', 'BENDAHARA', 'SUPER_ADMIN'].includes(req.user.role)) {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'Akses ditolak. Anda tidak memiliki akses ke modul keuangan.' });
+};
+
+const requireTreasurer = (req, res, next) => {
+  if (req.user && ['BENDAHARA', 'SUPER_ADMIN'].includes(req.user.role)) {
+    return next();
+  }
+  return res.status(403).json({ success: false, message: 'Aksi ini hanya dapat dilakukan Bendahara atau Super Admin.' });
+};
+
 module.exports = {
   requireAuth,
   requireAdmin,
-  requireSuperAdmin
+  requireSuperAdmin,
+  requireFinanceAccess,
+  requireTreasurer
 };

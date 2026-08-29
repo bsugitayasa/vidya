@@ -99,6 +99,8 @@ export default function SisyaDetail() {
   });
 
   const [showSoftDeleteConfirm, setShowSoftDeleteConfirm] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState(null);
+  const [isDeletingDocument, setIsDeletingDocument] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const tanggalLahirVal = watch('tanggalLahir');
@@ -309,6 +311,22 @@ export default function SisyaDetail() {
       toast.error(err.response?.data?.message || 'Gagal menonaktifkan data');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteRegistrationDocument = async () => {
+    if (!isSuperAdmin || isDeletingDocument || !documentToDelete) return;
+
+    setIsDeletingDocument(true);
+    try {
+      const res = await api.delete(`/sisya/${id}/${documentToDelete.endpoint}`);
+      toast.success(res.data.message || `${documentToDelete.label} berhasil dihapus`);
+      setDocumentToDelete(null);
+      await fetchSisyaDetail();
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Gagal menghapus ${documentToDelete.label.toLowerCase()}`);
+    } finally {
+      setIsDeletingDocument(false);
     }
   };
 
@@ -1063,7 +1081,22 @@ export default function SisyaDetail() {
             <h4 className="font-bold text-lg border-b border-muted/20 pb-3 mb-4 text-primary">Dokumen Identitas</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <span className="block text-xs font-bold text-muted uppercase tracking-wider">KTP / KK</span>
+                <div className="flex min-h-8 items-center justify-between gap-3">
+                  <span className="block text-xs font-bold text-muted uppercase tracking-wider">KTP / KK</span>
+                  {isSuperAdmin && sisya.fileIdentitasPath && (
+                    <button
+                      type="button"
+                      onClick={() => setDocumentToDelete({
+                        endpoint: 'dokumen-identitas',
+                        label: 'Dokumen KTP/KK/Ijazah'
+                      })}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100"
+                      title="Hapus dokumen identitas"
+                    >
+                      <Trash2 size={13} /> Hapus
+                    </button>
+                  )}
+                </div>
                 {sisya.fileIdentitasPath && ktpUrl ? (
                   <DocumentPreview
                     url={ktpUrl}
@@ -1082,7 +1115,22 @@ export default function SisyaDetail() {
               </div>
 
               <div className="space-y-2">
-                <span className="block text-xs font-bold text-muted uppercase tracking-wider">Surat Rekomendasi</span>
+                <div className="flex min-h-8 items-center justify-between gap-3">
+                  <span className="block text-xs font-bold text-muted uppercase tracking-wider">Surat Rekomendasi</span>
+                  {isSuperAdmin && sisya.fileRekomendasiPath && (
+                    <button
+                      type="button"
+                      onClick={() => setDocumentToDelete({
+                        endpoint: 'surat-rekomendasi',
+                        label: 'Surat Rekomendasi'
+                      })}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100"
+                      title="Hapus surat rekomendasi"
+                    >
+                      <Trash2 size={13} /> Hapus
+                    </button>
+                  )}
+                </div>
                 {sisya.fileRekomendasiPath && rekomendasiUrl ? (
                   <DocumentPreview
                     url={rekomendasiUrl}
@@ -1456,6 +1504,16 @@ export default function SisyaDetail() {
         confirmLabel={isUpdating ? "Memproses..." : "Nonaktifkan"}
         variant="danger"
         isLoading={isUpdating}
+      />
+      <ConfirmDialog
+        open={Boolean(documentToDelete)}
+        onCancel={() => setDocumentToDelete(null)}
+        title={`Hapus ${documentToDelete?.label || 'Dokumen'}?`}
+        message={`${documentToDelete?.label || 'Dokumen'} milik ${sisya.namaLengkap} akan dihapus permanen. Sisya perlu mengunggah ulang dokumen melalui halaman lengkapi berkas.`}
+        onConfirm={handleDeleteRegistrationDocument}
+        confirmLabel="Ya, Hapus"
+        variant="danger"
+        isLoading={isDeletingDocument}
       />
 
       {/* Edit Program Ajahan Modal (Super Admin) */}

@@ -8,12 +8,23 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  nama      String
-  role      Role     @default(STAFF)
-  createdAt DateTime @default(now())
+  id                      Int                @id @default(autoincrement())
+  email                   String             @unique
+  password                String
+  nama                    String
+  role                    Role               @default(STAFF)
+  createdAt               DateTime           @default(now())
+  rabDibuat               RencanaAnggaran[]  @relation("RabDibuat")
+  rabDisetujui            RencanaAnggaran[]  @relation("RabDisetujui")
+  rabDitutup              RencanaAnggaran[]  @relation("RabDitutup")
+  pencairanDibuat         PencairanDana[]    @relation("PencairanDibuat")
+  pencairanDibatalkan     PencairanDana[]    @relation("PencairanDibatalkan")
+  pengeluaranDibuat       PengeluaranRab[]   @relation("PengeluaranDibuat")
+  pengeluaranDiverifikasi PengeluaranRab[]   @relation("PengeluaranDiverifikasi")
+  pengeluaranDibatalkan   PengeluaranRab[]   @relation("PengeluaranDibatalkan")
+  pengembalianDibuat      PengembalianDana[] @relation("PengembalianDibuat")
+  pengembalianDibatalkan  PengembalianDana[] @relation("PengembalianDibatalkan")
+  auditKeuangans          AuditKeuangan[]
 }
 
 model KonfigurasiAplikasi {
@@ -25,19 +36,20 @@ model KonfigurasiAplikasi {
 }
 
 model ProgramAjahan {
-  id                 Int            @id @default(autoincrement())
-  kode               String         @unique
+  id                 Int               @id @default(autoincrement())
+  kode               String            @unique
   nama               String
   deskripsi          String?
   puniaNormal        Int
   puniaPasangan      Int?
-  isPasanganTersedia Boolean        @default(false)
-  isAktif            Boolean        @default(true)
-  urutan             Int            @default(0)
+  isPasanganTersedia Boolean           @default(false)
+  isAktif            Boolean           @default(true)
+  urutan             Int               @default(0)
   kodeSertifikat     String?
   pinKoordinator     String?
   mataKuliahs        MataKuliah[]
   sisyaPrograms      SisyaProgram[]
+  rencanaAnggarans   RencanaAnggaran[]
 }
 
 model SisyaProgram {
@@ -55,8 +67,8 @@ model SisyaProgram {
 }
 
 model Sisya {
-  id                  Int              @id @default(autoincrement())
-  nomorPendaftaran    String           @unique
+  id                  Int               @id @default(autoincrement())
+  nomorPendaftaran    String            @unique
   namaLengkap         String
   tempatLahir         String
   tanggalLahir        DateTime
@@ -68,24 +80,24 @@ model Sisya {
   namaDesa            String
   namaKabupaten       String?
   totalPunia          Int
-  totalTerbayar       Int              @default(0)
-  statusPembayaran    StatusPembayaran @default(MENUNGGU_PEMBAYARAN)
+  totalTerbayar       Int               @default(0)
+  statusPembayaran    StatusPembayaran  @default(MENUNGGU_PEMBAYARAN)
   fileIdentitasPath   String?
   fileFotoPath        String?
   fileRekomendasiPath String?
-  status              StatusSisya      @default(PENDING)
+  status              StatusSisya       @default(PENDING)
   tanggalDiksan       DateTime?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
   absensiSisyas       AbsensiSisya[]
   pembayarans         Pembayaran[]
   programSisyas       SisyaProgram[]
   statusKelulusan     OverrideKelulusan @default(AUTO)
   prosesiKelulusan    ProsesiKelulusan?
-  
-  partnerId           Int?             @unique
-  partner             Sisya?           @relation("PartnerRelation", fields: [partnerId], references: [id])
-  partnerOf           Sisya?           @relation("PartnerRelation")
+
+  partnerId Int?   @unique
+  partner   Sisya? @relation("PartnerRelation", fields: [partnerId], references: [id])
+  partnerOf Sisya? @relation("PartnerRelation")
 }
 
 model Pembayaran {
@@ -165,10 +177,236 @@ model AbsensiSisya {
   @@unique([sesiAbsensiId, sisyaId])
 }
 
+model KategoriKeuangan {
+  id            Int              @id @default(autoincrement())
+  kode          String           @unique
+  nama          String
+  deskripsi     String?
+  isAktif       Boolean          @default(true)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  itemAnggarans ItemAnggaran[]
+  pengeluarans  PengeluaranRab[]
+}
+
+model AkunKas {
+  id            Int                @id @default(autoincrement())
+  kode          String             @unique
+  nama          String
+  tipe          TipeAkunKas
+  namaBank      String?
+  nomorRekening String?
+  isAktif       Boolean            @default(true)
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  pencairans    PencairanDana[]
+  pengeluarans  PengeluaranRab[]
+  pengembalians PengembalianDana[]
+}
+
+model RencanaAnggaran {
+  id              Int                @id @default(autoincrement())
+  nomorRab        String             @unique
+  namaKegiatan    String
+  programAjahanId Int?
+  penanggungJawab String
+  tujuan          String?
+  tanggalMulai    DateTime
+  tanggalSelesai  DateTime
+  totalDiajukan   Decimal            @db.Decimal(18, 0)
+  totalDisetujui  Decimal            @default(0) @db.Decimal(18, 0)
+  status          StatusRab          @default(DRAFT)
+  dokumenPath     String?
+  catatan         String?
+  revision        Int                @default(1)
+  createdById     Int
+  submittedAt     DateTime?
+  approvedById    Int?
+  approvedAt      DateTime?
+  rejectedReason  String?
+  closedById      Int?
+  closedAt        DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  programAjahan   ProgramAjahan?     @relation(fields: [programAjahanId], references: [id], onDelete: Restrict)
+  createdBy       User               @relation("RabDibuat", fields: [createdById], references: [id], onDelete: Restrict)
+  approvedBy      User?              @relation("RabDisetujui", fields: [approvedById], references: [id], onDelete: Restrict)
+  closedBy        User?              @relation("RabDitutup", fields: [closedById], references: [id], onDelete: Restrict)
+  items           ItemAnggaran[]
+  pencairans      PencairanDana[]
+  pengeluarans    PengeluaranRab[]
+  pengembalians   PengembalianDana[]
+
+  @@index([status, createdAt])
+  @@index([programAjahanId])
+}
+
+model ItemAnggaran {
+  id              Int               @id @default(autoincrement())
+  rabId           Int
+  kategoriId      Int?
+  uraian          String
+  volume          Decimal           @db.Decimal(12, 2)
+  satuan          String
+  hargaSatuan     Decimal           @db.Decimal(18, 0)
+  jumlahDiajukan  Decimal           @db.Decimal(18, 0)
+  jumlahDisetujui Decimal           @default(0) @db.Decimal(18, 0)
+  urutan          Int               @default(0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  rab             RencanaAnggaran   @relation(fields: [rabId], references: [id], onDelete: Cascade)
+  kategori        KategoriKeuangan? @relation(fields: [kategoriId], references: [id], onDelete: Restrict)
+  pengeluarans    PengeluaranRab[]
+
+  @@index([rabId, urutan])
+}
+
+model PencairanDana {
+  id             Int                     @id @default(autoincrement())
+  rabId          Int
+  akunKasId      Int
+  tanggal        DateTime
+  nominal        Decimal                 @db.Decimal(18, 0)
+  sumberDana     String
+  nomorReferensi String?
+  buktiPath      String?
+  keterangan     String?
+  status         StatusTransaksiKeuangan @default(AKTIF)
+  createdById    Int
+  cancelledById  Int?
+  cancelledAt    DateTime?
+  cancelReason   String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  rab            RencanaAnggaran         @relation(fields: [rabId], references: [id], onDelete: Restrict)
+  akunKas        AkunKas                 @relation(fields: [akunKasId], references: [id], onDelete: Restrict)
+  createdBy      User                    @relation("PencairanDibuat", fields: [createdById], references: [id], onDelete: Restrict)
+  cancelledBy    User?                   @relation("PencairanDibatalkan", fields: [cancelledById], references: [id], onDelete: Restrict)
+
+  @@index([rabId, status])
+}
+
+model PengeluaranRab {
+  id              Int                      @id @default(autoincrement())
+  rabId           Int
+  itemAnggaranId  Int?
+  kategoriId      Int
+  akunKasId       Int
+  tanggal         DateTime
+  uraian          String
+  penerima        String?
+  nominal         Decimal                  @db.Decimal(18, 0)
+  metode          MetodePembayaranKeuangan
+  nomorBukti      String?
+  buktiPath       String?
+  status          StatusPengeluaran        @default(MENUNGGU_VERIFIKASI)
+  keterangan      String?
+  allowOverBudget Boolean                  @default(false)
+  overrideReason  String?
+  createdById     Int
+  verifiedById    Int?
+  verifiedAt      DateTime?
+  rejectedReason  String?
+  cancelledById   Int?
+  cancelledAt     DateTime?
+  cancelReason    String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  rab             RencanaAnggaran          @relation(fields: [rabId], references: [id], onDelete: Restrict)
+  itemAnggaran    ItemAnggaran?            @relation(fields: [itemAnggaranId], references: [id], onDelete: Restrict)
+  kategori        KategoriKeuangan         @relation(fields: [kategoriId], references: [id], onDelete: Restrict)
+  akunKas         AkunKas                  @relation(fields: [akunKasId], references: [id], onDelete: Restrict)
+  createdBy       User                     @relation("PengeluaranDibuat", fields: [createdById], references: [id], onDelete: Restrict)
+  verifiedBy      User?                    @relation("PengeluaranDiverifikasi", fields: [verifiedById], references: [id], onDelete: Restrict)
+  cancelledBy     User?                    @relation("PengeluaranDibatalkan", fields: [cancelledById], references: [id], onDelete: Restrict)
+
+  @@index([rabId, status])
+  @@index([kategoriId, tanggal])
+}
+
+model PengembalianDana {
+  id             Int                     @id @default(autoincrement())
+  rabId          Int
+  akunKasId      Int
+  tanggal        DateTime
+  nominal        Decimal                 @db.Decimal(18, 0)
+  nomorReferensi String?
+  buktiPath      String?
+  keterangan     String?
+  status         StatusTransaksiKeuangan @default(AKTIF)
+  createdById    Int
+  cancelledById  Int?
+  cancelledAt    DateTime?
+  cancelReason   String?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  rab            RencanaAnggaran         @relation(fields: [rabId], references: [id], onDelete: Restrict)
+  akunKas        AkunKas                 @relation(fields: [akunKasId], references: [id], onDelete: Restrict)
+  createdBy      User                    @relation("PengembalianDibuat", fields: [createdById], references: [id], onDelete: Restrict)
+  cancelledBy    User?                   @relation("PengembalianDibatalkan", fields: [cancelledById], references: [id], onDelete: Restrict)
+
+  @@index([rabId, status])
+}
+
+model AuditKeuangan {
+  id         Int      @id @default(autoincrement())
+  entityType String
+  entityId   Int
+  action     String
+  oldValue   Json?
+  newValue   Json?
+  reason     String?
+  userId     Int
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId, createdAt])
+  @@index([userId, createdAt])
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN
+  BENDAHARA
   STAFF
+}
+
+enum StatusRab {
+  DRAFT
+  DIAJUKAN
+  DISETUJUI
+  DITOLAK
+  DICAIRKAN_SEBAGIAN
+  DICAIRKAN_PENUH
+  REALISASI
+  MENUNGGU_VERIFIKASI_LPJ
+  PERLU_REVISI
+  SELESAI
+  DIBATALKAN
+}
+
+enum TipeAkunKas {
+  KAS
+  BANK
+}
+
+enum StatusTransaksiKeuangan {
+  AKTIF
+  DIBATALKAN
+}
+
+enum StatusPengeluaran {
+  MENUNGGU_VERIFIKASI
+  VERIFIKASI
+  DITOLAK
+  DIBATALKAN
+}
+
+enum MetodePembayaranKeuangan {
+  TUNAI
+  TRANSFER
+  QRIS
+  LAINNYA
 }
 
 enum StatusVerifikasi {
@@ -211,12 +449,12 @@ enum OverrideKelulusan {
 }
 
 model ProsesiKelulusan {
-  id              Int      @id @default(autoincrement())
-  sisyaId         Int      @unique
-  waktuHadir      DateTime @default(now())
-  createdAt       DateTime @default(now())
-  
-  sisya           Sisya    @relation(fields: [sisyaId], references: [id])
+  id         Int      @id @default(autoincrement())
+  sisyaId    Int      @unique
+  waktuHadir DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  sisya Sisya @relation(fields: [sisyaId], references: [id])
 }
 
 model QrDocument {
@@ -237,12 +475,12 @@ model QrDocument {
 }
 
 model TemplatePenandatangan {
-  id             Int      @id @default(autoincrement())
-  namaTemplate   String   @unique
-  namaPejabat    String
-  jabatan        String
-  namaPejabat2   String?
-  jabatan2       String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  namaTemplate String   @unique
+  namaPejabat  String
+  jabatan      String
+  namaPejabat2 String?
+  jabatan2     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

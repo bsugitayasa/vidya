@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import PublicLayout from './layouts/PublicLayout';
 import AdminLayout from './layouts/AdminLayout';
+import useAuthStore from './store/authStore';
 
 // Public Pages (Lazy Loaded)
 const Registrasi = lazy(() => import('./pages/public/Registrasi'));
@@ -38,6 +39,10 @@ const TarifConfig = lazy(() => import('./pages/admin/TarifConfig'));
 const VerifikasiDokumenAdmin = lazy(() => import('./pages/admin/VerifikasiDokumenAdmin'));
 const ManajemenUser = lazy(() => import('./pages/admin/ManajemenUser'));
 const KuesionerAdmin = lazy(() => import('./pages/admin/KuesionerAdmin'));
+const KeuanganDashboard = lazy(() => import('./pages/admin/keuangan/KeuanganDashboard'));
+const RabList = lazy(() => import('./pages/admin/keuangan/RabList'));
+const RabDetail = lazy(() => import('./pages/admin/keuangan/RabDetail'));
+const MasterKeuangan = lazy(() => import('./pages/admin/keuangan/MasterKeuangan'));
 
 const queryClient = new QueryClient();
 
@@ -48,6 +53,11 @@ const LoadingFallback = () => (
     <p className="mt-4 text-xs font-bold text-slate-400 uppercase tracking-widest animate-pulse">Memuat Halaman...</p>
   </div>
 );
+
+const AdminIndexRedirect = () => {
+  const user = useAuthStore((state) => state.user);
+  return <Navigate to={user?.role === 'BENDAHARA' ? '/admin/keuangan' : '/admin/dashboard'} replace />;
+};
 
 function App() {
   return (
@@ -74,7 +84,7 @@ function App() {
 
             {/* Admin Protected Routes */}
             <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route index element={<AdminIndexRedirect />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="sisya" element={<SisyaList />} />
               <Route path="sisya/:id" element={<SisyaDetail />} />
@@ -97,6 +107,10 @@ function App() {
               <Route path="verifikasi-dokumen" element={<VerifikasiDokumenAdmin />} />
               <Route path="manajemen-user" element={<ManajemenUser />} />
               <Route path="kuesioner" element={<KuesionerAdmin />} />
+              <Route path="keuangan" element={<KeuanganDashboard />} />
+              <Route path="keuangan/rab" element={<RabList />} />
+              <Route path="keuangan/rab/:id" element={<RabDetail />} />
+              <Route path="keuangan/master" element={<MasterKeuangan />} />
             </Route>
 
             {/* Standalone Public Verification Scan Page */}

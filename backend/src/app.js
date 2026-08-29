@@ -59,6 +59,7 @@ app.use('/api/qr-document', qrDocumentRoutes);
 app.use('/api/template-penandatangan', templatePenandatanganRoutes);
 app.use('/api/user-management', userManagementRoutes);
 app.use('/api/kuesioner', require('./routes/kuesioner.routes'));
+app.use('/api/keuangan', require('./routes/keuangan.routes'));
 
 const multer = require('multer');
 

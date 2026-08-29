@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon --watch . --watch ../shared server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/**/*.test.js",
+    "test:finance-db": "node tests/keuangan.db-smoke.js && node tests/keuangan.http-smoke.js",
+    "test:sisya-documents": "node tests/sisya.identity-document.http-smoke.js"
   },
   "keywords": [],
   "author": "",

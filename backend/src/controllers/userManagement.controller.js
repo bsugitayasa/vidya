@@ -51,7 +51,7 @@ const getUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { email, password, nama } = req.body;
+    const { email, password, nama, role = 'ADMIN' } = req.body;
 
     if (!email || !password || !nama) {
       return res.status(400).json({ success: false, message: 'Email, password, dan nama wajib diisi' });
@@ -69,12 +69,16 @@ const createUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    if (!['ADMIN', 'BENDAHARA'].includes(role)) {
+      return res.status(400).json({ success: false, message: 'Role user tidak valid' });
+    }
+
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
         nama,
-        role: 'ADMIN', // Only ADMIN can be created from UI
+        role,
       },
       select: {
         id: true,
@@ -87,7 +91,7 @@ const createUser = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `User ADMIN "${nama}" berhasil didaftarkan`,
+      message: `User ${role === 'BENDAHARA' ? 'Bendahara' : 'Admin'} "${nama}" berhasil didaftarkan`,
       data: user
     });
   } catch (error) {
@@ -114,6 +118,14 @@ const deleteUser = async (req, res) => {
     // Prevent deleting SUPER_ADMIN
     if (user.role === 'SUPER_ADMIN') {
       return res.status(403).json({ success: false, message: 'Tidak dapat menghapus akun Super Admin' });
+    }
+
+    const financeReferences = await prisma.auditKeuangan.count({ where: { userId } });
+    if (financeReferences > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'User memiliki riwayat transaksi keuangan dan tidak dapat dihapus demi menjaga jejak audit.'
+      });
     }
 
     await prisma.user.delete({ where: { id: userId } });
