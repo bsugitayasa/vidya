@@ -72,4 +72,10 @@ router.post('/:id/link-partner', requireAuth, requireAdmin, sisyaController.link
 // DELETE /api/sisya/:id/soft-delete (Soft delete by changing status to TIDAK_AKTIF)
 router.delete('/:id/soft-delete', requireAuth, requireSuperAdmin, sisyaController.softDelete);
 
+// DELETE /api/sisya/:id/dokumen-identitas (SUPER_ADMIN only)
+router.delete('/:id/dokumen-identitas', requireAuth, requireSuperAdmin, sisyaController.deleteIdentityDocument);
+
+// DELETE /api/sisya/:id/surat-rekomendasi (SUPER_ADMIN only)
+router.delete('/:id/surat-rekomendasi', requireAuth, requireSuperAdmin, sisyaController.deleteRecommendationDocument);
+
 module.exports = router;

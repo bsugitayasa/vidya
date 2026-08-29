@@ -12,7 +12,8 @@ import {
   GraduationCap,
   QrCode,
   UserCog,
-  MessageSquareText
+  MessageSquareText,
+  WalletCards
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import useIdleTimeout from '../hooks/useIdleTimeout';
@@ -30,17 +31,18 @@ export default function AdminLayout() {
   const [expandedMenus, setExpandedMenus] = useState([]); // Default collapse all
 
   const menuItems = [
-    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
-    { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400' },
-    { path: '/admin/absensi', icon: ClipboardList, label: 'Absensi', color: 'text-violet-400' },
-    { path: '/admin/kuesioner', icon: MessageSquareText, label: 'Kuesioner', color: 'text-teal-400' },
-    { path: '/admin/verifikasi-dokumen', icon: QrCode, label: 'Verifikasi Dokumen', color: 'text-cyan-400' },
+    { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
+    { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
+    { path: '/admin/absensi', icon: ClipboardList, label: 'Absensi', color: 'text-violet-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
+    { path: '/admin/kuesioner', icon: MessageSquareText, label: 'Kuesioner', color: 'text-teal-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
+    { path: '/admin/verifikasi-dokumen', icon: QrCode, label: 'Verifikasi Dokumen', color: 'text-cyan-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { path: '/admin/manajemen-user', icon: UserCog, label: 'Manajemen User', color: 'text-pink-400', superAdminOnly: true },
     {
       path: '/admin/kelulusan',
       icon: GraduationCap,
       label: 'Kelulusan',
       color: 'text-yellow-400',
+      roles: ['ADMIN', 'SUPER_ADMIN'],
       subItems: [
         { path: '/admin/kelulusan/syarat', label: 'Syarat Kelulusan' },
         { path: '/admin/kelulusan/absensi', label: 'Absensi Hari H' },
@@ -52,6 +54,7 @@ export default function AdminLayout() {
       icon: FileText,
       label: 'Laporan',
       color: 'text-emerald-400',
+      roles: ['ADMIN', 'SUPER_ADMIN'],
       subItems: [
         { path: '/admin/laporan/pendaftaran', label: 'Pendaftaran' },
         { path: '/admin/laporan/punia-range', label: 'Detail Punia' },
@@ -61,10 +64,23 @@ export default function AdminLayout() {
       ]
     },
     {
+      path: '/admin/keuangan',
+      icon: WalletCards,
+      label: 'Keuangan',
+      color: 'text-emerald-400',
+      roles: ['ADMIN', 'BENDAHARA', 'SUPER_ADMIN'],
+      subItems: [
+        { path: '/admin/keuangan', label: 'Dashboard Keuangan' },
+        { path: '/admin/keuangan/rab', label: 'RAB & LPJ' },
+        { path: '/admin/keuangan/master', label: 'Master Keuangan' },
+      ]
+    },
+    {
       path: '/admin/pengaturan',
       icon: Settings,
       label: 'Pengaturan',
       color: 'text-rose-400',
+      roles: ['ADMIN', 'SUPER_ADMIN'],
       subItems: [
         { path: '/admin/pengaturan', label: 'Umum & Rekening', restricted: true },
         { path: '/admin/pengaturan/tarif', label: 'Tarif Program' },
@@ -77,6 +93,7 @@ export default function AdminLayout() {
   const filteredMenuItems = menuItems
     .filter(item => {
       if (item.superAdminOnly && user?.role !== 'SUPER_ADMIN') return false;
+      if (item.roles && !item.roles.includes(user?.role)) return false;
       return true;
     })
     .map(item => {

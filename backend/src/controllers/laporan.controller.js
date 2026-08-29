@@ -1,6 +1,18 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const ExcelJS = require('exceljs');
+const path = require('path');
+const fs = require('fs');
+
+const getUploadedDocumentExportValue = (storedPath) => {
+  if (typeof storedPath !== 'string' || !storedPath.trim()) return 'Belum tersedia';
+
+  const filename = path.basename(storedPath);
+  if (!filename || filename.includes('..')) return 'Belum tersedia';
+
+  const filePath = path.join(__dirname, '../../uploads', filename);
+  return fs.existsSync(filePath) ? storedPath : 'Belum tersedia';
+};
 
 const getLaporanSisya = async (req, res) => {
   try {
@@ -363,7 +375,7 @@ const exportSisya = async (req, res) => {
         { header: 'Status Kelulusan', key: 'statusKelulusan', width: 18 },
         { header: 'Tgl Pediksaan', key: 'tglDiksan', width: 15 },
         { header: 'File Foto', key: 'fileFotoPath', width: 35 },
-        { header: 'File KTP/KK/Ijasah', key: 'fileIdentitasPath', width: 35 },
+        { header: 'File KTP/KK/Ijazah', key: 'fileIdentitasPath', width: 35 },
         { header: 'File Surat Rekomendasi', key: 'fileRekomendasiPath', width: 35 }
       ];
 
@@ -440,8 +452,8 @@ const exportSisya = async (req, res) => {
           statusKelulusan: sisya.statusKelulusan,
           tglDiksan: sisya.tanggalDiksan ? new Date(sisya.tanggalDiksan).toLocaleDateString('id-ID') : '-',
           fileFotoPath: sisya.fileFotoPath || 'Belum tersedia',
-          fileIdentitasPath: sisya.fileIdentitasPath || 'Belum tersedia',
-          fileRekomendasiPath: sisya.fileRekomendasiPath || 'Belum tersedia'
+          fileIdentitasPath: getUploadedDocumentExportValue(sisya.fileIdentitasPath),
+          fileRekomendasiPath: getUploadedDocumentExportValue(sisya.fileRekomendasiPath)
         });
 
         row.eachCell((cell) => {

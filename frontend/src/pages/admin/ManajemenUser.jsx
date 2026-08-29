@@ -32,6 +32,7 @@ export default function ManajemenUser() {
   const [formNama, setFormNama] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formPassword, setFormPassword] = useState('');
+  const [formRole, setFormRole] = useState('ADMIN');
   const [showPassword, setShowPassword] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -95,12 +96,14 @@ export default function ManajemenUser() {
         nama: formNama,
         email: formEmail,
         password: formPassword,
+        role: formRole,
       });
       if (response.data.success) {
         toast.success(response.data.message);
         setFormNama('');
         setFormEmail('');
         setFormPassword('');
+        setFormRole('ADMIN');
         setPage(1);
         fetchUsers();
       }
@@ -167,6 +170,13 @@ export default function ManajemenUser() {
         </span>
       );
     }
+    if (role === 'BENDAHARA') {
+      return (
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-gradient-to-r from-emerald-100 to-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+          <Shield size={11} /> Bendahara
+        </span>
+      );
+    }
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
         {role}
@@ -181,7 +191,7 @@ export default function ManajemenUser() {
         <h1 className="text-3xl font-black text-slate-800 tracking-tight flex items-center gap-3">
           <UserCog className="text-pink-500 w-9 h-9" /> Manajemen User
         </h1>
-        <p className="text-slate-500 mt-1">Registrasi akun ADMIN baru, kelola, dan reset password user sistem.</p>
+        <p className="text-slate-500 mt-1">Registrasi akun Admin atau Bendahara, kelola, dan reset password user sistem.</p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
@@ -190,9 +200,9 @@ export default function ManajemenUser() {
           <Card className="shadow-md border-slate-100">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="text-lg font-bold flex items-center gap-2 text-slate-800">
-                <Plus size={18} className="text-pink-500" /> Registrasi User ADMIN Baru
+                <Plus size={18} className="text-pink-500" /> Registrasi User Baru
               </CardTitle>
-              <CardDescription>Buat akun ADMIN baru untuk mengakses panel administrasi.</CardDescription>
+              <CardDescription>Buat akun Admin operasional atau Bendahara untuk modul keuangan.</CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <form onSubmit={handleCreateUser} className="space-y-5">
@@ -250,10 +260,10 @@ export default function ManajemenUser() {
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Role</label>
-                    <div className="flex items-center h-10 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-600">
-                      <Shield size={15} className="mr-2 text-blue-500" /> ADMIN
-                      <span className="text-[10px] text-slate-400 ml-2">(tidak dapat diubah)</span>
-                    </div>
+                    <select value={formRole} onChange={(e) => setFormRole(e.target.value)} className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700">
+                      <option value="ADMIN">Admin</option>
+                      <option value="BENDAHARA">Bendahara</option>
+                    </select>
                   </div>
                 </div>
 

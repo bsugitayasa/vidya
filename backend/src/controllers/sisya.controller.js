@@ -457,6 +457,78 @@ const serveFile = async (req, res) => {
   }
 };
 
+const deleteRegistrationDocument = async (req, res, { field, label, errorContext }) => {
+  try {
+    const sisyaId = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(sisyaId) || sisyaId <= 0) {
+      return res.status(400).json({ success: false, message: 'ID Sisya tidak valid' });
+    }
+
+    const sisya = await prisma.sisya.findUnique({
+      where: { id: sisyaId },
+      select: { id: true, namaLengkap: true, [field]: true }
+    });
+
+    if (!sisya) {
+      return res.status(404).json({ success: false, message: 'Data Sisya tidak ditemukan' });
+    }
+
+    const storedPath = sisya[field];
+    if (!storedPath) {
+      return res.status(409).json({ success: false, message: `${label} sudah tidak tersedia` });
+    }
+
+    // Kosongkan referensi hanya jika path belum berubah sejak data dibaca.
+    // Ini mencegah file pengganti yang baru diunggah ikut terhapus oleh request lama.
+    const updateResult = await prisma.sisya.updateMany({
+      where: { id: sisya.id, [field]: storedPath },
+      data: { [field]: null }
+    });
+
+    if (updateResult.count !== 1) {
+      return res.status(409).json({
+        success: false,
+        message: `${label} telah berubah. Muat ulang halaman dan coba kembali.`
+      });
+    }
+
+    const filename = path.basename(storedPath);
+    const uploadDirectory = path.resolve(__dirname, '../../uploads');
+    const filePath = path.resolve(uploadDirectory, filename);
+
+    if (filename && filePath.startsWith(`${uploadDirectory}${path.sep}`)) {
+      try {
+        await fs.promises.unlink(filePath);
+      } catch (fileError) {
+        if (fileError.code !== 'ENOENT') {
+          // Referensi database tetap sudah dihapus supaya dokumen tidak lagi dapat diakses.
+          console.error(`${errorContext} Physical File Error:`, fileError);
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `${label} ${sisya.namaLengkap} berhasil dihapus`
+    });
+  } catch (error) {
+    console.error(`${errorContext} Error:`, error);
+    res.status(500).json({ success: false, message: `Gagal menghapus ${label.toLowerCase()}` });
+  }
+};
+
+const deleteIdentityDocument = (req, res) => deleteRegistrationDocument(req, res, {
+  field: 'fileIdentitasPath',
+  label: 'Dokumen KTP/KK/Ijazah',
+  errorContext: 'Delete Identity Document'
+});
+
+const deleteRecommendationDocument = (req, res) => deleteRegistrationDocument(req, res, {
+  field: 'fileRekomendasiPath',
+  label: 'Surat Rekomendasi',
+  errorContext: 'Delete Recommendation Document'
+});
+
 const getAttendanceExport = async (req, res) => {
   try {
     const sisyas = await prisma.sisya.findMany({
@@ -1023,6 +1095,8 @@ module.exports = {
   getById,
   findByNomor,
   serveFile,
+  deleteIdentityDocument,
+  deleteRecommendationDocument,
   servePublicRegistrationFile,
   lengkapiBerkas,
   updateStatus,
