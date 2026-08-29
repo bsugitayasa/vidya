@@ -170,7 +170,7 @@ export default function AdminLayout() {
           {filteredMenuItems.map((item) => {
             const Icon = item.icon;
             const isParentActive = location.pathname.startsWith(item.path);
-            const isExpanded = expandedMenus.includes(item.path) || (isParentActive && !isMinimized);
+            const isExpanded = expandedMenus.includes(item.path);
 
             if (item.subItems) {
               return (
