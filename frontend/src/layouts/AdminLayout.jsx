@@ -34,6 +34,18 @@ export default function AdminLayout() {
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { path: '/admin/absensi', icon: ClipboardList, label: 'Absensi', color: 'text-violet-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
+    {
+      path: '/admin/keuangan',
+      icon: WalletCards,
+      label: 'Keuangan',
+      color: 'text-emerald-400',
+      roles: ['ADMIN', 'BENDAHARA', 'SUPER_ADMIN'],
+      subItems: [
+        { path: '/admin/keuangan', label: 'Dashboard Keuangan' },
+        { path: '/admin/keuangan/rab', label: 'RAB & LPJ' },
+        { path: '/admin/keuangan/master', label: 'Master Keuangan' },
+      ]
+    },
     { path: '/admin/kuesioner', icon: MessageSquareText, label: 'Kuesioner', color: 'text-teal-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { path: '/admin/verifikasi-dokumen', icon: QrCode, label: 'Verifikasi Dokumen', color: 'text-cyan-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { path: '/admin/manajemen-user', icon: UserCog, label: 'Manajemen User', color: 'text-pink-400', superAdminOnly: true },
@@ -61,18 +73,6 @@ export default function AdminLayout() {
         { path: '/admin/laporan/punia-bulanan', label: 'Rekap Bulanan' },
         { path: '/admin/laporan/absensi', label: 'Rekap Absensi' },
         { path: '/admin/laporan/program-ajahan', label: 'Program Ajahan' },
-      ]
-    },
-    {
-      path: '/admin/keuangan',
-      icon: WalletCards,
-      label: 'Keuangan',
-      color: 'text-emerald-400',
-      roles: ['ADMIN', 'BENDAHARA', 'SUPER_ADMIN'],
-      subItems: [
-        { path: '/admin/keuangan', label: 'Dashboard Keuangan' },
-        { path: '/admin/keuangan/rab', label: 'RAB & LPJ' },
-        { path: '/admin/keuangan/master', label: 'Master Keuangan' },
       ]
     },
     {
