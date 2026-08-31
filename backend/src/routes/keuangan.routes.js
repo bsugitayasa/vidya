@@ -20,6 +20,7 @@ router.post('/rab', upload.single('dokumen'), controller.createRab);
 router.get('/rab/:id/export.xlsx', controller.exportExcel);
 router.get('/rab/:id', controller.getRab);
 router.patch('/rab/:id', upload.single('dokumen'), controller.updateRab);
+router.patch('/rab/:id/metadata', requireTreasurer, controller.updateRabMetadata);
 router.post('/rab/:id/submit', controller.submitRab);
 router.post('/rab/:id/approve', requireTreasurer, controller.approveRab);
 router.post('/rab/:id/reject', requireTreasurer, controller.rejectRab);
@@ -29,6 +30,7 @@ router.post('/rab/:id/pengembalian', requireTreasurer, upload.single('bukti'), c
 router.post('/rab/:id/submit-lpj', controller.submitLpj);
 router.post('/rab/:id/request-revision', requireTreasurer, controller.requestRevision);
 router.post('/rab/:id/close', requireTreasurer, controller.closeRab);
+router.post('/rab/:id/sign-lpj', requireTreasurer, controller.signCompletedLpj);
 router.patch('/rab/:id/dokumen', upload.single('bukti'), controller.updateRabEvidence);
 
 router.post('/pencairan/:id/cancel', requireTreasurer, controller.cancelDisbursement);
