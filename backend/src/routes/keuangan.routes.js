@@ -20,6 +20,7 @@ router.post('/rab', upload.single('dokumen'), controller.createRab);
 router.get('/rab/:id/export.xlsx', controller.exportExcel);
 router.get('/rab/:id', controller.getRab);
 router.patch('/rab/:id', upload.single('dokumen'), controller.updateRab);
+router.patch('/rab/:id/metadata', requireTreasurer, controller.updateRabMetadata);
 router.post('/rab/:id/submit', controller.submitRab);
 router.post('/rab/:id/approve', requireTreasurer, controller.approveRab);
 router.post('/rab/:id/reject', requireTreasurer, controller.rejectRab);

@@ -320,6 +320,59 @@ const updateRab = async (req, res) => {
   }
 };
 
+const updateRabMetadata = async (req, res) => {
+  try {
+    const existing = await getRabOrFail(req.params.id);
+    if (!existing) return fail(res, 404, 'RAB tidak ditemukan');
+    if (!req.body.alasanPerubahan?.trim()) return fail(res, 400, 'Alasan perubahan wajib diisi untuk kebutuhan audit');
+    if (!req.body.namaKegiatan?.trim() || !req.body.penanggungJawab?.trim() || !req.body.tanggalMulai || !req.body.tanggalSelesai) {
+      return fail(res, 400, 'Nama kegiatan, penanggung jawab, dan periode wajib diisi');
+    }
+    const tanggalMulai = new Date(req.body.tanggalMulai);
+    const tanggalSelesai = new Date(req.body.tanggalSelesai);
+    if (Number.isNaN(tanggalMulai.getTime()) || Number.isNaN(tanggalSelesai.getTime()) || tanggalSelesai < tanggalMulai) {
+      return fail(res, 400, 'Periode kegiatan tidak valid');
+    }
+    const data = {
+      namaKegiatan: req.body.namaKegiatan.trim(),
+      nomorReferensi: req.body.nomorReferensi?.trim() || null,
+      programAjahanId: req.body.programAjahanId ? asInt(req.body.programAjahanId) : null,
+      penanggungJawab: req.body.penanggungJawab.trim(),
+      tujuan: req.body.tujuan?.trim() || null,
+      tanggalMulai,
+      tanggalSelesai,
+      catatan: req.body.catatan?.trim() || null
+    };
+    const oldValue = {
+      namaKegiatan: existing.namaKegiatan,
+      nomorReferensi: existing.nomorReferensi,
+      programAjahanId: existing.programAjahanId,
+      penanggungJawab: existing.penanggungJawab,
+      tujuan: existing.tujuan,
+      tanggalMulai: existing.tanggalMulai,
+      tanggalSelesai: existing.tanggalSelesai,
+      catatan: existing.catatan
+    };
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.rencanaAnggaran.update({ where: { id: existing.id }, data, include: rabInclude });
+      await audit(tx, {
+        entityType: 'RAB',
+        entityId: existing.id,
+        action: existing.status === 'SELESAI' ? 'INFORMASI_LPJ_DIPERBARUI' : 'INFORMASI_RAB_DIPERBARUI',
+        oldValue,
+        newValue: data,
+        reason: req.body.alasanPerubahan.trim(),
+        userId: req.user.id
+      });
+      return row;
+    });
+    res.json({ success: true, message: 'Informasi RAB/LPJ berhasil diperbarui', data: withSummary(updated) });
+  } catch (error) {
+    console.error('Update RAB Metadata Error:', error);
+    fail(res, 400, error.message || 'Gagal memperbarui informasi RAB/LPJ');
+  }
+};
+
 const submitRab = async (req, res) => {
   try {
     const rab = await getRabOrFail(req.params.id);
@@ -829,7 +882,7 @@ const serveFile = async (req, res) => {
 };
 
 module.exports = {
-  getDashboard, listVerificationDocuments, listRab, getRab, createRab, updateRab, submitRab, approveRab, rejectRab,
+  getDashboard, listVerificationDocuments, listRab, getRab, createRab, updateRab, updateRabMetadata, submitRab, approveRab, rejectRab,
   addDisbursement, addExpense, updateExpense, verifyExpense, rejectExpense, addReturn,
   cancelDisbursement: cancelTransaction('pencairanDana', 'PENCAIRAN'),
   cancelExpense: cancelTransaction('pengeluaranRab', 'PENGELUARAN'),
