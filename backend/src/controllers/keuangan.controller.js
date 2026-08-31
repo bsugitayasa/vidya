@@ -658,6 +658,47 @@ const closeRab = async (req, res) => {
   }
 };
 
+const signCompletedLpj = async (req, res) => {
+  try {
+    const rab = await getRabOrFail(req.params.id);
+    if (!rab) return fail(res, 404, 'RAB tidak ditemukan');
+    if (rab.status !== 'SELESAI') return fail(res, 409, 'Fitur ini hanya untuk melengkapi tanda tangan LPJ yang sudah selesai');
+    if (rab.lpjQrDocumentId) return fail(res, 409, 'LPJ sudah memiliki tanda tangan elektronik');
+    const selectedVerificationId = await resolveLpjVerificationDocument({
+      id: req.body.lpjQrDocumentId,
+      token: req.body.lpjQrDocumentToken,
+      currentRabId: rab.id
+    });
+    const signer = selectedVerificationId ? null : getSignerData(req.body);
+    const updated = await prisma.$transaction(async (tx) => {
+      const verification = selectedVerificationId ? null : await createVerificationDocument(tx, {
+        nomorSurat: rab.nomorRab,
+        keteranganSurat: `Persetujuan LPJ - ${rab.namaKegiatan}`,
+        signer
+      });
+      const lpjQrDocumentId = selectedVerificationId || verification.id;
+      const row = await tx.rencanaAnggaran.update({
+        where: { id: rab.id },
+        data: { lpjQrDocumentId },
+        include: rabInclude
+      });
+      await audit(tx, {
+        entityType: 'RAB',
+        entityId: rab.id,
+        action: 'TANDA_TANGAN_LPJ_DILENGKAPI',
+        oldValue: { status: rab.status, lpjQrDocumentId: null },
+        newValue: { status: rab.status, lpjQrDocumentId: lpjQrDocumentId.toString() },
+        userId: req.user.id
+      });
+      return row;
+    });
+    res.json({ success: true, message: 'Tanda tangan elektronik LPJ berhasil ditambahkan', data: withSummary(updated) });
+  } catch (error) {
+    console.error('Sign Completed LPJ Error:', error);
+    fail(res, 400, error.message || 'Gagal menambahkan tanda tangan LPJ');
+  }
+};
+
 const evidenceTargets = {
   rab: { model: 'rencanaAnggaran', field: 'dokumenPath', entityType: 'RAB' },
   pencairan: { model: 'pencairanDana', field: 'buktiPath', entityType: 'PENCAIRAN' },
@@ -793,7 +834,7 @@ module.exports = {
   cancelDisbursement: cancelTransaction('pencairanDana', 'PENCAIRAN'),
   cancelExpense: cancelTransaction('pengeluaranRab', 'PENGELUARAN'),
   cancelReturn: cancelTransaction('pengembalianDana', 'PENGEMBALIAN'),
-  submitLpj, requestRevision, closeRab,
+  submitLpj, requestRevision, closeRab, signCompletedLpj,
   updateRabEvidence: updateEvidence('rab'),
   updateDisbursementEvidence: updateEvidence('pencairan'),
   updateExpenseEvidence: updateEvidence('pengeluaran'),

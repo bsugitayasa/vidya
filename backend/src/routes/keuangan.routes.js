@@ -29,6 +29,7 @@ router.post('/rab/:id/pengembalian', requireTreasurer, upload.single('bukti'), c
 router.post('/rab/:id/submit-lpj', controller.submitLpj);
 router.post('/rab/:id/request-revision', requireTreasurer, controller.requestRevision);
 router.post('/rab/:id/close', requireTreasurer, controller.closeRab);
+router.post('/rab/:id/sign-lpj', requireTreasurer, controller.signCompletedLpj);
 router.patch('/rab/:id/dokumen', upload.single('bukti'), controller.updateRabEvidence);
 
 router.post('/pencairan/:id/cancel', requireTreasurer, controller.cancelDisbursement);
