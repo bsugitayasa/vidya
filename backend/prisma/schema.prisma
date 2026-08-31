@@ -207,6 +207,7 @@ model AkunKas {
 model RencanaAnggaran {
   id              Int                @id @default(autoincrement())
   nomorRab        String             @unique
+  nomorReferensi  String?
   namaKegiatan    String
   programAjahanId Int?
   penanggungJawab String
@@ -226,12 +227,16 @@ model RencanaAnggaran {
   rejectedReason  String?
   closedById      Int?
   closedAt        DateTime?
+  rabQrDocumentId BigInt?            @unique
+  lpjQrDocumentId BigInt?            @unique
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   programAjahan   ProgramAjahan?     @relation(fields: [programAjahanId], references: [id], onDelete: Restrict)
   createdBy       User               @relation("RabDibuat", fields: [createdById], references: [id], onDelete: Restrict)
   approvedBy      User?              @relation("RabDisetujui", fields: [approvedById], references: [id], onDelete: Restrict)
   closedBy        User?              @relation("RabDitutup", fields: [closedById], references: [id], onDelete: Restrict)
+  rabQrDocument   QrDocument?        @relation("RabApprovalQr", fields: [rabQrDocumentId], references: [id], onDelete: SetNull)
+  lpjQrDocument   QrDocument?        @relation("LpjApprovalQr", fields: [lpjQrDocumentId], references: [id], onDelete: SetNull)
   items           ItemAnggaran[]
   pencairans      PencairanDana[]
   pengeluarans    PengeluaranRab[]
@@ -458,18 +463,20 @@ model ProsesiKelulusan {
 }
 
 model QrDocument {
-  id              BigInt    @id
-  token           String    @unique @db.VarChar(100)
-  nomorSurat      String    @map("nomor_surat") @db.VarChar(200)
-  keteranganSurat String    @map("keterangan_surat") @db.VarChar(200)
-  tanggal         DateTime  @db.Date
-  namaPejabat     String    @map("nama_pejabat") @db.VarChar(200)
-  jabatan         String    @db.VarChar(200)
-  namaPejabat2    String?   @map("nama_pejabat_2") @db.VarChar(200)
-  jabatan2        String?   @map("jabatan_2") @db.VarChar(200)
-  createdAt       DateTime  @default(now()) @map("created_at")
-  modifiedBy      String?   @map("modified_by") @db.VarChar(200)
-  modifiedAt      DateTime? @map("modified_at")
+  id              BigInt           @id
+  token           String           @unique @db.VarChar(100)
+  nomorSurat      String           @map("nomor_surat") @db.VarChar(200)
+  keteranganSurat String           @map("keterangan_surat") @db.VarChar(200)
+  tanggal         DateTime         @db.Date
+  namaPejabat     String           @map("nama_pejabat") @db.VarChar(200)
+  jabatan         String           @db.VarChar(200)
+  namaPejabat2    String?          @map("nama_pejabat_2") @db.VarChar(200)
+  jabatan2        String?          @map("jabatan_2") @db.VarChar(200)
+  createdAt       DateTime         @default(now()) @map("created_at")
+  modifiedBy      String?          @map("modified_by") @db.VarChar(200)
+  modifiedAt      DateTime?        @map("modified_at")
+  rabApproval     RencanaAnggaran? @relation("RabApprovalQr")
+  lpjApproval     RencanaAnggaran? @relation("LpjApprovalQr")
 
   @@map("qr_document")
 }

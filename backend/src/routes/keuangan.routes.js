@@ -7,6 +7,7 @@ const router = express.Router();
 router.use(requireAuth, requireFinanceAccess);
 
 router.get('/dashboard', controller.getDashboard);
+router.get('/verification-documents', controller.listVerificationDocuments);
 router.get('/kategori', controller.listCategories);
 router.get('/akun-kas', controller.listAccounts);
 router.post('/kategori', requireTreasurer, controller.saveCategory);
@@ -28,12 +29,17 @@ router.post('/rab/:id/pengembalian', requireTreasurer, upload.single('bukti'), c
 router.post('/rab/:id/submit-lpj', controller.submitLpj);
 router.post('/rab/:id/request-revision', requireTreasurer, controller.requestRevision);
 router.post('/rab/:id/close', requireTreasurer, controller.closeRab);
+router.patch('/rab/:id/dokumen', upload.single('bukti'), controller.updateRabEvidence);
 
 router.post('/pencairan/:id/cancel', requireTreasurer, controller.cancelDisbursement);
+router.patch('/pencairan/:id/bukti', upload.single('bukti'), controller.updateDisbursementEvidence);
+router.patch('/pengeluaran/:id', requireTreasurer, upload.single('bukti'), controller.updateExpense);
+router.patch('/pengeluaran/:id/bukti', upload.single('bukti'), controller.updateExpenseEvidence);
 router.post('/pengeluaran/:id/verify', requireTreasurer, controller.verifyExpense);
 router.post('/pengeluaran/:id/reject', requireTreasurer, controller.rejectExpense);
 router.post('/pengeluaran/:id/cancel', requireTreasurer, controller.cancelExpense);
 router.post('/pengembalian/:id/cancel', requireTreasurer, controller.cancelReturn);
+router.patch('/pengembalian/:id/bukti', upload.single('bukti'), controller.updateReturnEvidence);
 router.get('/files/:filename', controller.serveFile);
 
 module.exports = router;
