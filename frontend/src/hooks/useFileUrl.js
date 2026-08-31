@@ -8,7 +8,7 @@ import api from '../lib/axios';
  * @param {string} filePath Path file dari database (contoh: /uploads/abc.jpg)
  * @returns {string|null} Blob URL atau null jika sedang loading/error
  */
-export default function useFileUrl(filePath) {
+export default function useFileUrl(filePath, endpoint = '/sisya/files') {
   const [fileState, setFileState] = useState({ filePath: null, url: null });
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export default function useFileUrl(filePath) {
         // Ambil nama file saja dari path
         const filename = filePath.split('/').pop();
         
-        const response = await api.get(`/sisya/files/${filename}`, {
+        const response = await api.get(`${endpoint}/${filename}`, {
           responseType: 'blob'
         });
 
@@ -48,7 +48,7 @@ export default function useFileUrl(filePath) {
       cancelled = true;
       if (blobUrl) URL.revokeObjectURL(blobUrl);
     };
-  }, [filePath]);
+  }, [filePath, endpoint]);
 
   return fileState.filePath === filePath ? fileState.url : null;
 }

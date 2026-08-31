@@ -3,9 +3,6 @@ import useAuthStore from '../store/authStore';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001/api', // Membaca dari .env atau fallback ke localhost
-  headers: {
-    'Content-Type': 'application/json',
-  },
 });
 
 // Interceptor untuk menyisipkan token JWT ke setiap request

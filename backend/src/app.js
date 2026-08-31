@@ -81,6 +81,14 @@ app.use((err, req, res, next) => {
     });
   }
 
+  if (err.code === 'UNSUPPORTED_FILE_TYPE') {
+    return res.status(400).json({
+      success: false,
+      error: err.code,
+      message: err.message
+    });
+  }
+
   console.error(err.stack);
   res.status(500).json({
     success: false,

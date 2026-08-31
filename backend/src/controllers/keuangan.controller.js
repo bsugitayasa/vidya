@@ -1,17 +1,137 @@
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const ExcelJS = require('exceljs');
 const { PrismaClient } = require('@prisma/client');
 const { rabInclude, withSummary, summarizeRab, audit, treasurerRoles } = require('../services/keuangan.service');
 
 const prisma = new PrismaClient();
 const asInt = (value) => Number.parseInt(value, 10);
+const asBigInt = (value) => value ? BigInt(value) : null;
 const asMoney = (value) => Math.round(Number(value || 0));
 const isTreasurer = (user) => treasurerRoles.includes(user.role);
 const parseItems = (value) => typeof value === 'string' ? JSON.parse(value) : value;
 const safeFilePath = (file) => file ? `/uploads/${file.filename}` : null;
 
 const fail = (res, status, message) => res.status(status).json({ success: false, message });
+
+const getSignerData = (body) => {
+  const signer = {
+    namaPejabat: body.namaPejabat?.trim(),
+    jabatan: body.jabatan?.trim(),
+    namaPejabat2: body.namaPejabat2?.trim(),
+    jabatan2: body.jabatan2?.trim()
+  };
+  if (Object.values(signer).some((value) => !value)) throw new Error('Nama dan jabatan kedua penandatangan wajib diisi');
+  return signer;
+};
+
+const createVerificationDocument = async (tx, { nomorSurat, keteranganSurat, signer }) => {
+  let token;
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const candidate = crypto.randomBytes(4).toString('hex').toUpperCase();
+    if (!await tx.qrDocument.findUnique({ where: { token: candidate } })) {
+      token = candidate;
+      break;
+    }
+  }
+  if (!token) throw new Error('Gagal membuat token verifikasi dokumen');
+  return tx.qrDocument.create({
+    data: {
+      id: BigInt(Date.now()) * 1000n + BigInt(crypto.randomInt(1000)),
+      token,
+      nomorSurat,
+      keteranganSurat,
+      tanggal: new Date(),
+      ...signer
+    }
+  });
+};
+
+const validateRabVerificationDocument = async (value, currentRabId = null) => {
+  if (!value) return null;
+  let id;
+  try { id = asBigInt(value); } catch { throw new Error('QR-Code verifikasi tidak valid'); }
+  const document = await prisma.qrDocument.findUnique({
+    where: { id },
+    include: { rabApproval: { select: { id: true } } }
+  });
+  if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
+  if (document.rabApproval && document.rabApproval.id !== currentRabId) throw new Error('QR-Code verifikasi sudah digunakan oleh RAB lain');
+  return id;
+};
+
+const resolveRabVerificationDocument = async ({ id, token, currentRabId = null }) => {
+  if (id) return validateRabVerificationDocument(id, currentRabId);
+  if (!token) return null;
+
+  const document = await prisma.qrDocument.findUnique({
+    where: { token: String(token).trim().toUpperCase() },
+    include: { rabApproval: { select: { id: true } } }
+  });
+  if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
+  if (document.rabApproval && document.rabApproval.id !== currentRabId) {
+    throw new Error('QR-Code verifikasi sudah digunakan oleh RAB lain');
+  }
+  return document.id;
+};
+
+const validateLpjVerificationDocument = async (value, currentRabId = null) => {
+  if (!value) return null;
+  let id;
+  try { id = asBigInt(value); } catch { throw new Error('QR-Code verifikasi tidak valid'); }
+  const document = await prisma.qrDocument.findUnique({
+    where: { id },
+    include: { lpjApproval: { select: { id: true } } }
+  });
+  if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
+  if (document.lpjApproval && document.lpjApproval.id !== currentRabId) throw new Error('QR-Code verifikasi sudah digunakan oleh LPJ lain');
+  return id;
+};
+
+const resolveLpjVerificationDocument = async ({ id, token, currentRabId = null }) => {
+  if (id) return validateLpjVerificationDocument(id, currentRabId);
+  if (!token) return null;
+
+  const document = await prisma.qrDocument.findUnique({
+    where: { token: String(token).trim().toUpperCase() },
+    include: { lpjApproval: { select: { id: true } } }
+  });
+  if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
+  if (document.lpjApproval && document.lpjApproval.id !== currentRabId) {
+    throw new Error('QR-Code verifikasi sudah digunakan oleh LPJ lain');
+  }
+  return document.id;
+};
+
+const listVerificationDocuments = async (req, res) => {
+  try {
+    const search = req.query.search?.trim();
+    const documents = await prisma.qrDocument.findMany({
+      where: search ? { OR: [
+        { token: { contains: search, mode: 'insensitive' } },
+        { nomorSurat: { contains: search, mode: 'insensitive' } },
+        { keteranganSurat: { contains: search, mode: 'insensitive' } },
+        { namaPejabat: { contains: search, mode: 'insensitive' } },
+        { namaPejabat2: { contains: search, mode: 'insensitive' } }
+      ] } : undefined,
+      include: {
+        rabApproval: { select: { id: true, nomorRab: true, namaKegiatan: true } },
+        lpjApproval: { select: { id: true, nomorRab: true, namaKegiatan: true } }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 250
+    });
+    res.json({ success: true, data: documents.map((document) => ({
+      ...document,
+      id: document.id.toString(),
+      tersedia: !document.rabApproval && !document.lpjApproval
+    })) });
+  } catch (error) {
+    console.error('List Finance Verification Documents Error:', error);
+    fail(res, 500, 'Gagal memuat daftar QR-Code verifikasi');
+  }
+};
 
 const generateRabNumber = async () => {
   const now = new Date();
@@ -85,6 +205,7 @@ const listRab = async (req, res) => {
       ...(req.query.status ? { status: req.query.status } : {}),
       ...(req.query.search ? { OR: [
         { nomorRab: { contains: req.query.search, mode: 'insensitive' } },
+        { nomorReferensi: { contains: req.query.search, mode: 'insensitive' } },
         { namaKegiatan: { contains: req.query.search, mode: 'insensitive' } },
         { penanggungJawab: { contains: req.query.search, mode: 'insensitive' } }
       ] } : {})
@@ -130,10 +251,13 @@ const createRab = async (req, res) => {
     const normalized = items.map((item, index) => normalizeItem(item, index));
     const totalDiajukan = normalized.reduce((total, item) => total + item.jumlahDiajukan, 0);
     const nomorRab = await generateRabNumber();
+    const rabQrDocumentId = await validateRabVerificationDocument(req.body.rabQrDocumentId);
     const rab = await prisma.$transaction(async (tx) => {
       const created = await tx.rencanaAnggaran.create({
         data: {
           nomorRab,
+          nomorReferensi: req.body.nomorReferensi?.trim() || null,
+          rabQrDocumentId,
           namaKegiatan: req.body.namaKegiatan.trim(),
           programAjahanId: req.body.programAjahanId ? asInt(req.body.programAjahanId) : null,
           penanggungJawab: req.body.penanggungJawab.trim(),
@@ -163,8 +287,13 @@ const updateRab = async (req, res) => {
     if (!existing) return fail(res, 404, 'RAB tidak ditemukan');
     if (!['DRAFT', 'DITOLAK'].includes(existing.status)) return fail(res, 409, 'RAB pada status ini tidak dapat diedit');
     const items = req.body.items ? parseItems(req.body.items).map((item, index) => normalizeItem(item, index)) : null;
+    const rabQrDocumentId = req.body.rabQrDocumentId !== undefined
+      ? await validateRabVerificationDocument(req.body.rabQrDocumentId, existing.id)
+      : undefined;
     const data = {
       ...(req.body.namaKegiatan ? { namaKegiatan: req.body.namaKegiatan.trim() } : {}),
+      ...(req.body.nomorReferensi !== undefined ? { nomorReferensi: req.body.nomorReferensi.trim() || null } : {}),
+      ...(rabQrDocumentId !== undefined ? { rabQrDocumentId } : {}),
       ...(req.body.penanggungJawab ? { penanggungJawab: req.body.penanggungJawab.trim() } : {}),
       ...(req.body.programAjahanId !== undefined ? { programAjahanId: req.body.programAjahanId ? asInt(req.body.programAjahanId) : null } : {}),
       ...(req.body.tujuan !== undefined ? { tujuan: req.body.tujuan || null } : {}),
@@ -219,16 +348,27 @@ const approveRab = async (req, res) => {
     if (approvedItems.some((item) => item.amount < 0)) return fail(res, 400, 'Nilai persetujuan tidak boleh negatif');
     const totalDisetujui = approvedItems.reduce((total, item) => total + item.amount, 0);
     if (totalDisetujui <= 0) return fail(res, 400, 'Total anggaran disetujui harus lebih dari nol');
+    const selectedVerificationId = await resolveRabVerificationDocument({
+      id: req.body.rabQrDocumentId,
+      token: req.body.rabQrDocumentToken,
+      currentRabId: rab.id
+    }) || rab.rabQrDocumentId;
+    const signer = selectedVerificationId ? null : getSignerData(req.body);
     const updated = await prisma.$transaction(async (tx) => {
       await Promise.all(approvedItems.map((item) => tx.itemAnggaran.update({ where: { id: item.id }, data: { jumlahDisetujui: item.amount } })));
-      const row = await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { totalDisetujui, status: 'DISETUJUI', approvedById: req.user.id, approvedAt: new Date(), rejectedReason: null }, include: rabInclude });
+      const verification = selectedVerificationId ? null : await createVerificationDocument(tx, {
+        nomorSurat: rab.nomorRab,
+        keteranganSurat: `Persetujuan RAB - ${rab.namaKegiatan}`,
+        signer
+      });
+      const row = await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { totalDisetujui, status: 'DISETUJUI', approvedById: req.user.id, approvedAt: new Date(), rejectedReason: null, rabQrDocumentId: selectedVerificationId || verification.id }, include: rabInclude });
       await audit(tx, { entityType: 'RAB', entityId: rab.id, action: 'DISETUJUI', oldValue: { status: rab.status }, newValue: { status: 'DISETUJUI', totalDisetujui }, reason: req.body.catatan, userId: req.user.id });
       return row;
     });
     res.json({ success: true, message: 'RAB berhasil disetujui', data: withSummary(updated) });
   } catch (error) {
     console.error('Approve RAB Error:', error);
-    fail(res, 500, 'Gagal menyetujui RAB');
+    fail(res, 400, error.message || 'Gagal menyetujui RAB');
   }
 };
 
@@ -301,6 +441,66 @@ const addExpense = async (req, res) => {
   } catch (error) {
     console.error('Add Expense Error:', error);
     fail(res, 400, error.message || 'Gagal mencatat pengeluaran');
+  }
+};
+
+const updateExpense = async (req, res) => {
+  try {
+    const expense = await prisma.pengeluaranRab.findUnique({
+      where: { id: asInt(req.params.id) },
+      include: { rab: { include: rabInclude } }
+    });
+    if (!expense) return fail(res, 404, 'Pengeluaran tidak ditemukan');
+    if (expense.status !== 'MENUNGGU_VERIFIKASI') return fail(res, 409, 'Hanya pengeluaran yang menunggu verifikasi yang dapat diedit');
+
+    const nominal = asMoney(req.body.nominal);
+    if (nominal <= 0 || !req.body.kategoriId || !req.body.akunKasId || !req.body.uraian?.trim() || !req.body.metode) return fail(res, 400, 'Data pengeluaran belum lengkap');
+    const summary = summarizeRab(expense.rab);
+    if (nominal > summary.kasTersediaUntukInput + Number(expense.nominal)) return fail(res, 409, 'Nominal pengeluaran melebihi kas yang tersedia');
+
+    const itemAnggaranId = req.body.itemAnggaranId ? asInt(req.body.itemAnggaranId) : null;
+    const allowOverBudget = req.body.allowOverBudget === true || req.body.allowOverBudget === 'true';
+    if (allowOverBudget && !req.body.overrideReason?.trim()) return fail(res, 400, 'Alasan pengecualian anggaran wajib diisi');
+    if (itemAnggaranId) {
+      const item = expense.rab.items.find((row) => row.id === itemAnggaranId);
+      if (!item) return fail(res, 400, 'Item anggaran tidak termasuk dalam RAB ini');
+      const used = expense.rab.pengeluarans
+        .filter((row) => row.id !== expense.id && row.itemAnggaranId === item.id && ['MENUNGGU_VERIFIKASI', 'VERIFIKASI'].includes(row.status))
+        .reduce((total, row) => total + Number(row.nominal), 0);
+      if (used + nominal > Number(item.jumlahDisetujui) && !allowOverBudget) return fail(res, 409, 'Nominal melebihi sisa item anggaran. Aktifkan pengecualian dan isi alasannya bila tetap akan diproses.');
+    }
+
+    const oldValue = {
+      tanggal: expense.tanggal,
+      uraian: expense.uraian,
+      penerima: expense.penerima,
+      nominal: Number(expense.nominal),
+      nomorBukti: expense.nomorBukti
+    };
+    const data = {
+      itemAnggaranId,
+      kategoriId: asInt(req.body.kategoriId),
+      akunKasId: asInt(req.body.akunKasId),
+      tanggal: new Date(req.body.tanggal || expense.tanggal),
+      uraian: req.body.uraian.trim(),
+      penerima: req.body.penerima?.trim() || null,
+      nominal,
+      metode: req.body.metode,
+      nomorBukti: req.body.nomorBukti?.trim() || null,
+      keterangan: req.body.keterangan?.trim() || null,
+      allowOverBudget,
+      overrideReason: allowOverBudget ? req.body.overrideReason.trim() : null,
+      ...(req.file ? { buktiPath: safeFilePath(req.file) } : {})
+    };
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.pengeluaranRab.update({ where: { id: expense.id }, data });
+      await audit(tx, { entityType: 'PENGELUARAN', entityId: expense.id, action: 'DIPERBARUI_SAAT_VERIFIKASI', oldValue, newValue: { rabId: expense.rabId, ...data, tanggal: data.tanggal.toISOString() }, reason: data.overrideReason, userId: req.user.id });
+      return row;
+    });
+    res.json({ success: true, message: 'Detail pengeluaran berhasil diperbarui', data: updated });
+  } catch (error) {
+    console.error('Update Expense Error:', error);
+    fail(res, 400, error.message || 'Gagal memperbarui pengeluaran');
   }
 };
 
@@ -436,14 +636,58 @@ const closeRab = async (req, res) => {
     const summary = summarizeRab(rab);
     if (summary.pengeluaranMenunggu > 0) return fail(res, 409, 'Masih ada pengeluaran yang menunggu verifikasi');
     if (summary.sisaKas !== 0) return fail(res, 409, `Sisa kas Rp ${summary.sisaKas.toLocaleString('id-ID')} harus dikembalikan sebelum LPJ ditutup`);
+    const selectedVerificationId = await resolveLpjVerificationDocument({
+      id: req.body.lpjQrDocumentId,
+      token: req.body.lpjQrDocumentToken,
+      currentRabId: rab.id
+    }) || rab.lpjQrDocumentId;
+    const signer = selectedVerificationId ? null : getSignerData(req.body);
     await prisma.$transaction(async (tx) => {
-      await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { status: 'SELESAI', closedById: req.user.id, closedAt: new Date() } });
+      const verification = selectedVerificationId ? null : await createVerificationDocument(tx, {
+        nomorSurat: rab.nomorRab,
+        keteranganSurat: `Persetujuan LPJ - ${rab.namaKegiatan}`,
+        signer
+      });
+      await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { status: 'SELESAI', closedById: req.user.id, closedAt: new Date(), lpjQrDocumentId: selectedVerificationId || verification.id } });
       await audit(tx, { entityType: 'RAB', entityId: rab.id, action: 'LPJ_DITUTUP', oldValue: { status: rab.status }, newValue: { status: 'SELESAI', ...summary }, userId: req.user.id });
     });
     res.json({ success: true, message: 'LPJ telah diverifikasi dan RAB ditutup' });
   } catch (error) {
     console.error('Close RAB Error:', error);
-    fail(res, 500, 'Gagal menutup LPJ');
+    fail(res, 400, error.message || 'Gagal menutup LPJ');
+  }
+};
+
+const evidenceTargets = {
+  rab: { model: 'rencanaAnggaran', field: 'dokumenPath', entityType: 'RAB' },
+  pencairan: { model: 'pencairanDana', field: 'buktiPath', entityType: 'PENCAIRAN' },
+  pengeluaran: { model: 'pengeluaranRab', field: 'buktiPath', entityType: 'PENGELUARAN' },
+  pengembalian: { model: 'pengembalianDana', field: 'buktiPath', entityType: 'PENGEMBALIAN' }
+};
+
+const updateEvidence = (targetName) => async (req, res) => {
+  try {
+    const target = evidenceTargets[targetName];
+    if (!req.file) return fail(res, 400, 'Pilih berkas bukti yang akan diunggah');
+    const id = asInt(req.params.id);
+    const existing = await prisma[target.model].findUnique({ where: { id } });
+    if (!existing) return fail(res, 404, 'Data transaksi tidak ditemukan');
+    const newPath = safeFilePath(req.file);
+    await prisma.$transaction(async (tx) => {
+      await tx[target.model].update({ where: { id }, data: { [target.field]: newPath } });
+      await audit(tx, {
+        entityType: target.entityType,
+        entityId: id,
+        action: existing[target.field] ? 'BUKTI_DIGANTI' : 'BUKTI_DIUNGGAH',
+        oldValue: { path: existing[target.field] },
+        newValue: { path: newPath },
+        userId: req.user.id
+      });
+    });
+    res.json({ success: true, message: existing[target.field] ? 'Berkas bukti berhasil diganti' : 'Berkas bukti berhasil diunggah', data: { path: newPath } });
+  } catch (error) {
+    console.error(`Update ${targetName} Evidence Error:`, error);
+    fail(res, 400, error.message || 'Gagal mengunggah berkas bukti');
   }
 };
 
@@ -498,7 +742,7 @@ const exportExcel = async (req, res) => {
     sheet.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
     sheet.getRow(1).height = 32;
     const info = [
-      ['Nomor RAB', rab.nomorRab], ['Kegiatan', rab.namaKegiatan], ['Program Ajahan', rab.programAjahan?.nama || '-'],
+      ['Nomor RAB', rab.nomorRab], ['No. Referensi', rab.nomorReferensi || '-'], ['Kegiatan', rab.namaKegiatan], ['Program Ajahan', rab.programAjahan?.nama || '-'],
       ['Penanggung Jawab', rab.penanggungJawab], ['Periode', `${new Date(rab.tanggalMulai).toLocaleDateString('id-ID')} - ${new Date(rab.tanggalSelesai).toLocaleDateString('id-ID')}`], ['Status', rab.status]
     ];
     info.forEach((row) => sheet.addRow([row[0], row[1]]));
@@ -544,12 +788,16 @@ const serveFile = async (req, res) => {
 };
 
 module.exports = {
-  getDashboard, listRab, getRab, createRab, updateRab, submitRab, approveRab, rejectRab,
-  addDisbursement, addExpense, verifyExpense, rejectExpense, addReturn,
+  getDashboard, listVerificationDocuments, listRab, getRab, createRab, updateRab, submitRab, approveRab, rejectRab,
+  addDisbursement, addExpense, updateExpense, verifyExpense, rejectExpense, addReturn,
   cancelDisbursement: cancelTransaction('pencairanDana', 'PENCAIRAN'),
   cancelExpense: cancelTransaction('pengeluaranRab', 'PENGELUARAN'),
   cancelReturn: cancelTransaction('pengembalianDana', 'PENGEMBALIAN'),
   submitLpj, requestRevision, closeRab,
+  updateRabEvidence: updateEvidence('rab'),
+  updateDisbursementEvidence: updateEvidence('pencairan'),
+  updateExpenseEvidence: updateEvidence('pengeluaran'),
+  updateReturnEvidence: updateEvidence('pengembalian'),
   listCategories: listMaster('kategoriKeuangan'), listAccounts: listMaster('akunKas'), saveCategory, saveAccount,
   exportExcel, serveFile
 };

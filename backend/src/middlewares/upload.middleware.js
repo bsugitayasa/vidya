@@ -23,10 +23,15 @@ const fileFilter = (req, file, cb) => {
     'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg',
     'video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo'
   ];
-  if (allowedMimeTypes.includes(file.mimetype)) {
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf', '.mp3', '.wav', '.ogg', '.mp4', '.mov', '.webm', '.avi'];
+  const extension = path.extname(file.originalname || '').toLowerCase();
+  const genericMimeWithValidExtension = ['application/octet-stream', 'binary/octet-stream', ''].includes(file.mimetype) && allowedExtensions.includes(extension);
+  if (allowedMimeTypes.includes(file.mimetype) || genericMimeWithValidExtension) {
     cb(null, true);
   } else {
-    cb(new Error('Format file tidak didukung. Hanya JPG, PNG, PDF, Audio (MP3/WAV), dan Video (MP4/MOV/WebM) yang diperbolehkan.'), false);
+    const error = new Error('Format file tidak didukung. Gunakan JPG, JPEG, PNG, PDF, Audio (MP3/WAV), atau Video (MP4/MOV/WebM).');
+    error.code = 'UNSUPPORTED_FILE_TYPE';
+    cb(error, false);
   }
 };
 

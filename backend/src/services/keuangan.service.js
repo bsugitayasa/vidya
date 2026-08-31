@@ -7,6 +7,8 @@ const rabInclude = {
   createdBy: { select: { id: true, nama: true, role: true } },
   approvedBy: { select: { id: true, nama: true } },
   closedBy: { select: { id: true, nama: true } },
+  rabQrDocument: true,
+  lpjQrDocument: true,
   items: {
     include: { kategori: true },
     orderBy: { urutan: 'asc' }
@@ -62,7 +64,16 @@ const summarizeRab = (rab) => {
   };
 };
 
-const withSummary = (rab) => ({ ...rab, ringkasan: summarizeRab(rab) });
+const serializeQrDocument = (document) => document ? { ...document, id: document.id.toString() } : null;
+
+const withSummary = (rab) => ({
+  ...rab,
+  rabQrDocumentId: rab.rabQrDocumentId?.toString() || null,
+  lpjQrDocumentId: rab.lpjQrDocumentId?.toString() || null,
+  rabQrDocument: serializeQrDocument(rab.rabQrDocument),
+  lpjQrDocument: serializeQrDocument(rab.lpjQrDocument),
+  ringkasan: summarizeRab(rab)
+});
 
 const audit = (tx, { entityType, entityId, action, oldValue, newValue, reason, userId }) => tx.auditKeuangan.create({
   data: {
