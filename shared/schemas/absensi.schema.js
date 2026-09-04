@@ -12,7 +12,8 @@ const createSesiSchema = z.object({
   mataKuliahId: z.coerce.number().int().positive('ID Mata Kuliah tidak valid'),
   tanggal: z.string().or(z.date()),
   pertemuan: z.coerce.number().int().positive('Nomor pertemuan harus positif'),
-  topik: z.string().optional()
+  topik: z.string().trim().max(500, 'Topik maksimal 500 karakter').nullable().optional(),
+  narawakya: z.string().trim().max(200, 'Nama Narawakya maksimal 200 karakter').nullable().optional()
 });
 
 const inputAbsensiSchema = z.object({
