@@ -529,6 +529,75 @@ const deleteRecommendationDocument = (req, res) => deleteRegistrationDocument(re
   errorContext: 'Delete Recommendation Document'
 });
 
+const removeUploadedFile = async (storedPath, errorContext) => {
+  if (!storedPath) return;
+  const filename = path.basename(storedPath);
+  const uploadDirectory = path.resolve(__dirname, '../../uploads');
+  const filePath = path.resolve(uploadDirectory, filename);
+  if (!filename || !filePath.startsWith(`${uploadDirectory}${path.sep}`)) return;
+
+  try {
+    await fs.promises.unlink(filePath);
+  } catch (fileError) {
+    if (fileError.code !== 'ENOENT') console.error(`${errorContext} Physical File Error:`, fileError);
+  }
+};
+
+const replaceRegistrationDocument = async (req, res, { field, label, errorContext }) => {
+  const uploadedPath = req.file ? `/uploads/${req.file.filename}` : null;
+  try {
+    const sisyaId = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(sisyaId) || sisyaId <= 0) {
+      await removeUploadedFile(uploadedPath, errorContext);
+      return res.status(400).json({ success: false, message: 'ID Sisya tidak valid' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: `${label} wajib dipilih` });
+    }
+
+    const sisya = await prisma.sisya.findUnique({
+      where: { id: sisyaId },
+      select: { id: true, namaLengkap: true, [field]: true }
+    });
+    if (!sisya) {
+      await removeUploadedFile(uploadedPath, errorContext);
+      return res.status(404).json({ success: false, message: 'Data Sisya tidak ditemukan' });
+    }
+
+    const updateResult = await prisma.sisya.updateMany({
+      where: { id: sisya.id, [field]: sisya[field] },
+      data: { [field]: uploadedPath }
+    });
+    if (updateResult.count !== 1) {
+      await removeUploadedFile(uploadedPath, errorContext);
+      return res.status(409).json({ success: false, message: `${label} telah berubah. Muat ulang halaman dan coba kembali.` });
+    }
+
+    await removeUploadedFile(sisya[field], errorContext);
+    res.json({
+      success: true,
+      message: `${label} ${sisya.namaLengkap} berhasil ${sisya[field] ? 'diganti' : 'diunggah'}`,
+      data: { [field]: uploadedPath }
+    });
+  } catch (error) {
+    await removeUploadedFile(uploadedPath, errorContext);
+    console.error(`${errorContext} Error:`, error);
+    res.status(500).json({ success: false, message: `Gagal mengunggah ${label.toLowerCase()}` });
+  }
+};
+
+const uploadIdentityDocument = (req, res) => replaceRegistrationDocument(req, res, {
+  field: 'fileIdentitasPath',
+  label: 'Dokumen KTP/KK',
+  errorContext: 'Upload Identity Document'
+});
+
+const uploadRecommendationDocument = (req, res) => replaceRegistrationDocument(req, res, {
+  field: 'fileRekomendasiPath',
+  label: 'Surat Rekomendasi',
+  errorContext: 'Upload Recommendation Document'
+});
+
 const getAttendanceExport = async (req, res) => {
   try {
     const sisyas = await prisma.sisya.findMany({
@@ -1095,6 +1164,8 @@ module.exports = {
   getById,
   findByNomor,
   serveFile,
+  uploadIdentityDocument,
+  uploadRecommendationDocument,
   deleteIdentityDocument,
   deleteRecommendationDocument,
   servePublicRegistrationFile,
