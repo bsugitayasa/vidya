@@ -101,6 +101,9 @@ export default function SisyaDetail() {
   const [showSoftDeleteConfirm, setShowSoftDeleteConfirm] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState(null);
   const [isDeletingDocument, setIsDeletingDocument] = useState(false);
+  const [documentToUpload, setDocumentToUpload] = useState(null);
+  const [registrationDocumentFile, setRegistrationDocumentFile] = useState(null);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const tanggalLahirVal = watch('tanggalLahir');
@@ -327,6 +330,50 @@ export default function SisyaDetail() {
       toast.error(err.response?.data?.message || `Gagal menghapus ${documentToDelete.label.toLowerCase()}`);
     } finally {
       setIsDeletingDocument(false);
+    }
+  };
+
+  const closeRegistrationDocumentUpload = () => {
+    if (isUploadingDocument) return;
+    setDocumentToUpload(null);
+    setRegistrationDocumentFile(null);
+  };
+
+  const handleRegistrationDocumentFile = (file) => {
+    if (!file) {
+      setRegistrationDocumentFile(null);
+      return;
+    }
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (!['jpg', 'jpeg', 'png', 'pdf'].includes(extension)) {
+      toast.error('Format dokumen harus JPG, JPEG, PNG, atau PDF');
+      setRegistrationDocumentFile(null);
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('Ukuran dokumen maksimal 20 MB');
+      setRegistrationDocumentFile(null);
+      return;
+    }
+    setRegistrationDocumentFile(file);
+  };
+
+  const handleUploadRegistrationDocument = async () => {
+    if (!isSuperAdmin || isUploadingDocument || !documentToUpload || !registrationDocumentFile) return;
+
+    setIsUploadingDocument(true);
+    try {
+      const formData = new FormData();
+      formData.append(documentToUpload.fieldName, registrationDocumentFile);
+      const res = await api.patch(`/sisya/${id}/${documentToUpload.endpoint}`, formData);
+      toast.success(res.data.message || `${documentToUpload.label} berhasil diunggah`);
+      setDocumentToUpload(null);
+      setRegistrationDocumentFile(null);
+      await fetchSisyaDetail();
+    } catch (err) {
+      toast.error(err.response?.data?.message || `Gagal mengunggah ${documentToUpload.label.toLowerCase()}`);
+    } finally {
+      setIsUploadingDocument(false);
     }
   };
 
@@ -1083,18 +1130,24 @@ export default function SisyaDetail() {
               <div className="space-y-2">
                 <div className="flex min-h-8 items-center justify-between gap-3">
                   <span className="block text-xs font-bold text-muted uppercase tracking-wider">KTP / KK</span>
-                  {isSuperAdmin && sisya.fileIdentitasPath && (
-                    <button
-                      type="button"
-                      onClick={() => setDocumentToDelete({
-                        endpoint: 'dokumen-identitas',
-                        label: 'Dokumen KTP/KK/Ijazah'
-                      })}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100"
-                      title="Hapus dokumen identitas"
-                    >
-                      <Trash2 size={13} /> Hapus
-                    </button>
+                  {isSuperAdmin && (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDocumentToUpload({ endpoint: 'dokumen-identitas', fieldName: 'fileIdentitas', label: 'Dokumen KTP/KK', replacing: Boolean(sisya.fileIdentitasPath) })}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
+                      >
+                        <Upload size={13} /> {sisya.fileIdentitasPath ? 'Ganti' : 'Upload'}
+                      </button>
+                      {sisya.fileIdentitasPath && <button
+                        type="button"
+                        onClick={() => setDocumentToDelete({ endpoint: 'dokumen-identitas', label: 'Dokumen KTP/KK/Ijazah' })}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100"
+                        title="Hapus dokumen identitas"
+                      >
+                        <Trash2 size={13} /> Hapus
+                      </button>}
+                    </div>
                   )}
                 </div>
                 {sisya.fileIdentitasPath && ktpUrl ? (
@@ -1117,18 +1170,24 @@ export default function SisyaDetail() {
               <div className="space-y-2">
                 <div className="flex min-h-8 items-center justify-between gap-3">
                   <span className="block text-xs font-bold text-muted uppercase tracking-wider">Surat Rekomendasi</span>
-                  {isSuperAdmin && sisya.fileRekomendasiPath && (
-                    <button
-                      type="button"
-                      onClick={() => setDocumentToDelete({
-                        endpoint: 'surat-rekomendasi',
-                        label: 'Surat Rekomendasi'
-                      })}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100"
-                      title="Hapus surat rekomendasi"
-                    >
-                      <Trash2 size={13} /> Hapus
-                    </button>
+                  {isSuperAdmin && (
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDocumentToUpload({ endpoint: 'surat-rekomendasi', fieldName: 'fileRekomendasi', label: 'Surat Rekomendasi', replacing: Boolean(sisya.fileRekomendasiPath) })}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/10"
+                      >
+                        <Upload size={13} /> {sisya.fileRekomendasiPath ? 'Ganti' : 'Upload'}
+                      </button>
+                      {sisya.fileRekomendasiPath && <button
+                        type="button"
+                        onClick={() => setDocumentToDelete({ endpoint: 'surat-rekomendasi', label: 'Surat Rekomendasi' })}
+                        className="inline-flex items-center gap-1.5 rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-600 transition-colors hover:bg-red-100"
+                        title="Hapus surat rekomendasi"
+                      >
+                        <Trash2 size={13} /> Hapus
+                      </button>}
+                    </div>
                   )}
                 </div>
                 {sisya.fileRekomendasiPath && rekomendasiUrl ? (
@@ -1477,6 +1536,53 @@ export default function SisyaDetail() {
                 <Button variant="outline" onClick={() => { setShowUploadModal(false); setUploadFile(null); setUploadKeterangan(''); }}>Batal</Button>
                 <Button onClick={handleAdminUploadBukti} disabled={isUploading || !uploadFile}>
                   {isUploading ? 'Mengupload...' : 'Upload Bukti'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {documentToUpload && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md overflow-hidden rounded-xl border border-muted/20 bg-surface shadow-2xl">
+            <div className="flex items-center justify-between border-b border-muted/10 bg-primary/5 p-5">
+              <h3 className="flex items-center gap-2 text-lg font-bold text-primary">
+                <Upload size={19} /> {documentToUpload.replacing ? 'Ganti' : 'Upload'} {documentToUpload.label}
+              </h3>
+              <button type="button" disabled={isUploadingDocument} onClick={closeRegistrationDocumentUpload} className="text-muted hover:text-text disabled:opacity-50">✕</button>
+            </div>
+            <div className="space-y-4 p-5">
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
+                Dokumen untuk <span className="font-bold">{sisya.namaLengkap}</span>. Format JPG, PNG, atau PDF dengan ukuran maksimal 20 MB.
+              </div>
+              {documentToUpload.replacing && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                  Dokumen lama akan digantikan setelah unggahan baru berhasil disimpan.
+                </div>
+              )}
+              <label className="block space-y-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-muted">Pilih Berkas</span>
+                <Input
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  disabled={isUploadingDocument}
+                  onChange={(event) => handleRegistrationDocumentFile(event.target.files?.[0])}
+                />
+              </label>
+              {registrationDocumentFile && (
+                <div className="flex items-center gap-3 rounded-lg border border-muted/20 bg-bg/50 p-3">
+                  <FileText size={24} className="shrink-0 text-primary" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-text">{registrationDocumentFile.name}</p>
+                    <p className="text-xs text-muted">{(registrationDocumentFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end gap-3 pt-2">
+                <Button type="button" variant="outline" disabled={isUploadingDocument} onClick={closeRegistrationDocumentUpload}>Batal</Button>
+                <Button type="button" disabled={isUploadingDocument || !registrationDocumentFile} onClick={handleUploadRegistrationDocument}>
+                  {isUploadingDocument ? <><Loader2 size={15} className="mr-2 animate-spin" /> Mengunggah...</> : <><Upload size={15} className="mr-2" /> Simpan Dokumen</>}
                 </Button>
               </div>
             </div>
