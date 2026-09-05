@@ -265,7 +265,10 @@ const getSesiDetail = async (req, res) => {
         namaGriya: true,
         nomorPendaftaran: true
       },
-      orderBy: { namaLengkap: 'asc' }
+      orderBy: [
+        { nomorPendaftaran: 'asc' },
+        { id: 'asc' }
+      ]
     });
 
     // Gabungkan data absensi dengan daftar sisya
