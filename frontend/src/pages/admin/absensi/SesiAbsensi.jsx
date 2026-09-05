@@ -200,6 +200,36 @@ export default function SesiAbsensi() {
     const pageHeight = doc.internal.pageSize.getHeight();
     const margin = 14;
 
+    const fetchPublicImageAsBase64 = async (imageUrl) => {
+      try {
+        const response = await fetch(imageUrl);
+        if (!response.ok) return null;
+        const blob = await response.blob();
+        return await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        return null;
+      }
+    };
+
+    const drawWrappedInfoRow = (label, value, startY) => {
+      const colonX = margin + 40;
+      const valueX = margin + 44;
+      const valueLines = doc.splitTextToSize(value || '-', pageWidth - margin - valueX);
+
+      doc.setFont('helvetica', 'bold');
+      doc.text(label, margin, startY);
+      doc.setFont('helvetica', 'normal');
+      doc.text(':', colonX, startY);
+      doc.text(valueLines, valueX, startY, { lineHeightFactor: 1.25 });
+
+      return startY + Math.max(6, valueLines.length * 5);
+    };
+
     // Helper: fetch protected image as base64 data URL
     const fetchImageAsBase64 = async (filePath) => {
       try {
@@ -217,16 +247,21 @@ export default function SesiAbsensi() {
     };
 
     // ── Header ──
+    const logoBase64 = await fetchPublicImageAsBase64('/logo.png');
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', margin, 9, 20, 20);
+    }
+    const headerTextCenter = (margin + 24 + pageWidth - margin) / 2;
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('REKAPITULASI ABSENSI', pageWidth / 2, 18, { align: 'center' });
+    doc.text('REKAPITULASI ABSENSI', headerTextCenter, 18, { align: 'center' });
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('SEKSI PENDIDIKAN & PENGAJARAN KEBRAHMANAN PDPN', pageWidth / 2, 24, { align: 'center' });
+    doc.text('SEKSI PENDIDIKAN & PENGAJARAN KEBRAHMANAN PDPN', headerTextCenter, 24, { align: 'center' });
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text('Pasraman Dharma Wasitha Capung Mas Ubud Gianyar', pageWidth / 2, 30, { align: 'center' });
+    doc.text('Pasraman Dharma Wasitha Capung Mas Ubud Gianyar', headerTextCenter, 30, { align: 'center' });
 
     doc.setDrawColor(124, 58, 237);
     doc.setLineWidth(0.5);
@@ -262,19 +297,11 @@ export default function SesiAbsensi() {
     doc.text(`: ${tanggalStr}`, margin + 42, y);
 
     y += 6;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Narawakya', margin, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`: ${sesiData.narawakya || '-'}`, margin + 42, y);
-
-    y += 6;
-    doc.setFont('helvetica', 'bold');
-    doc.text('Topik', margin, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`: ${sesiData.topik || '-'}`, margin + 42, y);
+    y = drawWrappedInfoRow('Narawakya', sesiData.narawakya, y);
+    y = drawWrappedInfoRow('Topik', sesiData.topik, y);
 
     // ── Statistik ──
-    y += 10;
+    y += 4;
     doc.setFillColor(245, 245, 255);
     doc.roundedRect(margin, y - 4, pageWidth - (margin * 2), 12, 2, 2, 'F');
     doc.setFontSize(9);
