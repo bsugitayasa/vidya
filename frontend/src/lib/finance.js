@@ -16,6 +16,7 @@ export const RAB_STATUS = {
   REALISASI: { label: 'Realisasi', className: 'bg-violet-100 text-violet-700' },
   MENUNGGU_VERIFIKASI_LPJ: { label: 'Verifikasi LPJ', className: 'bg-orange-100 text-orange-700' },
   PERLU_REVISI: { label: 'Perlu Revisi', className: 'bg-rose-100 text-rose-700' },
+  DALAM_PENYESUAIAN: { label: 'Dalam Penyesuaian', className: 'bg-amber-100 text-amber-800' },
   SELESAI: { label: 'Selesai', className: 'bg-emerald-100 text-emerald-700' },
   DIBATALKAN: { label: 'Dibatalkan', className: 'bg-slate-200 text-slate-500' }
 };

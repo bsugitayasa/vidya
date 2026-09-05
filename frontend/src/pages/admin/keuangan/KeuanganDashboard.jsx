@@ -31,11 +31,12 @@ export default function KeuanganDashboard() {
 
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard icon={ClipboardCheck} label="Anggaran Disetujui" value={formatRupiah(data.totalAnggaranDisetujui)} hint={`${data.totalRab} pengajuan RAB`} />
-      <StatCard icon={Banknote} label="Dana Masuk" value={formatRupiah(data.totalDanaMasuk)} tone="blue" />
+      <StatCard icon={Banknote} label="Dana Masuk" value={formatRupiah(data.totalDanaMasuk)} tone="blue" hint={`Bendahara ${formatRupiah(data.totalDanaBendahara)} · Tambahan ${formatRupiah(data.totalDanaTambahan)} · Menunggu ${formatRupiah(data.totalPenerimaanMenunggu)}`} />
       <StatCard icon={ReceiptText} label="Realisasi Terverifikasi" value={formatRupiah(data.totalPengeluaran)} tone="violet" />
       <StatCard icon={WalletCards} label="Sisa Kas Dipertanggungjawabkan" value={formatRupiah(data.totalSisaKas)} tone="amber" />
     </div>
 
+    <Link to="/admin/keuangan/rekonsiliasi" className="block rounded-xl bg-emerald-50 p-4 font-bold text-emerald-800">Laporan Rekonsiliasi Dana — seluruh RAB, penerimaan, realisasi, dan sisa dana →</Link>
     <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
       <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm xl:col-span-2">
         <div className="mb-5 flex items-center gap-3"><div className="rounded-lg bg-emerald-50 p-2 text-emerald-600"><BarChart3 size={20} /></div><div><h2 className="font-bold text-slate-800">Realisasi per Kategori</h2><p className="text-xs text-slate-500">Hanya pengeluaran yang telah diverifikasi</p></div></div>

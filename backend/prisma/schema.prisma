@@ -202,6 +202,7 @@ model AkunKas {
   pencairans    PencairanDana[]
   pengeluarans  PengeluaranRab[]
   pengembalians PengembalianDana[]
+  pemeriksaans RekonsiliasiKas[]
 }
 
 model RencanaAnggaran {
@@ -241,6 +242,8 @@ model RencanaAnggaran {
   pencairans      PencairanDana[]
   pengeluarans    PengeluaranRab[]
   pengembalians   PengembalianDana[]
+  arsips          ArsipLpj[]
+  perubahanAnggarans PerubahanAnggaran[]
 
   @@index([status, createdAt])
   @@index([programAjahanId])
@@ -273,6 +276,9 @@ model PencairanDana {
   tanggal        DateTime
   nominal        Decimal                 @db.Decimal(18, 0)
   sumberDana     String
+  jenisSumber    String                  @default("BENDAHARA")
+  verifiedById   Int?
+  verifiedAt     DateTime?
   nomorReferensi String?
   buktiPath      String?
   keterangan     String?
@@ -386,6 +392,7 @@ enum StatusRab {
   REALISASI
   MENUNGGU_VERIFIKASI_LPJ
   PERLU_REVISI
+  DALAM_PENYESUAIAN
   SELESAI
   DIBATALKAN
 }
@@ -396,8 +403,48 @@ enum TipeAkunKas {
 }
 
 enum StatusTransaksiKeuangan {
+  MENUNGGU_VERIFIKASI
   AKTIF
   DIBATALKAN
+}
+
+model ArsipLpj {
+  id        Int @id @default(autoincrement())
+  rabId     Int
+  revision  Int
+  snapshot  Json
+  alasan    String
+  userId    Int
+  createdAt DateTime @default(now())
+  rab       RencanaAnggaran @relation(fields: [rabId], references: [id], onDelete: Restrict)
+  @@unique([rabId, revision])
+}
+
+model PerubahanAnggaran {
+  id         Int @id @default(autoincrement())
+  rabId      Int
+  items      Json
+  alasan     String
+  status     String @default("MENUNGGU_VERIFIKASI")
+  userId     Int
+  verifiedById Int?
+  verifiedAt DateTime?
+  createdAt  DateTime @default(now())
+  rab        RencanaAnggaran @relation(fields: [rabId], references: [id], onDelete: Restrict)
+  @@index([rabId, status])
+}
+
+model RekonsiliasiKas {
+  id           Int @id @default(autoincrement())
+  akunKasId    Int
+  tanggal      DateTime
+  saldoSistem  Decimal @db.Decimal(18, 0)
+  saldoAktual  Decimal @db.Decimal(18, 0)
+  catatan      String
+  userId       Int
+  createdAt    DateTime @default(now())
+  akunKas      AkunKas @relation(fields: [akunKasId], references: [id], onDelete: Restrict)
+  @@index([akunKasId, tanggal])
 }
 
 enum StatusPengeluaran {

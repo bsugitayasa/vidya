@@ -18,6 +18,9 @@ test('menghitung dana masuk, realisasi, pengembalian, sisa kas, dan sisa anggara
   });
 
   assert.deepEqual(result, {
+    pencairanBendahara: 8_000_000,
+    danaTambahan: 0,
+    penerimaanMenunggu: 0,
     danaMasuk: 8_000_000,
     pengeluaranTerverifikasi: 5_000_000,
     pengeluaranMenunggu: 500_000,
