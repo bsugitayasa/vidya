@@ -43,6 +43,7 @@ const KeuanganDashboard = lazy(() => import('./pages/admin/keuangan/KeuanganDash
 const RabList = lazy(() => import('./pages/admin/keuangan/RabList'));
 const RabDetail = lazy(() => import('./pages/admin/keuangan/RabDetail'));
 const MasterKeuangan = lazy(() => import('./pages/admin/keuangan/MasterKeuangan'));
+const RekonsiliasiKeuangan = lazy(() => import('./pages/admin/keuangan/RekonsiliasiKeuangan'));
 
 const queryClient = new QueryClient();
 
@@ -111,6 +112,7 @@ function App() {
               <Route path="keuangan/rab" element={<RabList />} />
               <Route path="keuangan/rab/:id" element={<RabDetail />} />
               <Route path="keuangan/master" element={<MasterKeuangan />} />
+              <Route path="keuangan/rekonsiliasi" element={<RekonsiliasiKeuangan />} />
             </Route>
 
             {/* Standalone Public Verification Scan Page */}

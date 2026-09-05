@@ -21,7 +21,7 @@ import IdleWarningDialog from '../components/ui/IdleWarningDialog';
 
 export default function AdminLayout() {
   const { token, user } = useAuthStore();
-  const [isMinimized, setIsMinimized] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(() => window.innerWidth < 768);
   const location = useLocation();
 
   if (!token) {
@@ -43,6 +43,7 @@ export default function AdminLayout() {
       subItems: [
         { path: '/admin/keuangan', label: 'Dashboard Keuangan' },
         { path: '/admin/keuangan/rab', label: 'RAB & LPJ' },
+        { path: '/admin/keuangan/rekonsiliasi', label: 'Rekonsiliasi Dana' },
         { path: '/admin/keuangan/master', label: 'Master Keuangan' },
       ]
     },
@@ -135,11 +136,12 @@ export default function AdminLayout() {
       {/* Sidebar */}
       <aside
         className={`${isMinimized ? 'w-20' : 'w-64'
-          } bg-secondary text-white flex flex-col transition-all duration-300 ease-in-out relative shadow-xl`}
+          } shrink-0 bg-secondary text-white flex flex-col transition-all duration-300 ease-in-out relative shadow-xl`}
       >
         {/* Toggle Button */}
         <button
           onClick={() => setIsMinimized(!isMinimized)}
+          aria-label={isMinimized ? 'Perluas menu' : 'Minimalkan menu'}
           className="absolute -right-3 top-20 bg-primary text-white rounded-full p-1 shadow-lg hover:scale-110 transition-transform z-10"
         >
           {isMinimized ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
@@ -246,7 +248,7 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto">
+      <main className="min-w-0 flex-1 p-4 md:p-8 overflow-y-auto">
         <div className="max-w-7xl mx-auto">
           <Outlet />
         </div>

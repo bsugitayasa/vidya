@@ -3,6 +3,8 @@ const { Prisma } = require('@prisma/client');
 const ACTIVE_EXPENSE_STATUSES = ['MENUNGGU_VERIFIKASI', 'VERIFIKASI'];
 
 const rabInclude = {
+  arsips: { select: { id: true, revision: true, alasan: true, createdAt: true }, orderBy: { revision: 'desc' } },
+  perubahanAnggarans: { orderBy: { createdAt: 'desc' } },
   programAjahan: { select: { id: true, kode: true, nama: true } },
   createdBy: { select: { id: true, nama: true, role: true } },
   approvedBy: { select: { id: true, nama: true } },
@@ -53,6 +55,9 @@ const summarizeRab = (rab) => {
   const totalDisetujui = money(rab.totalDisetujui);
 
   return {
+    pencairanBendahara: sum(rab.pencairans || [], row => row.status === 'AKTIF' && (!row.jenisSumber || row.jenisSumber === 'BENDAHARA') ? row.nominal : 0),
+    danaTambahan: sum(rab.pencairans || [], row => row.status === 'AKTIF' && row.jenisSumber && row.jenisSumber !== 'BENDAHARA' ? row.nominal : 0),
+    penerimaanMenunggu: sum(rab.pencairans || [], row => row.status === 'MENUNGGU_VERIFIKASI' ? row.nominal : 0),
     danaMasuk,
     pengeluaranTerverifikasi,
     pengeluaranMenunggu,
@@ -65,6 +70,11 @@ const summarizeRab = (rab) => {
 };
 
 const serializeQrDocument = (document) => document ? { ...document, id: document.id.toString() } : null;
+const summarizeAccount = (rab, akunKasId) => summarizeRab({ ...rab,
+  pencairans: (rab.pencairans || []).filter(r => r.akunKasId === Number(akunKasId)),
+  pengeluarans: (rab.pengeluarans || []).filter(r => r.akunKasId === Number(akunKasId)),
+  pengembalians: (rab.pengembalians || []).filter(r => r.akunKasId === Number(akunKasId))
+});
 
 const withSummary = (rab) => ({
   ...rab,
@@ -95,6 +105,7 @@ module.exports = {
   rabInclude,
   money,
   summarizeRab,
+  summarizeAccount,
   withSummary,
   audit,
   financeRoles,

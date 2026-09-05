@@ -2,13 +2,17 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
-const { PrismaClient } = require('@prisma/client');
-const { rabInclude, withSummary, summarizeRab, audit, treasurerRoles } = require('../services/keuangan.service');
+const { rabInclude, withSummary, summarizeRab, summarizeAccount, audit, treasurerRoles } = require('../services/keuangan.service');
+const { assertUnusedQr } = require('./rekonsiliasi.controller');
 
-const prisma = new PrismaClient();
+const { prisma } = require('../services/finance-db');
 const asInt = (value) => Number.parseInt(value, 10);
 const asBigInt = (value) => value ? BigInt(value) : null;
-const asMoney = (value) => Math.round(Number(value || 0));
+const asMoney = (value) => {
+  const result = Math.round(Number(value || 0));
+  if (!Number.isSafeInteger(result)) throw new Error('Nominal tidak valid');
+  return result;
+};
 const isTreasurer = (user) => treasurerRoles.includes(user.role);
 const parseItems = (value) => typeof value === 'string' ? JSON.parse(value) : value;
 const safeFilePath = (file) => file ? `/uploads/${file.filename}` : null;
@@ -57,6 +61,7 @@ const validateRabVerificationDocument = async (value, currentRabId = null) => {
     include: { rabApproval: { select: { id: true } } }
   });
   if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
+  await assertUnusedQr(prisma, id);
   if (document.rabApproval && document.rabApproval.id !== currentRabId) throw new Error('QR-Code verifikasi sudah digunakan oleh RAB lain');
   return id;
 };
@@ -70,6 +75,7 @@ const resolveRabVerificationDocument = async ({ id, token, currentRabId = null }
     include: { rabApproval: { select: { id: true } } }
   });
   if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
+  await assertUnusedQr(prisma, document.id);
   if (document.rabApproval && document.rabApproval.id !== currentRabId) {
     throw new Error('QR-Code verifikasi sudah digunakan oleh RAB lain');
   }
@@ -85,6 +91,7 @@ const validateLpjVerificationDocument = async (value, currentRabId = null) => {
     include: { lpjApproval: { select: { id: true } } }
   });
   if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
+  await assertUnusedQr(prisma, id);
   if (document.lpjApproval && document.lpjApproval.id !== currentRabId) throw new Error('QR-Code verifikasi sudah digunakan oleh LPJ lain');
   return id;
 };
@@ -98,6 +105,7 @@ const resolveLpjVerificationDocument = async ({ id, token, currentRabId = null }
     include: { lpjApproval: { select: { id: true } } }
   });
   if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
+  await assertUnusedQr(prisma, document.id);
   if (document.lpjApproval && document.lpjApproval.id !== currentRabId) {
     throw new Error('QR-Code verifikasi sudah digunakan oleh LPJ lain');
   }
@@ -122,10 +130,12 @@ const listVerificationDocuments = async (req, res) => {
       orderBy: { createdAt: 'desc' },
       take: 250
     });
+    const archived = await prisma.arsipLpj.findMany({ select: { snapshot: true } });
+    const reserved = new Set(archived.flatMap(a => [a.snapshot.rabQrDocumentId, a.snapshot.lpjQrDocumentId]).filter(Boolean));
     res.json({ success: true, data: documents.map((document) => ({
       ...document,
       id: document.id.toString(),
-      tersedia: !document.rabApproval && !document.lpjApproval
+      tersedia: !document.rabApproval && !document.lpjApproval && !reserved.has(document.id.toString())
     })) });
   } catch (error) {
     console.error('List Finance Verification Documents Error:', error);
@@ -183,6 +193,9 @@ const getDashboard = async (req, res) => {
         totalRab: rabs.length,
         totalAnggaranDisetujui: rabs.reduce((t, r) => t + Number(r.totalDisetujui), 0),
         totalDanaMasuk: summaries.reduce((t, r) => t + r.summary.danaMasuk, 0),
+        totalDanaBendahara: summaries.reduce((t, r) => t + r.summary.pencairanBendahara, 0),
+        totalDanaTambahan: summaries.reduce((t, r) => t + r.summary.danaTambahan, 0),
+        totalPenerimaanMenunggu: summaries.reduce((t, r) => t + r.summary.penerimaanMenunggu, 0),
         totalPengeluaran: summaries.reduce((t, r) => t + r.summary.pengeluaranTerverifikasi, 0),
         totalSisaKas: summaries.reduce((t, r) => t + r.summary.sisaKas, 0),
         menungguPersetujuan: statusCounts.DIAJUKAN || 0,
@@ -324,6 +337,7 @@ const updateRabMetadata = async (req, res) => {
   try {
     const existing = await getRabOrFail(req.params.id);
     if (!existing) return fail(res, 404, 'RAB tidak ditemukan');
+    if (['SELESAI', 'MENUNGGU_VERIFIKASI_LPJ'].includes(existing.status)) return fail(res, 409, 'Buka penyesuaian sebelum mengubah informasi LPJ selesai');
     if (!req.body.alasanPerubahan?.trim()) return fail(res, 400, 'Alasan perubahan wajib diisi untuk kebutuhan audit');
     if (!req.body.namaKegiatan?.trim() || !req.body.penanggungJawab?.trim() || !req.body.tanggalMulai || !req.body.tanggalSelesai) {
       return fail(res, 400, 'Nama kegiatan, penanggung jawab, dan periode wajib diisi');
@@ -442,39 +456,35 @@ const rejectRab = async (req, res) => {
   }
 };
 
-const addDisbursement = async (req, res) => {
+const signAdjustedRab = async (req, res) => {
   try {
     const rab = await getRabOrFail(req.params.id);
     if (!rab) return fail(res, 404, 'RAB tidak ditemukan');
-    if (!['DISETUJUI', 'DICAIRKAN_SEBAGIAN', 'DICAIRKAN_PENUH', 'REALISASI'].includes(rab.status)) return fail(res, 409, 'Dana hanya dapat dicairkan setelah RAB disetujui');
-    const nominal = asMoney(req.body.nominal);
-    if (nominal <= 0 || !req.body.akunKasId || !req.body.sumberDana?.trim()) return fail(res, 400, 'Data pencairan belum lengkap');
-    const ringkasan = summarizeRab(rab);
-    if (ringkasan.danaMasuk + nominal > Number(rab.totalDisetujui)) return fail(res, 409, 'Total pencairan melebihi anggaran yang disetujui');
-    const result = await prisma.$transaction(async (tx) => {
-      const row = await tx.pencairanDana.create({ data: { rabId: rab.id, akunKasId: asInt(req.body.akunKasId), tanggal: new Date(req.body.tanggal || Date.now()), nominal, sumberDana: req.body.sumberDana.trim(), nomorReferensi: req.body.nomorReferensi || null, buktiPath: safeFilePath(req.file), keterangan: req.body.keterangan || null, createdById: req.user.id } });
-      const total = ringkasan.danaMasuk + nominal;
-      const status = total >= Number(rab.totalDisetujui) ? 'DICAIRKAN_PENUH' : 'DICAIRKAN_SEBAGIAN';
-      await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { status } });
-      await audit(tx, { entityType: 'PENCAIRAN', entityId: row.id, action: 'DICATAT', newValue: { rabId: rab.id, nominal, status: 'AKTIF' }, userId: req.user.id });
-      return row;
+    if (!['DISETUJUI','DICAIRKAN_SEBAGIAN','DICAIRKAN_PENUH','REALISASI','PERLU_REVISI','DALAM_PENYESUAIAN'].includes(rab.status) || rab.rabQrDocumentId) return fail(res, 409, 'Tanda tangan revisi hanya tersedia untuk RAB disetujui yang belum memiliki QR');
+    if (rab.perubahanAnggarans.some(p => p.status === 'MENUNGGU_VERIFIKASI')) return fail(res, 409, 'Selesaikan persetujuan komponen anggaran terlebih dahulu');
+    const selected = await resolveRabVerificationDocument({ id: req.body.rabQrDocumentId, token: req.body.rabQrDocumentToken, currentRabId: rab.id });
+    const signer = selected ? null : getSignerData(req.body);
+    await prisma.$transaction(async tx => {
+      const verification = selected ? null : await createVerificationDocument(tx, { nomorSurat: rab.nomorRab, keteranganSurat: `RAB revisi ${rab.revision} - ${rab.namaKegiatan}`.slice(0, 200), signer });
+      const qrId = selected || verification.id;
+      await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { rabQrDocumentId: qrId } });
+      await audit(tx, { entityType: 'RAB', entityId: rab.id, action: 'RAB_REVISI_DITANDATANGANI', newValue: { revision: rab.revision, rabQrDocumentId: String(qrId) }, userId: req.user.id });
     });
-    res.status(201).json({ success: true, message: 'Pencairan dana berhasil dicatat', data: result });
-  } catch (error) {
-    console.error('Add Disbursement Error:', error);
-    fail(res, 400, error.message || 'Gagal mencatat pencairan');
-  }
+    res.json({ success: true, message: 'Tanda tangan RAB revisi berhasil disimpan' });
+  } catch (error) { fail(res, 400, error.message || 'Gagal menandatangani RAB'); }
 };
+
 
 const addExpense = async (req, res) => {
   try {
     const rab = await getRabOrFail(req.params.id);
     if (!rab) return fail(res, 404, 'RAB tidak ditemukan');
-    if (!['DICAIRKAN_SEBAGIAN', 'DICAIRKAN_PENUH', 'REALISASI', 'PERLU_REVISI'].includes(rab.status)) return fail(res, 409, 'Pengeluaran belum dapat dicatat pada status RAB ini');
+    if (!['DICAIRKAN_SEBAGIAN', 'DICAIRKAN_PENUH', 'REALISASI', 'PERLU_REVISI', 'DALAM_PENYESUAIAN'].includes(rab.status)) return fail(res, 409, 'Pengeluaran belum dapat dicatat pada status RAB ini');
     const nominal = asMoney(req.body.nominal);
     if (nominal <= 0 || !req.body.kategoriId || !req.body.akunKasId || !req.body.uraian?.trim() || !req.body.metode) return fail(res, 400, 'Data pengeluaran belum lengkap');
     const summary = summarizeRab(rab);
     if (nominal > summary.kasTersediaUntukInput) return fail(res, 409, 'Nominal pengeluaran melebihi kas yang tersedia');
+    if (nominal > summarizeAccount(rab, req.body.akunKasId).kasTersediaUntukInput) return fail(res, 409, 'Dana RAB pada akun kas yang dipilih tidak mencukupi');
     let allowOverBudget = req.body.allowOverBudget === true || req.body.allowOverBudget === 'true';
     if (allowOverBudget && !isTreasurer(req.user)) return fail(res, 403, 'Hanya Bendahara yang dapat memberi pengecualian anggaran');
     if (allowOverBudget && !req.body.overrideReason?.trim()) return fail(res, 400, 'Alasan pengecualian anggaran wajib diisi');
@@ -486,7 +496,7 @@ const addExpense = async (req, res) => {
     }
     const result = await prisma.$transaction(async (tx) => {
       const row = await tx.pengeluaranRab.create({ data: { rabId: rab.id, itemAnggaranId: req.body.itemAnggaranId ? asInt(req.body.itemAnggaranId) : null, kategoriId: asInt(req.body.kategoriId), akunKasId: asInt(req.body.akunKasId), tanggal: new Date(req.body.tanggal || Date.now()), uraian: req.body.uraian.trim(), penerima: req.body.penerima || null, nominal, metode: req.body.metode, nomorBukti: req.body.nomorBukti || null, buktiPath: safeFilePath(req.file), keterangan: req.body.keterangan || null, allowOverBudget, overrideReason: req.body.overrideReason || null, createdById: req.user.id } });
-      if (rab.status !== 'PERLU_REVISI') await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { status: 'REALISASI' } });
+      if (!['PERLU_REVISI', 'DALAM_PENYESUAIAN'].includes(rab.status)) await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { status: 'REALISASI' } });
       await audit(tx, { entityType: 'PENGELUARAN', entityId: row.id, action: 'DICATAT', newValue: { rabId: rab.id, nominal, status: row.status }, reason: req.body.overrideReason, userId: req.user.id });
       return row;
     });
@@ -510,6 +520,8 @@ const updateExpense = async (req, res) => {
     if (nominal <= 0 || !req.body.kategoriId || !req.body.akunKasId || !req.body.uraian?.trim() || !req.body.metode) return fail(res, 400, 'Data pengeluaran belum lengkap');
     const summary = summarizeRab(expense.rab);
     if (nominal > summary.kasTersediaUntukInput + Number(expense.nominal)) return fail(res, 409, 'Nominal pengeluaran melebihi kas yang tersedia');
+    const accountAvailable = summarizeAccount(expense.rab, req.body.akunKasId).kasTersediaUntukInput + (expense.akunKasId === asInt(req.body.akunKasId) ? Number(expense.nominal) : 0);
+    if (nominal > accountAvailable) return fail(res, 409, 'Dana pada akun kas yang dipilih tidak mencukupi');
 
     const itemAnggaranId = req.body.itemAnggaranId ? asInt(req.body.itemAnggaranId) : null;
     const allowOverBudget = req.body.allowOverBudget === true || req.body.allowOverBudget === 'true';
@@ -564,6 +576,7 @@ const verifyExpense = async (req, res) => {
     if (expense.status !== 'MENUNGGU_VERIFIKASI') return fail(res, 409, 'Pengeluaran sudah diproses');
     const summary = summarizeRab(expense.rab);
     if (Number(expense.nominal) > summary.sisaKas) return fail(res, 409, 'Kas tersedia tidak mencukupi untuk memverifikasi pengeluaran ini');
+    if (Number(expense.nominal) > summarizeAccount(expense.rab, expense.akunKasId).sisaKas) return fail(res, 409, 'Dana pada akun kas pengeluaran tidak mencukupi');
     await prisma.$transaction(async (tx) => {
       await tx.pengeluaranRab.update({ where: { id: expense.id }, data: { status: 'VERIFIKASI', verifiedById: req.user.id, verifiedAt: new Date(), rejectedReason: null } });
       await audit(tx, { entityType: 'PENGELUARAN', entityId: expense.id, action: 'DIVERIFIKASI', oldValue: { status: expense.status }, newValue: { rabId: expense.rabId, status: 'VERIFIKASI', nominal: Number(expense.nominal) }, userId: req.user.id });
@@ -596,10 +609,12 @@ const addReturn = async (req, res) => {
   try {
     const rab = await getRabOrFail(req.params.id);
     if (!rab) return fail(res, 404, 'RAB tidak ditemukan');
+    if (['SELESAI', 'MENUNGGU_VERIFIKASI_LPJ'].includes(rab.status)) return fail(res, 409, 'Buka penyesuaian sebelum mengembalikan dana');
     const nominal = asMoney(req.body.nominal);
     const summary = summarizeRab(rab);
     if (nominal <= 0 || !req.body.akunKasId) return fail(res, 400, 'Data pengembalian belum lengkap');
-    if (nominal > summary.sisaKas) return fail(res, 409, 'Pengembalian dana melebihi sisa kas');
+    if (nominal > summary.kasTersediaUntukInput) return fail(res, 409, 'Pengembalian dana melebihi kas tersedia setelah pengeluaran menunggu verifikasi');
+    if (nominal > summarizeAccount(rab, req.body.akunKasId).kasTersediaUntukInput) return fail(res, 409, 'Saldo akun kas pengembalian tidak mencukupi');
     const row = await prisma.$transaction(async (tx) => {
       const created = await tx.pengembalianDana.create({ data: { rabId: rab.id, akunKasId: asInt(req.body.akunKasId), tanggal: new Date(req.body.tanggal || Date.now()), nominal, nomorReferensi: req.body.nomorReferensi || null, buktiPath: safeFilePath(req.file), keterangan: req.body.keterangan || null, createdById: req.user.id } });
       await audit(tx, { entityType: 'PENGEMBALIAN', entityId: created.id, action: 'DICATAT', newValue: { rabId: rab.id, nominal, status: 'AKTIF' }, userId: req.user.id });
@@ -621,15 +636,16 @@ const cancelTransaction = (model, entityType) => async (req, res) => {
     const rab = await getRabOrFail(row.rabId);
     if (!rab) return fail(res, 404, 'RAB transaksi tidak ditemukan');
     if (['MENUNGGU_VERIFIKASI_LPJ', 'SELESAI'].includes(rab.status)) return fail(res, 409, 'Transaksi pada LPJ yang sedang diverifikasi atau sudah ditutup tidak dapat dikoreksi');
-    if (model === 'pencairanDana') {
+    if (model === 'pencairanDana' && row.status === 'AKTIF') {
       const summary = summarizeRab(rab);
-      if (summary.danaMasuk - Number(row.nominal) < summary.pengeluaranTerverifikasi + summary.danaDikembalikan) {
+      if (Number(row.nominal) > summarizeAccount(rab, row.akunKasId).kasTersediaUntukInput) return fail(res, 409, 'Dana pada akun ini sudah digunakan atau dialokasikan untuk pengeluaran');
+      if (summary.danaMasuk - Number(row.nominal) < summary.pengeluaranTerverifikasi + summary.pengeluaranMenunggu + summary.danaDikembalikan) {
         return fail(res, 409, 'Pencairan tidak dapat dibatalkan karena dananya sudah direalisasikan atau dikembalikan');
       }
     }
     await prisma.$transaction(async (tx) => {
       await tx[model].update({ where: { id: row.id }, data: { status: 'DIBATALKAN', cancelledById: req.user.id, cancelledAt: new Date(), cancelReason: req.body.alasan.trim() } });
-      if (rab.status !== 'PERLU_REVISI' && ['pencairanDana', 'pengeluaranRab'].includes(model)) {
+      if (!['PERLU_REVISI', 'DALAM_PENYESUAIAN'].includes(rab.status) && ['pencairanDana', 'pengeluaranRab'].includes(model)) {
         const [funds, activeExpenses] = await Promise.all([
           tx.pencairanDana.aggregate({ where: { rabId: rab.id, status: 'AKTIF' }, _sum: { nominal: true } }),
           tx.pengeluaranRab.count({ where: { rabId: rab.id, status: { in: ['MENUNGGU_VERIFIKASI', 'VERIFIKASI'] } } })
@@ -651,7 +667,8 @@ const submitLpj = async (req, res) => {
   try {
     const rab = await getRabOrFail(req.params.id);
     if (!rab) return fail(res, 404, 'RAB tidak ditemukan');
-    if (!['REALISASI', 'DICAIRKAN_PENUH', 'PERLU_REVISI'].includes(rab.status)) return fail(res, 409, 'LPJ belum dapat diajukan pada status ini');
+    if (!['REALISASI', 'DICAIRKAN_PENUH', 'DICAIRKAN_SEBAGIAN', 'PERLU_REVISI', 'DALAM_PENYESUAIAN'].includes(rab.status)) return fail(res, 409, 'LPJ belum dapat diajukan pada status ini');
+    if (rab.pencairans.some(r => r.status === 'MENUNGGU_VERIFIKASI') || rab.perubahanAnggarans.some(r => r.status === 'MENUNGGU_VERIFIKASI')) return fail(res, 409, 'Masih ada penerimaan atau penyesuaian anggaran menunggu verifikasi');
     if (rab.pengeluarans.some((row) => row.status === 'MENUNGGU_VERIFIKASI')) return fail(res, 409, 'Masih ada pengeluaran yang menunggu verifikasi');
     await prisma.$transaction(async (tx) => {
       await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { status: 'MENUNGGU_VERIFIKASI_LPJ', ...(rab.status === 'PERLU_REVISI' ? { revision: { increment: 1 } } : {}) } });
@@ -688,6 +705,7 @@ const closeRab = async (req, res) => {
     if (rab.status !== 'MENUNGGU_VERIFIKASI_LPJ') return fail(res, 409, 'LPJ belum diajukan untuk verifikasi');
     const summary = summarizeRab(rab);
     if (summary.pengeluaranMenunggu > 0) return fail(res, 409, 'Masih ada pengeluaran yang menunggu verifikasi');
+    if (summary.penerimaanMenunggu > 0 || rab.perubahanAnggarans.some(r => r.status === 'MENUNGGU_VERIFIKASI')) return fail(res, 409, 'Masih ada penerimaan atau penyesuaian menunggu verifikasi');
     if (summary.sisaKas !== 0) return fail(res, 409, `Sisa kas Rp ${summary.sisaKas.toLocaleString('id-ID')} harus dikembalikan sebelum LPJ ditutup`);
     const selectedVerificationId = await resolveLpjVerificationDocument({
       id: req.body.lpjQrDocumentId,
@@ -821,7 +839,9 @@ const saveAccount = async (req, res) => {
 
 const exportExcel = async (req, res) => {
   try {
-    const rab = await getRabOrFail(req.params.id);
+    const archived = req.query.arsip ? await prisma.arsipLpj.findFirst({ where: { id: asInt(req.query.arsip), rabId: asInt(req.params.id) } }) : null;
+    if (req.query.arsip && !archived) return fail(res, 404, 'Arsip LPJ tidak ditemukan');
+    const rab = archived ? archived.snapshot : await getRabOrFail(req.params.id);
     if (!rab) return fail(res, 404, 'RAB tidak ditemukan');
     const summary = summarizeRab(rab);
     const workbook = new ExcelJS.Workbook();
@@ -859,6 +879,14 @@ const exportExcel = async (req, res) => {
     detail.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     detail.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF166534' } };
     detail.autoFilter = { from: 'A1', to: 'I1' };
+    const receipts = workbook.addWorksheet('Dana Masuk');
+    receipts.addRow(['Tanggal', 'Jenis Sumber', 'Pemberi / Asal Dana', 'Kas', 'Referensi', 'Status', 'Nominal']);
+    rab.pencairans.forEach(r => receipts.addRow([new Date(r.tanggal), r.jenisSumber || 'BENDAHARA', r.sumberDana, r.akunKas?.nama || '', r.nomorReferensi || '', r.status, Number(r.nominal)]));
+    receipts.columns.forEach(c => { c.width = 24; }); receipts.getColumn(1).numFmt = 'dd/mm/yyyy'; receipts.getColumn(7).numFmt = '#,##0';
+    sheet.addRow(['Pencairan Bendahara', '', summary.pencairanBendahara]);
+    sheet.addRow(['Hibah / Punia / Lainnya', '', summary.danaTambahan]);
+    sheet.addRow(['Penerimaan Menunggu', '', summary.penerimaanMenunggu]);
+    sheet.addRow(['Revisi', rab.revision]);
     const filename = `LPJ-${rab.nomorRab.replaceAll('/', '-')}.xlsx`;
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -882,8 +910,9 @@ const serveFile = async (req, res) => {
 };
 
 module.exports = {
+  signAdjustedRab,
   getDashboard, listVerificationDocuments, listRab, getRab, createRab, updateRab, updateRabMetadata, submitRab, approveRab, rejectRab,
-  addDisbursement, addExpense, updateExpense, verifyExpense, rejectExpense, addReturn,
+  addExpense, updateExpense, verifyExpense, rejectExpense, addReturn,
   cancelDisbursement: cancelTransaction('pencairanDana', 'PENCAIRAN'),
   cancelExpense: cancelTransaction('pengeluaranRab', 'PENGELUARAN'),
   cancelReturn: cancelTransaction('pengembalianDana', 'PENGEMBALIAN'),
