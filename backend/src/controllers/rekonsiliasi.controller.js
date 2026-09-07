@@ -63,6 +63,30 @@ const verifyReceipt = guard(async (req, res) => {
   res.json({ success: true, message: 'Penerimaan diverifikasi dan saldo kas bertambah' });
 });
 
+const editItemDescription = guard(async (req, res) => {
+  requireValue(req.user.role === 'SUPER_ADMIN', 'Hanya SUPER_ADMIN dapat mengubah uraian komponen', 403);
+  const alasan = reason(req.body);
+  requireValue(typeof req.body.uraian === 'string' && req.body.uraian.trim().length > 0 && req.body.uraian.trim().length <= 1000, 'Uraian wajib diisi, maksimal 1000 karakter');
+  const uraian = req.body.uraian.trim();
+  await transact(async tx => {
+    const rab = await getRab(tx, req.params.id);
+    requireValue([...editableStatuses, 'DRAFT', 'DITOLAK', 'DIAJUKAN'].includes(rab.status), 'Buka penyesuaian RAB selesai atau kembalikan LPJ untuk revisi sebelum mengubah uraian', 409);
+    const item = rab.items.find(i => i.id === positiveId(req.params.itemId));
+    requireValue(item, 'Komponen tidak ditemukan dalam RAB ini', 404);
+    requireValue(req.body.uraianSebelumnya === item.uraian, 'Uraian sudah berubah. Muat ulang detail lalu coba kembali.', 409);
+    if (item.uraian === uraian) return;
+    await tx.itemAnggaran.update({ where: { id: item.id }, data: { uraian } });
+    // Pending proposals must not restore the previous label when later approved.
+    for (const proposal of rab.perubahanAnggarans.filter(p => p.status === 'MENUNGGU_VERIFIKASI')) {
+      const items = proposal.items.map(i => i.id === item.id ? { ...i, uraian } : i);
+      await tx.perubahanAnggaran.update({ where: { id: proposal.id }, data: { items } });
+    }
+    if (rab.rabQrDocumentId && !['DRAFT', 'DITOLAK', 'DIAJUKAN'].includes(rab.status)) await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { rabQrDocumentId: null } });
+    await audit(tx, { entityType: 'RAB', entityId: rab.id, action: 'URAIAN_KOMPONEN_DIPERBARUI', oldValue: { itemId: item.id, uraian: item.uraian, rabQrDocumentId: rab.rabQrDocumentId?.toString() || null }, newValue: { itemId: item.id, uraian }, reason: alasan, userId: req.user.id });
+  });
+  res.json({ success: true, message: 'Uraian komponen diperbarui. Referensi dan export mengikuti uraian terbaru.' });
+});
+
 const proposeBudget = guard(async (req, res) => {
   const alasan = reason(req.body);
   requireValue(Array.isArray(req.body.items) && req.body.items.length > 0, 'Minimal satu komponen wajib diisi');
@@ -74,6 +98,7 @@ const proposeBudget = guard(async (req, res) => {
       const id = item.id ? positiveId(item.id) : null;
       if (id) { requireValue(rab.items.some(r => r.id === id) && !ids.has(id), 'Komponen tidak valid atau duplikat'); ids.add(id); }
       requireValue(item.uraian?.trim() && item.satuan?.trim(), 'Uraian dan satuan wajib diisi');
+      if (id && req.user.role !== 'SUPER_ADMIN') requireValue(item.uraian.trim() === rab.items.find(i => i.id === id).uraian, 'Hanya SUPER_ADMIN dapat mengubah uraian komponen yang sudah ada', 403);
       const volume = Number(item.volume); requireValue(Number.isFinite(volume) && volume > 0 && Math.abs(Math.round(volume * 100) - volume * 100) < 0.000001, 'Volume maksimal dua desimal');
       const hargaSatuan = amount(item.hargaSatuan);
       return { id, kategoriId: item.kategoriId ? positiveId(item.kategoriId) : null, uraian: item.uraian.trim(), satuan: item.satuan.trim(), volume, hargaSatuan, jumlahDiajukan: amount(Math.round(volume * hargaSatuan)) };
@@ -144,4 +169,4 @@ const saveCashCheck = guard(async (req, res) => {
   res.json({ success: true, message: 'Hasil pemeriksaan kas tersimpan; selisih tidak otomatis menjadi transaksi' });
 });
 
-module.exports = { reopen, archive, receive, verifyReceipt, proposeBudget, decideBudget, report, exportExcel, cashChecks, saveCashCheck, assertUnusedQr };
+module.exports = { editItemDescription, reopen, archive, receive, verifyReceipt, proposeBudget, decideBudget, report, exportExcel, cashChecks, saveCashCheck, assertUnusedQr };

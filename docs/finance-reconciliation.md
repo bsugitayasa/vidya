@@ -14,6 +14,12 @@
 
 ## Rekonsiliasi
 
+### Edit uraian komponen
+
+Pada Detail RAB → Rincian Anggaran, SUPER_ADMIN dapat memilih **Edit Uraian** dan mengisi alasan. ID komponen, nominal, serta relasi pengeluaran tetap dipertahankan. Pilihan Item RAB pada pengeluaran, label komponen pada realisasi, rincian PDF dan sheet Rincian Anggaran Excel mengikuti uraian terkini. Uraian transaksi pengeluaran merupakan keterangan bukti transaksi tersendiri dan tidak ditimpa.
+
+Usulan penyesuaian anggaran yang masih menunggu diselaraskan agar tidak mengembalikan uraian lama saat disetujui. Perubahan dicatat di Jejak Audit. RAB bertanda tangan yang uraiannya berubah memerlukan tanda tangan RAB kembali. LPJ selesai harus dibuka untuk penyesuaian, dan LPJ yang sedang diverifikasi harus dikembalikan untuk revisi terlebih dahulu. Arsip LPJ tetap memuat nama komponen pada versi lama.
+
 Menu **Keuangan → Rekonsiliasi Dana** merangkum seluruh RAB. Tersedia filter periode transaksi, program, status terkini, kas, serta RAB penerima sumber dana tertentu.
 
 - Saldo awal: penerimaan terverifikasi sebelum periode dikurangi realisasi dan pengembalian sebelum periode.

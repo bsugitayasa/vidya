@@ -27,11 +27,20 @@ async function main() {
         const result=await response.json();assert.equal(response.status,expected,`${method} ${path}: ${JSON.stringify(result)}`);checks++;return result.data;
       };
       await call('POST',`/rab/${rab.id}/reopen`,{alasan:'Dana punia tambahan'},403,'ADMIN');
+      const renamePath=`/rab/${rab.id}/items/${rab.items[0].id}/uraian`;
+      const rename={uraian:'Konsumsi utama',uraianSebelumnya:'Komponen awal',alasan:'Perjelas nama komponen'};
+      await call('PATCH',renamePath,rename,403,'ADMIN');
+      await call('PATCH',renamePath,rename,403,'BENDAHARA');
+      await call('PATCH',renamePath,rename,409);
       await call('POST',`/rab/${rab.id}/reopen`,{alasan:''},400);
       await call('POST',`/rab/${rab.id}/pencairan`,{nominal:2000000,akunKasId:account.id,tanggal:'2026-09-01',jenisSumber:'PUNIA'},409);
       await call('POST',`/rab/${rab.id}/reopen`,{alasan:'Dana punia tambahan'});
       const detail=await call('GET',`/rab/${rab.id}`);assert.equal(detail.revision,2);assert.equal(detail.lpjQrDocumentId,null);assert.equal(detail.arsips.length,1);
       const snapshot=await call('GET',`/rab/${rab.id}/arsip/${detail.arsips[0].id}`);assert.equal(snapshot.status,'SELESAI');assert.equal(snapshot.lpjQrDocument.token,tag);
+      await call('PATCH',renamePath,{...rename,uraian:'   '},400);
+      await call('PATCH',renamePath,rename);
+      await call('PATCH',renamePath,rename,409);
+      const renamed=await call('GET',`/rab/${rab.id}`);assert.equal(renamed.items[0].id,rab.items[0].id);assert.equal(renamed.items[0].uraian,'Konsumsi utama');assert.equal(Number(renamed.totalDisetujui),10000000);
       await call('POST',`/rab/${rab.id}/pencairan`,{nominal:-1,akunKasId:account.id,tanggal:'2026-09-01'},400);
       await call('POST',`/rab/${rab.id}/pencairan`,{nominal:2000000,akunKasId:account.id,tanggal:'2026-09-01',jenisSumber:'PUNIA',sumberDana:'Donatur'},201,'ADMIN');
       let current=await call('GET',`/rab/${rab.id}`);assert.equal(current.ringkasan.sisaKas,0);assert.equal(current.ringkasan.penerimaanMenunggu,2000000);
@@ -40,10 +49,12 @@ async function main() {
       await call('POST',`/pencairan/${receipt.id}/verify`,{},403,'ADMIN');
       await call('POST',`/pencairan/${receipt.id}/verify`,{});
       await call('POST',`/pencairan/${receipt.id}/verify`,{},409);
-      const proposal={alasan:'Komponen tambahan disetujui',items:[{uraian:'Tambahan konsumsi',volume:1,satuan:'paket',hargaSatuan:1500000,kategoriId:category.id}]};
+      const proposal={alasan:'Komponen tambahan disetujui',items:[{id:rab.items[0].id,uraian:'Konsumsi utama',volume:1,satuan:'paket',hargaSatuan:10000000,kategoriId:category.id},{uraian:'Tambahan konsumsi',volume:1,satuan:'paket',hargaSatuan:1500000,kategoriId:category.id}]};
       await call('POST',`/rab/${rab.id}/penyesuaian-anggaran`,proposal,200,'ADMIN');
       current=await call('GET',`/rab/${rab.id}`);assert.equal(Number(current.totalDisetujui),10000000);assert.equal(current.ringkasan.sisaKas,2000000);
       const pending=current.perubahanAnggarans[0];
+      await call('PATCH',renamePath,{...rename,uraianSebelumnya:'Konsumsi utama',uraian:'Konsumsi peserta program'});
+      const synced=await call('GET',`/rab/${rab.id}`);assert.equal(synced.perubahanAnggarans[0].items[0].uraian,'Konsumsi peserta program');
       await call('POST',`/penyesuaian-anggaran/${pending.id}/decision`,{status:'DISETUJUI',alasan:'Komponen disetujui'},403,'ADMIN');
       await call('POST',`/penyesuaian-anggaran/${pending.id}/decision`,{status:'DISETUJUI',alasan:'Komponen disetujui'});
       current=await call('GET',`/rab/${rab.id}`);assert.equal(Number(current.totalDisetujui),11500000);assert.equal(current.status,'DALAM_PENYESUAIAN');
@@ -60,12 +71,14 @@ async function main() {
       await call('POST','/rekonsiliasi/kas',{akunKasId:account.id,tanggal:'2026-09-30',saldoAktual:0,alasan:'Pemeriksaan data uji'});
       await call('GET','/rekonsiliasi/kas');
       const stillArchived=await call('GET',`/rab/${rab.id}/arsip/${detail.arsips[0].id}`);assert.equal(stillArchived.ringkasan.danaMasuk,10000000);
+      assert.equal(stillArchived.items[0].uraian,'Komponen awal');
+      assert.equal(current.items[0].uraian,'Konsumsi peserta program');
       const ExcelJS=require('exceljs');
       for(const path of ['/rekonsiliasi/export.xlsx?dari=2026-09-01&sampai=2026-09-30',`/rab/${rab.id}/export.xlsx?arsip=${detail.arsips[0].id}`]) {
         const token=jwt.sign({id:user.id,role:'SUPER_ADMIN'},process.env.JWT_SECRET,{expiresIn:'5m'});
         const response=await fetch(base+path,{headers:{Authorization:`Bearer ${token}`}});assert.equal(response.status,200);
         const book=new ExcelJS.Workbook();await book.xlsx.load(Buffer.from(await response.arrayBuffer()));assert.ok(book.worksheets.length>=2);checks++;
-        if(path.includes('arsip')) assert.equal(book.getWorksheet('Dana Masuk').rowCount,2,'Arsip harus berisi satu pencairan awal saja');
+        if(path.includes('arsip')) { assert.equal(book.getWorksheet('Dana Masuk').rowCount,2,'Arsip harus berisi satu pencairan awal saja'); assert.equal(book.getWorksheet('Rincian Anggaran').getCell('A2').value,'Komponen awal'); }
         else { const sheet=book.getWorksheet('Rekonsiliasi RAB');let found=false;sheet.eachRow(row=>{if(row.getCell(1).value===tag){assert.equal(row.getCell(8).value,2000000);assert.equal(row.getCell(13).value,0);found=true;}});assert.ok(found); }
       }
       throw rollback;

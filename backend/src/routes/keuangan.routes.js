@@ -3,7 +3,7 @@ const controller = require('../controllers/keuangan.controller');
 const reconciliation = require('../controllers/rekonsiliasi.controller');
 const { atomicFinanceWrite } = require('../services/finance-db');
 const upload = require('../middlewares/upload.middleware');
-const { requireAuth, requireFinanceAccess, requireTreasurer } = require('../middlewares/auth.middleware');
+const { requireAuth, requireFinanceAccess, requireTreasurer, requireSuperAdmin } = require('../middlewares/auth.middleware');
 
 const router = express.Router();
 router.use(requireAuth, requireFinanceAccess);
@@ -30,6 +30,7 @@ router.get('/rab', controller.listRab);
 router.post('/rab', upload.single('dokumen'), atomicFinanceWrite(controller.createRab));
 router.get('/rab/:id/export.xlsx', controller.exportExcel);
 router.get('/rab/:id', controller.getRab);
+router.patch('/rab/:id/items/:itemId/uraian', requireSuperAdmin, atomicFinanceWrite(reconciliation.editItemDescription));
 router.patch('/rab/:id', upload.single('dokumen'), atomicFinanceWrite(controller.updateRab));
 router.patch('/rab/:id/metadata', requireTreasurer, atomicFinanceWrite(controller.updateRabMetadata));
 router.post('/rab/:id/submit', atomicFinanceWrite(controller.submitRab));

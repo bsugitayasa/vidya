@@ -880,6 +880,11 @@ const exportExcel = async (req, res) => {
     detail.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF166534' } };
     detail.autoFilter = { from: 'A1', to: 'I1' };
     const receipts = workbook.addWorksheet('Dana Masuk');
+    const budget = workbook.addWorksheet('Rincian Anggaran');
+    budget.addRow(['Uraian', 'Kategori', 'Volume', 'Satuan', 'Harga Satuan', 'Diajukan', 'Disetujui', 'Realisasi']);
+    rab.items.forEach(item => budget.addRow([item.uraian, item.kategori?.nama || '-', Number(item.volume), item.satuan, Number(item.hargaSatuan), Number(item.jumlahDiajukan), Number(item.jumlahDisetujui), rab.pengeluarans.filter(r => r.itemAnggaranId === item.id && r.status === 'VERIFIKASI').reduce((total, r) => total + Number(r.nominal), 0)]));
+    budget.columns.forEach((column, index) => { column.width = index === 0 ? 50 : 22; if (index >= 4) column.numFmt = '#,##0'; });
+    budget.getRow(1).font = { bold: true }; budget.getColumn(1).alignment = { wrapText: true };
     receipts.addRow(['Tanggal', 'Jenis Sumber', 'Pemberi / Asal Dana', 'Kas', 'Referensi', 'Status', 'Nominal']);
     rab.pencairans.forEach(r => receipts.addRow([new Date(r.tanggal), r.jenisSumber || 'BENDAHARA', r.sumberDana, r.akunKas?.nama || '', r.nomorReferensi || '', r.status, Number(r.nominal)]));
     receipts.columns.forEach(c => { c.width = 24; }); receipts.getColumn(1).numFmt = 'dd/mm/yyyy'; receipts.getColumn(7).numFmt = '#,##0';
