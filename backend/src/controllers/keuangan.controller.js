@@ -884,6 +884,19 @@ const exportExcel = async (req, res) => {
     receipts.addRow(['Tanggal', 'Jenis Sumber', 'Pemberi / Asal Dana', 'Kas', 'Referensi', 'Status', 'Nominal']);
     rab.pencairans.forEach(r => receipts.addRow([new Date(r.tanggal), r.jenisSumber || 'BENDAHARA', r.sumberDana, r.akunKas?.nama || '', r.nomorReferensi || '', r.status, Number(r.nominal)]));
     receipts.columns.forEach(c => { c.width = 24; }); receipts.getColumn(1).numFmt = 'dd/mm/yyyy'; receipts.getColumn(7).numFmt = '#,##0';
+    const additionalIncome = workbook.addWorksheet('Dana Tambahan');
+    additionalIncome.addRow(['Tanggal', 'Jenis', 'Pemberi / Asal Dana', 'Keterangan', 'Kas', 'Referensi', 'Status', 'Nominal']);
+    rab.pencairans.filter(r => r.jenisSumber && r.jenisSumber !== 'BENDAHARA').forEach(r => additionalIncome.addRow([new Date(r.tanggal), r.jenisSumber, r.sumberDana || '-', r.keterangan || '-', r.akunKas?.nama || '-', r.nomorReferensi || '-', r.status, Number(r.nominal)]));
+    additionalIncome.columns.forEach((column, index) => { column.width = index === 2 || index === 3 ? 34 : 20; });
+    additionalIncome.getColumn(1).numFmt = 'dd/mm/yyyy'; additionalIncome.getColumn(8).numFmt = '[$Rp-id-ID] #,##0';
+    additionalIncome.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; additionalIncome.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF059669' } };
+
+    const returns = workbook.addWorksheet('Pengembalian Dana');
+    returns.addRow(['Tanggal', 'Pengembali / Penanggung Jawab', 'Keterangan', 'Kas', 'Referensi', 'Status', 'Nominal']);
+    rab.pengembalians.forEach(r => returns.addRow([new Date(r.tanggal), rab.penanggungJawab || '-', r.keterangan || '-', r.akunKas?.nama || '-', r.nomorReferensi || '-', r.status, Number(r.nominal)]));
+    returns.columns.forEach((column, index) => { column.width = index === 1 || index === 2 ? 34 : 20; });
+    returns.getColumn(1).numFmt = 'dd/mm/yyyy'; returns.getColumn(7).numFmt = '[$Rp-id-ID] #,##0';
+    returns.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; returns.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD97706' } };
     sheet.addRow(['Pencairan Bendahara', '', summary.pencairanBendahara]);
     sheet.addRow(['Hibah / Punia / Lainnya', '', summary.danaTambahan]);
     sheet.addRow(['Penerimaan Menunggu', '', summary.penerimaanMenunggu]);

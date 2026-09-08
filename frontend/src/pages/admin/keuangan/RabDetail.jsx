@@ -161,6 +161,40 @@ export default function RabDetail() {
     autoTable(doc,{startY:y+3,margin:{top:38,bottom:20},head:[['No','Uraian','Kategori','Disetujui','Realisasi','Sisa']],body:rab.items.map((item,i)=>{const real=rab.pengeluarans.filter(e=>e.itemAnggaranId===item.id&&e.status==='VERIFIKASI').reduce((t,e)=>t+Number(e.nominal),0);return[i+1,item.uraian,item.kategori?.nama||'-',formatRupiah(item.jumlahDisetujui),formatRupiah(real),formatRupiah(Number(item.jumlahDisetujui)-real)];}),headStyles:{fillColor:[30,41,59]},styles:{fontSize:7.5},columnStyles:{0:{cellWidth:9},1:{cellWidth:55},2:{cellWidth:32},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}}});
     y=doc.lastAutoTable.finalY+7; if(y>258){doc.addPage();y=42;} doc.setFontSize(11); doc.text('Detail Pengeluaran',14,y);
     autoTable(doc,{startY:y+3,margin:{top:38,bottom:20},head:[['No','Tanggal','Kategori / Uraian','Penerima','No. Bukti','Status','Nominal']],body:rab.pengeluarans.map((e,i)=>[i+1,formatDate(e.tanggal),`${e.kategori.nama}\n${e.uraian}`,e.penerima||'-',e.nomorBukti||'-',e.status,formatRupiah(e.nominal)]),headStyles:{fillColor:[30,41,59]},styles:{fontSize:7},columnStyles:{0:{cellWidth:8},1:{cellWidth:20},2:{cellWidth:48},3:{cellWidth:28},4:{cellWidth:22},5:{cellWidth:28},6:{halign:'right'}}});
+    if (isLpj) {
+      const additionalIncome = rab.pencairans.filter((row) => row.jenisSumber && row.jenisSumber !== 'BENDAHARA');
+      y = doc.lastAutoTable.finalY + 7;
+      if (y > 250) { doc.addPage(); y = 42; }
+      doc.setTextColor(35,45,55); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      doc.text('Detail Dana Tambahan (Punia / Hibah / Lainnya)',14,y);
+      autoTable(doc,{
+        startY:y+3,
+        margin:{top:38,bottom:20},
+        head:[['No','Tanggal','Jenis','Pemberi / Asal Dana','Akun Kas','Referensi','Status','Nominal']],
+        body:additionalIncome.length
+          ? additionalIncome.map((row,index)=>[index+1,formatDate(row.tanggal),row.jenisSumber,`${row.sumberDana||'-'}${row.keterangan?`\n${row.keterangan}`:''}`,row.akunKas?.nama||'-',row.nomorReferensi||'-',row.status,formatRupiah(row.nominal)])
+          : [['-','-','-','Tidak ada dana tambahan','-','-','-',formatRupiah(0)]],
+        headStyles:{fillColor:[5,150,105]},
+        styles:{fontSize:7,cellPadding:1.7,overflow:'linebreak'},
+        columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:20},2:{cellWidth:19},3:{cellWidth:39},4:{cellWidth:25},5:{cellWidth:24},6:{cellWidth:22},7:{cellWidth:25,halign:'right'}}
+      });
+
+      y = doc.lastAutoTable.finalY + 7;
+      if (y > 250) { doc.addPage(); y = 42; }
+      doc.setTextColor(35,45,55); doc.setFont('helvetica','bold'); doc.setFontSize(11);
+      doc.text('Detail Pengembalian Dana',14,y);
+      autoTable(doc,{
+        startY:y+3,
+        margin:{top:38,bottom:20},
+        head:[['No','Tanggal','Pengembali / Keterangan','Akun Kas','Referensi','Status','Nominal']],
+        body:rab.pengembalians.length
+          ? rab.pengembalians.map((row,index)=>[index+1,formatDate(row.tanggal),`${rab.penanggungJawab||'-'}${row.keterangan?`\n${row.keterangan}`:''}`,row.akunKas?.nama||'-',row.nomorReferensi||'-',row.status,formatRupiah(row.nominal)])
+          : [['-','-','Tidak ada pengembalian dana','-','-','-',formatRupiah(0)]],
+        headStyles:{fillColor:[217,119,6]},
+        styles:{fontSize:7,cellPadding:1.7,overflow:'linebreak'},
+        columnStyles:{0:{cellWidth:8,halign:'center'},1:{cellWidth:21},2:{cellWidth:55},3:{cellWidth:28},4:{cellWidth:27},5:{cellWidth:22},6:{cellWidth:25,halign:'right'}}
+      });
+    }
     if (verification) {
       y = doc.lastAutoTable.finalY + 12;
       if (y > 225) { doc.addPage(); y = 42; }
