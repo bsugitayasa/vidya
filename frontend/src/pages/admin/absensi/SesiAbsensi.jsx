@@ -263,12 +263,17 @@ export default function SesiAbsensi() {
     doc.setFont('helvetica', 'normal');
     doc.text('Pasraman Dharma Wasitha Capung Mas Ubud Gianyar', headerTextCenter, 30, { align: 'center' });
 
+    doc.setFontSize(6);
+    doc.setFont('helvetica', 'italic');
+    doc.text('SK KEMENAG RI DIRJEN BIMAS HINDU NO. 471/DJ.VI/BA.01.1/03/2026', headerTextCenter, 34, { align: 'center' });
+    doc.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020', headerTextCenter, 37, { align: 'center' });
+
     doc.setDrawColor(124, 58, 237);
     doc.setLineWidth(0.5);
-    doc.line(margin, 33, pageWidth - margin, 33);
+    doc.line(margin, 40, pageWidth - margin, 40);
 
     // ── Info Sesi ──
-    let y = 39;
+    let y = 46;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('Program Ajahan', margin, y);

@@ -38,6 +38,10 @@ const addHeader = (pdf, title, subtitle, logo) => {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8.5);
   pdf.text(subtitle, logo ? 37 : 14, 17);
+  pdf.setFont('helvetica', 'italic');
+  pdf.setFontSize(5.5);
+  pdf.text('SK KEMENAG RI DIRJEN BIMAS HINDU NO. 471/DJ.VI/BA.01.1/03/2026', logo ? 37 : 14, 20.5);
+  pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020', logo ? 37 : 14, 23);
   pdf.setTextColor(...COLORS.text);
 };
 

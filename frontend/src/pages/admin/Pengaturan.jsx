@@ -125,7 +125,8 @@ export default function Pengaturan() {
           {Object.keys(configs).filter(k => ![
             'tanggal_kelulusan', 'musik_kelulusan', 'persentase_kelulusan',
             'admin_idle_timeout', 'absensi_allow_future_date',
-            'kuesioner_ai_enabled', 'kuesioner_ai_model', 'kuesioner_ai_min_responses'
+            'kuesioner_ai_enabled', 'kuesioner_ai_model', 'kuesioner_ai_min_responses',
+            'pakta_integritas_enabled', 'pakta_integritas_enforcement'
           ].includes(k)).map(key => (
             <div key={key} className="space-y-1.5">
               <label className="text-xs font-bold text-muted uppercase tracking-wider">{configs[key].label}</label>
@@ -311,6 +312,27 @@ export default function Pengaturan() {
             </div>
           )}
 
+          {configs.pakta_integritas_enabled && (
+            <div className="pt-4 border-t border-muted/10 space-y-4">
+              <ConfigSwitch
+                id="pakta-integritas-enabled"
+                label={configs.pakta_integritas_enabled.label}
+                description="Mengaktifkan tautan publik untuk penandatanganan dan verifikasi Pakta Integritas."
+                checked={configs.pakta_integritas_enabled.nilai === 'true'}
+                onChange={() => handleConfigChange('pakta_integritas_enabled', configs.pakta_integritas_enabled.nilai === 'true' ? 'false' : 'true')}
+              />
+              {configs.pakta_integritas_enforcement && (
+                <ConfigSwitch
+                  id="pakta-integritas-enforcement"
+                  label={configs.pakta_integritas_enforcement.label}
+                  description="Menandai pakta sebagai kewajiban sisya. Disiapkan untuk integrasi pembatasan layanan pada tahap berikutnya."
+                  checked={configs.pakta_integritas_enforcement.nilai === 'true'}
+                  onChange={() => handleConfigChange('pakta_integritas_enforcement', configs.pakta_integritas_enforcement.nilai === 'true' ? 'false' : 'true')}
+                />
+              )}
+            </div>
+          )}
+
           {configs.kuesioner_ai_model && (
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-muted uppercase tracking-wider">Model AI</label>
@@ -332,6 +354,20 @@ export default function Pengaturan() {
           {isSaving ? 'Sedang Menyimpan...' : 'Simpan Semua Perubahan'}
         </Button>
       </div>
+    </div>
+  );
+}
+
+function ConfigSwitch({ id, label, description, checked, onChange }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <label htmlFor={id} className="text-xs font-bold text-muted uppercase tracking-wider">{label}</label>
+        <p className="text-[10px] text-muted italic mt-1">{description}</p>
+      </div>
+      <button id={id} type="button" role="switch" aria-checked={checked} onClick={onChange} className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors ${checked ? 'bg-primary' : 'bg-muted/30'}`}>
+        <span className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
+      </button>
     </div>
   );
 }

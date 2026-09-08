@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Loader2, Calendar } from 'lucide-react';
 import api from '../../lib/axios';
+import { toast } from 'sonner';
 
 export default function LaporanProgramAjahan() {
   const [programs, setPrograms] = useState([]);
@@ -44,7 +45,7 @@ export default function LaporanProgramAjahan() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting excel:', error);
-      alert('Gagal mengekspor data ke Excel');
+      toast.error('Gagal mengekspor data ke Excel');
     } finally {
       setIsExporting(false);
     }

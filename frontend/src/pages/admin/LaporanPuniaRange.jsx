@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { useSearchParams } from 'react-router-dom';
 import { getProgramBadgeStyle } from '../../lib/utils';
+import { toast } from 'sonner';
 
 export default function LaporanPuniaRange() {
   const [searchParams] = useSearchParams();
@@ -83,7 +84,7 @@ export default function LaporanPuniaRange() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting excel:', error);
-      alert('Gagal mengekspor data ke Excel');
+      toast.error('Gagal mengekspor data ke Excel');
     } finally {
       setIsExporting(false);
     }

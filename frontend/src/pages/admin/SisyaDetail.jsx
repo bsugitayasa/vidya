@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2, Download, Edit2, Upload, BookOpen, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, User, CreditCard, ExternalLink, Trash2, Download, Edit2, Upload, BookOpen, AlertTriangle, ShieldCheck } from 'lucide-react';
 import api from '../../lib/axios';
 import { toast } from 'sonner';
 import { Button } from '../../components/ui/button';
@@ -419,7 +419,8 @@ export default function SisyaDetail() {
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(7);
         pdf.setTextColor(100, 100, 100);
-        pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 41, 27.5);
+        pdf.text('SK KEMENAG RI DIRJEN BIMAS HINDU NO. 471/DJ.VI/BA.01.1/03/2026', 41, 27.5);
+        pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 41, 30.5);
         pdf.setTextColor(0, 0, 0);
       } else {
         pdf.setFont('helvetica', 'bold');
@@ -432,14 +433,15 @@ export default function SisyaDetail() {
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(7.5);
         pdf.setTextColor(100, 100, 100);
-        pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 105, 29, { align: 'center' });
+        pdf.text('SK KEMENAG RI DIRJEN BIMAS HINDU NO. 471/DJ.VI/BA.01.1/03/2026', 105, 29, { align: 'center' });
+        pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 105, 32, { align: 'center' });
         pdf.setTextColor(0, 0, 0);
       }
 
       pdf.setLineWidth(0.8);
-      pdf.line(20, 33, 190, 33);
+      pdf.line(20, 35, 190, 35);
       pdf.setLineWidth(0.2);
-      pdf.line(20, 34, 190, 34);
+      pdf.line(20, 36, 190, 36);
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(14);
@@ -923,6 +925,26 @@ export default function SisyaDetail() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">
+            <div className="flex items-center justify-between border-b border-muted/20 pb-3 mb-4">
+              <h4 className="font-bold text-primary flex items-center gap-2"><ShieldCheck size={18}/> Pakta Integritas</h4>
+              <Link to="/admin/pakta-integritas" className="text-xs font-bold text-primary hover:underline">Kelola</Link>
+            </div>
+            {sisya.paktaIntegritass?.length ? (
+              <div className="space-y-3">
+                {sisya.paktaIntegritass.slice(0, 3).map((pakta) => (
+                  <div key={pakta.id} className="rounded-xl bg-muted/5 border border-muted/10 p-3">
+                    <div className="flex justify-between gap-2">
+                      <div><p className="text-sm font-bold text-text">Versi {pakta.template.versi}</p><p className="text-[10px] text-muted mt-0.5">{pakta.nomorDokumen}</p></div>
+                      <span className={`h-fit rounded-full px-2 py-1 text-[9px] font-black ${pakta.status === 'DITANDATANGANI' ? 'bg-emerald-100 text-emerald-700' : pakta.status === 'MENUNGGU' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{pakta.status.replaceAll('_', ' ')}</span>
+                    </div>
+                    {pakta.signedAt && <p className="mt-2 text-[10px] text-muted">Ditandatangani {new Date(pakta.signedAt).toLocaleString('id-ID')}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-sm text-muted">Sisya belum memiliki Pakta Integritas.</p>}
           </div>
 
           <div className="bg-surface rounded-lg shadow-sm border border-muted/20 p-6">

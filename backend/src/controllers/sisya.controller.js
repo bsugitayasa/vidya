@@ -336,6 +336,18 @@ const getById = async (req, res) => {
         pembayarans: {
           orderBy: { createdAt: 'desc' }
         },
+        paktaIntegritass: {
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            nomorDokumen: true,
+            verificationCode: true,
+            status: true,
+            expiresAt: true,
+            signedAt: true,
+            template: { select: { versi: true, judul: true, status: true } }
+          }
+        },
         partner: true,
         partnerOf: true
       }

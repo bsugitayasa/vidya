@@ -17,12 +17,13 @@ export const drawOrganizationHeader = (pdf, logoBase64) => {
   pdf.setFont('helvetica', 'italic');
   pdf.setFontSize(7);
   pdf.setTextColor(100, 100, 100);
-  pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 41, 27.5);
+  pdf.text('SK KEMENAG RI DIRJEN BIMAS HINDU NO. 471/DJ.VI/BA.01.1/03/2026', 41, 27.5);
+  pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 41, 30.5);
   pdf.setTextColor(0, 0, 0);
   pdf.setLineWidth(0.8);
-  pdf.line(20, 33, 190, 33);
+  pdf.line(20, 35, 190, 35);
   pdf.setLineWidth(0.2);
-  pdf.line(20, 34, 190, 34);
+  pdf.line(20, 36, 190, 36);
 };
 
 const UNASSIGNED_PROGRAM = {

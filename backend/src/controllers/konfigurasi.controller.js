@@ -13,6 +13,8 @@ const DEFAULT_CONFIGS = [
   { kunci: 'kuesioner_ai_enabled', nilai: 'false', label: 'Aktifkan Analisis AI Kuesioner' },
   { kunci: 'kuesioner_ai_model', nilai: 'gpt-5-nano', label: 'Model AI Kuesioner' },
   { kunci: 'kuesioner_ai_min_responses', nilai: '3', label: 'Minimum Respons untuk Analisis AI' },
+  { kunci: 'pakta_integritas_enabled', nilai: 'true', label: 'Aktifkan Penandatanganan Pakta Integritas' },
+  { kunci: 'pakta_integritas_enforcement', nilai: 'false', label: 'Wajibkan Pakta Integritas' },
 ];
 
 const getAll = async (req, res) => {
