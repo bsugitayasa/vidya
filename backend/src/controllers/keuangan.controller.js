@@ -61,7 +61,7 @@ const validateRabVerificationDocument = async (value, currentRabId = null) => {
     include: { rabApproval: { select: { id: true } } }
   });
   if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
-  await assertUnusedQr(prisma, id);
+  await assertUnusedQr(prisma, id, 'RAB');
   if (document.rabApproval && document.rabApproval.id !== currentRabId) throw new Error('QR-Code verifikasi sudah digunakan oleh RAB lain');
   return id;
 };
@@ -75,7 +75,7 @@ const resolveRabVerificationDocument = async ({ id, token, currentRabId = null }
     include: { rabApproval: { select: { id: true } } }
   });
   if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
-  await assertUnusedQr(prisma, document.id);
+  await assertUnusedQr(prisma, document.id, 'RAB');
   if (document.rabApproval && document.rabApproval.id !== currentRabId) {
     throw new Error('QR-Code verifikasi sudah digunakan oleh RAB lain');
   }
@@ -91,7 +91,7 @@ const validateLpjVerificationDocument = async (value, currentRabId = null) => {
     include: { lpjApproval: { select: { id: true } } }
   });
   if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
-  await assertUnusedQr(prisma, id);
+  await assertUnusedQr(prisma, id, 'LPJ');
   if (document.lpjApproval && document.lpjApproval.id !== currentRabId) throw new Error('QR-Code verifikasi sudah digunakan oleh LPJ lain');
   return id;
 };
@@ -105,7 +105,7 @@ const resolveLpjVerificationDocument = async ({ id, token, currentRabId = null }
     include: { lpjApproval: { select: { id: true } } }
   });
   if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
-  await assertUnusedQr(prisma, document.id);
+  await assertUnusedQr(prisma, document.id, 'LPJ');
   if (document.lpjApproval && document.lpjApproval.id !== currentRabId) {
     throw new Error('QR-Code verifikasi sudah digunakan oleh LPJ lain');
   }
@@ -131,11 +131,16 @@ const listVerificationDocuments = async (req, res) => {
       take: 250
     });
     const archived = await prisma.arsipLpj.findMany({ select: { snapshot: true } });
-    const reserved = new Set(archived.flatMap(a => [a.snapshot.rabQrDocumentId, a.snapshot.lpjQrDocumentId]).filter(Boolean));
+    const reservedForRab = new Set(archived.map(a => a.snapshot.rabQrDocumentId).filter(Boolean));
+    const reservedForLpj = new Set(archived.map(a => a.snapshot.lpjQrDocumentId).filter(Boolean));
     res.json({ success: true, data: documents.map((document) => ({
       ...document,
       id: document.id.toString(),
-      tersedia: !document.rabApproval && !document.lpjApproval && !reserved.has(document.id.toString())
+      tersediaUntukRab: !document.rabApproval && !reservedForRab.has(document.id.toString()),
+      tersediaUntukLpj: !document.lpjApproval && !reservedForLpj.has(document.id.toString()),
+      tersedia: !document.rabApproval && !document.lpjApproval
+        && !reservedForRab.has(document.id.toString())
+        && !reservedForLpj.has(document.id.toString())
     })) });
   } catch (error) {
     console.error('List Finance Verification Documents Error:', error);

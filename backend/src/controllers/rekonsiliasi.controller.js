@@ -10,9 +10,18 @@ const reason = body => { requireValue(typeof body.alasan === 'string' && body.al
 const transact = fn => prisma.$transaction(fn, { isolationLevel: 'Serializable', timeout: 20000 });
 const getRab = async (tx, id) => { const rab = await tx.rencanaAnggaran.findUnique({ where: { id: positiveId(id) }, include: rabInclude }); requireValue(rab, 'RAB tidak ditemukan', 404); return rab; };
 const editable = rab => requireValue(editableStatuses.includes(rab.status), 'RAB harus dibuka untuk penyesuaian sebelum transaksi diubah', 409);
-const assertUnusedQr = async (tx, id) => {
+const assertUnusedQr = async (tx, id, usage = 'ANY') => {
   if (!id) return;
-  const archives = await tx.arsipLpj.count({ where: { OR: [{ snapshot: { path: ['rabQrDocumentId'], equals: String(id) } }, { snapshot: { path: ['lpjQrDocumentId'], equals: String(id) } }] } });
+  const paths = usage === 'RAB'
+    ? [['rabQrDocumentId']]
+    : usage === 'LPJ'
+      ? [['lpjQrDocumentId']]
+      : [['rabQrDocumentId'], ['lpjQrDocumentId']];
+  const archives = await tx.arsipLpj.count({
+    where: {
+      OR: paths.map((path) => ({ snapshot: { path, equals: String(id) } }))
+    }
+  });
   requireValue(!archives, 'QR ini sudah terikat pada versi arsip. Pilih QR baru untuk revisi dokumen.', 409);
 };
 
