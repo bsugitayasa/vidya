@@ -49,9 +49,18 @@ const questionnaireLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const paktaLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 80,
+  message: { success: false, message: 'Terlalu banyak permintaan. Silakan coba kembali beberapa saat lagi.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 module.exports = {
   registrationLimiter,
   statusCheckLimiter,
   authLimiter,
-  questionnaireLimiter
+  questionnaireLimiter,
+  paktaLimiter
 };

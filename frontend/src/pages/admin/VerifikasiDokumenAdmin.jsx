@@ -372,7 +372,8 @@ export default function VerifikasiDokumenAdmin() {
       pdf.setFont('helvetica', 'italic');
       pdf.setFontSize(7);
       pdf.setTextColor(100, 100, 100);
-      pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 41, 27.5);
+      pdf.text('SK KEMENAG RI DIRJEN BIMAS HINDU NO. 471/DJ.VI/BA.01.1/03/2026', 41, 27.5);
+      pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 41, 30.5);
       pdf.setTextColor(0, 0, 0); // Restore back to black
     } else {
       // Fallback Centered header if logo fails to load
@@ -388,15 +389,16 @@ export default function VerifikasiDokumenAdmin() {
       pdf.setFont('helvetica', 'italic');
       pdf.setFontSize(7.5);
       pdf.setTextColor(100, 100, 100);
-      pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 105, 29, { align: 'center' });
+      pdf.text('SK KEMENAG RI DIRJEN BIMAS HINDU NO. 471/DJ.VI/BA.01.1/03/2026', 105, 29, { align: 'center' });
+      pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020 | Website: perkumpulan-dharmopadesa-pusat-nusantara.cloud', 105, 32, { align: 'center' });
       pdf.setTextColor(0, 0, 0); // Restore back to black
     }
 
     // Garis Kop
     pdf.setLineWidth(0.8);
-    pdf.line(20, 33, 190, 33);
+    pdf.line(20, 35, 190, 35);
     pdf.setLineWidth(0.2);
-    pdf.line(20, 34, 190, 34);
+    pdf.line(20, 36, 190, 36);
 
     // 2. Judul Surat
     pdf.setFont('helvetica', 'bold');
@@ -558,6 +560,10 @@ export default function VerifikasiDokumenAdmin() {
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     pdf.text(`Diekspor pada: ${new Date().toLocaleString('id-ID')}`, 148, 20, { align: 'center' });
+    pdf.setFont('helvetica', 'italic');
+    pdf.setFontSize(6.5);
+    pdf.text('SK KEMENAG RI DIRJEN BIMAS HINDU NO. 471/DJ.VI/BA.01.1/03/2026', 148, 25, { align: 'center' });
+    pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020', 148, 29, { align: 'center' });
 
     // Table Columns
     const tableColumn = ["Token", "Nomor Surat", "Keterangan Dokumen", "Tanggal", "Nama Pejabat 1", "Jabatan 1", "Nama Pejabat 2", "Jabatan 2", "Dibuat Pada"];
@@ -576,7 +582,7 @@ export default function VerifikasiDokumenAdmin() {
     autoTable(pdf, {
       head: [tableColumn],
       body: tableRows,
-      startY: 28,
+      startY: 34,
       theme: 'grid',
       headStyles: { fillColor: [79, 70, 229], fontStyle: 'bold' }, // theme Indigo
       styles: { fontSize: 8.5 },

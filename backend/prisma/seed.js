@@ -72,6 +72,8 @@ async function main() {
     { kunci: 'nama_rekening', nilai: 'PDPN DIKJAR POLEKSOSDA', label: 'Nama Pemilik Rekening' },
     { kunci: 'tanggal_kelulusan', nilai: '2026-05-10', label: 'Tanggal Prosesi Kelulusan' },
     { kunci: 'persentase_kelulusan', nilai: '50', label: 'Persentase Minimum Kelulusan (%)' },
+    { kunci: 'pakta_integritas_enabled', nilai: 'true', label: 'Aktifkan Penandatanganan Pakta Integritas' },
+    { kunci: 'pakta_integritas_enforcement', nilai: 'false', label: 'Wajibkan Pakta Integritas' },
   ]
 
   for (const c of configs) {

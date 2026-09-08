@@ -94,10 +94,80 @@ model Sisya {
   programSisyas       SisyaProgram[]
   statusKelulusan     OverrideKelulusan @default(AUTO)
   prosesiKelulusan    ProsesiKelulusan?
+  paktaIntegritass    PaktaSisya[]
 
   partnerId Int?   @unique
   partner   Sisya? @relation("PartnerRelation", fields: [partnerId], references: [id])
   partnerOf Sisya? @relation("PartnerRelation")
+}
+
+model PaktaTemplate {
+  id               Int                 @id @default(autoincrement())
+  kode             String
+  versi            Int
+  judul            String
+  pembuka          String              @db.Text
+  klausul          Json
+  referensiPedoman String
+  tanggalBerlaku   DateTime
+  batasHari        Int                 @default(14)
+  wajibTandaUlang  Boolean             @default(true)
+  status           StatusPaktaTemplate @default(DRAFT)
+  createdById      Int
+  publishedById    Int?
+  publishedAt      DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  paktaSisyas      PaktaSisya[]
+
+  @@unique([kode, versi])
+  @@index([status, tanggalBerlaku])
+}
+
+model PaktaSisya {
+  id                Int              @id @default(autoincrement())
+  sisyaId           Int
+  templateId        Int
+  nomorDokumen      String           @unique
+  tokenHash         String           @unique
+  tokenHint         String
+  verificationCode  String           @unique
+  status            StatusPaktaSisya @default(MENUNGGU)
+  expiresAt         DateTime
+  contentSnapshot   Json
+  programSnapshot   Json
+  namaPenandatangan String?
+  consentSnapshot   Json?
+  signatureData     String?          @db.Text
+  signedAt          DateTime?
+  ipHash            String?
+  userAgent         String?          @db.Text
+  documentHash      String?
+  evidenceHash      String?
+  revokedReason     String?
+  createdById       Int
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  sisya             Sisya            @relation(fields: [sisyaId], references: [id], onDelete: Restrict)
+  template          PaktaTemplate    @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  audits            PaktaAudit[]
+
+  @@unique([sisyaId, templateId])
+  @@index([status, expiresAt])
+  @@index([templateId, status])
+}
+
+model PaktaAudit {
+  id           Int        @id @default(autoincrement())
+  paktaSisyaId Int
+  action       String
+  actorType    String
+  actorUserId  Int?
+  metadata     Json?
+  createdAt    DateTime   @default(now())
+  paktaSisya   PaktaSisya @relation(fields: [paktaSisyaId], references: [id], onDelete: Cascade)
+
+  @@index([paktaSisyaId, createdAt])
 }
 
 model Pembayaran {
@@ -485,6 +555,20 @@ enum StatusPembayaran {
   BELUM_LUNAS
   LUNAS
   DITOLAK
+}
+
+enum StatusPaktaTemplate {
+  DRAFT
+  AKTIF
+  DINONAKTIFKAN
+}
+
+enum StatusPaktaSisya {
+  MENUNGGU
+  DITANDATANGANI
+  KEDALUWARSA
+  DIBATALKAN
+  DIGANTIKAN
 }
 
 enum StatusAbsensi {

@@ -29,6 +29,10 @@ const addPageHeader = (pdf, filterLabel, subtitle, logoBase64) => {
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8.5);
   pdf.text(subtitle, 37, 17);
+  pdf.setFont('helvetica', 'italic');
+  pdf.setFontSize(5.5);
+  pdf.text('SK KEMENAG RI DIRJEN BIMAS HINDU NO. 471/DJ.VI/BA.01.1/03/2026', 37, 20.5);
+  pdf.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020', 37, 23);
   pdf.text(`Filter: ${filterLabel}`, 196, 11, { align: 'right' });
   pdf.text(`Dibuat: ${new Date().toLocaleString('id-ID')}`, 196, 17, { align: 'right' });
   pdf.setTextColor(...COLORS.text);

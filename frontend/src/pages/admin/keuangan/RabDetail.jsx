@@ -130,6 +130,9 @@ export default function RabDetail() {
       if (headerLogo) doc.addImage(headerLogo,'PNG',14,6,20,20);
       doc.setTextColor(255); doc.setFontSize(14); doc.setFont('helvetica','bold'); doc.text(title,40,14);
       doc.setFontSize(8); doc.setFont('helvetica','normal'); doc.text(shorten(subtitle),40,21,{maxWidth:155});
+      doc.setFont('helvetica','italic'); doc.setFontSize(5.5);
+      doc.text('SK KEMENAG RI DIRJEN BIMAS HINDU NO. 471/DJ.VI/BA.01.1/03/2026',40,25.5);
+      doc.text('SK Kemenkumham RI No. AHU-0000052.AH.01.07.Tahun 2020',40,29);
     };
     const addAttachmentPage = (imageData, imageWidth, imageHeight, attachment, pageLabel = '') => {
       doc.addPage();

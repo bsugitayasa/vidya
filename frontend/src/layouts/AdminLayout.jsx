@@ -13,7 +13,8 @@ import {
   QrCode,
   UserCog,
   MessageSquareText,
-  WalletCards
+  WalletCards,
+  ShieldCheck
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import useIdleTimeout from '../hooks/useIdleTimeout';
@@ -33,6 +34,7 @@ export default function AdminLayout() {
   const menuItems = [
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'text-blue-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { path: '/admin/sisya', icon: Users, label: 'Data Sisya', color: 'text-amber-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
+    { path: '/admin/pakta-integritas', icon: ShieldCheck, label: 'Pakta Integritas', color: 'text-emerald-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
     { path: '/admin/absensi', icon: ClipboardList, label: 'Absensi', color: 'text-violet-400', roles: ['ADMIN', 'SUPER_ADMIN'] },
     {
       path: '/admin/keuangan',

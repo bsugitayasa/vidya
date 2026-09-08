@@ -4,6 +4,7 @@ import api from '../../lib/axios';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { getProgramBadgeStyle } from '../../lib/utils';
+import { toast } from 'sonner';
 
 export default function Laporan() {
   const [sisyas, setSisyas] = useState([]);
@@ -117,7 +118,7 @@ export default function Laporan() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting excel:', error);
-      alert('Gagal mengekspor data ke Excel');
+      toast.error('Gagal mengekspor data ke Excel');
     } finally {
       setIsExporting(false);
     }

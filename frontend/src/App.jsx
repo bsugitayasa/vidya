@@ -14,6 +14,8 @@ const LengkapiBerkas = lazy(() => import('./pages/public/LengkapiBerkas'));
 const VerifikasiDokumenPublic = lazy(() => import('./pages/public/VerifikasiDokumenPublic'));
 const InputAbsensiPublic = lazy(() => import('./pages/public/InputAbsensiPublic'));
 const KuesionerPublic = lazy(() => import('./pages/public/KuesionerPublic'));
+const PaktaIntegritasPublic = lazy(() => import('./pages/public/PaktaIntegritasPublic'));
+const VerifikasiPaktaPublic = lazy(() => import('./pages/public/VerifikasiPaktaPublic'));
 
 // Admin Pages (Lazy Loaded)
 const Login = lazy(() => import('./pages/admin/Login'));
@@ -44,6 +46,7 @@ const RabList = lazy(() => import('./pages/admin/keuangan/RabList'));
 const RabDetail = lazy(() => import('./pages/admin/keuangan/RabDetail'));
 const MasterKeuangan = lazy(() => import('./pages/admin/keuangan/MasterKeuangan'));
 const RekonsiliasiKeuangan = lazy(() => import('./pages/admin/keuangan/RekonsiliasiKeuangan'));
+const PaktaIntegritasAdmin = lazy(() => import('./pages/admin/PaktaIntegritasAdmin'));
 
 const queryClient = new QueryClient();
 
@@ -78,6 +81,9 @@ function App() {
               <Route path="input-absensi" element={<InputAbsensiPublic />} />
               <Route path="kuesioner" element={<KuesionerPublic />} />
               <Route path="kuesioner/:token" element={<KuesionerPublic />} />
+              <Route path="pakta-integritas" element={<PaktaIntegritasPublic />} />
+              <Route path="pakta-integritas/:token" element={<PaktaIntegritasPublic />} />
+              <Route path="verifikasi-pakta/:code" element={<VerifikasiPaktaPublic />} />
             </Route>
 
             {/* Admin Auth Route */}
@@ -108,6 +114,7 @@ function App() {
               <Route path="verifikasi-dokumen" element={<VerifikasiDokumenAdmin />} />
               <Route path="manajemen-user" element={<ManajemenUser />} />
               <Route path="kuesioner" element={<KuesionerAdmin />} />
+              <Route path="pakta-integritas" element={<PaktaIntegritasAdmin />} />
               <Route path="keuangan" element={<KeuanganDashboard />} />
               <Route path="keuangan/rab" element={<RabList />} />
               <Route path="keuangan/rab/:id" element={<RabDetail />} />
