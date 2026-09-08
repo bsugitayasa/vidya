@@ -82,34 +82,26 @@ const resolveRabVerificationDocument = async ({ id, token, currentRabId = null }
   return document.id;
 };
 
-const validateLpjVerificationDocument = async (value, currentRabId = null) => {
+const getLpjSignerSource = async (value) => {
   if (!value) return null;
   let id;
   try { id = asBigInt(value); } catch { throw new Error('QR-Code verifikasi tidak valid'); }
-  const document = await prisma.qrDocument.findUnique({
-    where: { id },
-    include: { lpjApproval: { select: { id: true } } }
-  });
+  const document = await prisma.qrDocument.findUnique({ where: { id } });
   if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
-  await assertUnusedQr(prisma, id, 'LPJ');
-  if (document.lpjApproval && document.lpjApproval.id !== currentRabId) throw new Error('QR-Code verifikasi sudah digunakan oleh LPJ lain');
-  return id;
+  getSignerData(document);
+  return document;
 };
 
-const resolveLpjVerificationDocument = async ({ id, token, currentRabId = null }) => {
-  if (id) return validateLpjVerificationDocument(id, currentRabId);
+const resolveLpjSignerSource = async ({ id, token }) => {
+  if (id) return getLpjSignerSource(id);
   if (!token) return null;
 
   const document = await prisma.qrDocument.findUnique({
-    where: { token: String(token).trim().toUpperCase() },
-    include: { lpjApproval: { select: { id: true } } }
+    where: { token: String(token).trim().toUpperCase() }
   });
   if (!document) throw new Error('QR-Code verifikasi tidak ditemukan');
-  await assertUnusedQr(prisma, document.id, 'LPJ');
-  if (document.lpjApproval && document.lpjApproval.id !== currentRabId) {
-    throw new Error('QR-Code verifikasi sudah digunakan oleh LPJ lain');
-  }
-  return document.id;
+  getSignerData(document);
+  return document;
 };
 
 const listVerificationDocuments = async (req, res) => {
@@ -136,8 +128,9 @@ const listVerificationDocuments = async (req, res) => {
     res.json({ success: true, data: documents.map((document) => ({
       ...document,
       id: document.id.toString(),
+      penandatanganLengkap: Boolean(document.namaPejabat && document.jabatan && document.namaPejabat2 && document.jabatan2),
       tersediaUntukRab: !document.rabApproval && !reservedForRab.has(document.id.toString()),
-      tersediaUntukLpj: !document.lpjApproval && !reservedForLpj.has(document.id.toString()),
+      tersediaUntukLpj: Boolean(document.namaPejabat && document.jabatan && document.namaPejabat2 && document.jabatan2),
       tersedia: !document.rabApproval && !document.lpjApproval
         && !reservedForRab.has(document.id.toString())
         && !reservedForLpj.has(document.id.toString())
@@ -712,20 +705,19 @@ const closeRab = async (req, res) => {
     if (summary.pengeluaranMenunggu > 0) return fail(res, 409, 'Masih ada pengeluaran yang menunggu verifikasi');
     if (summary.penerimaanMenunggu > 0 || rab.perubahanAnggarans.some(r => r.status === 'MENUNGGU_VERIFIKASI')) return fail(res, 409, 'Masih ada penerimaan atau penyesuaian menunggu verifikasi');
     if (summary.sisaKas !== 0) return fail(res, 409, `Sisa kas Rp ${summary.sisaKas.toLocaleString('id-ID')} harus dikembalikan sebelum LPJ ditutup`);
-    const selectedVerificationId = await resolveLpjVerificationDocument({
+    const signerSource = await resolveLpjSignerSource({
       id: req.body.lpjQrDocumentId,
-      token: req.body.lpjQrDocumentToken,
-      currentRabId: rab.id
-    }) || rab.lpjQrDocumentId;
-    const signer = selectedVerificationId ? null : getSignerData(req.body);
+      token: req.body.lpjQrDocumentToken
+    });
+    const signer = getSignerData(signerSource || req.body);
     await prisma.$transaction(async (tx) => {
-      const verification = selectedVerificationId ? null : await createVerificationDocument(tx, {
+      const verification = await createVerificationDocument(tx, {
         nomorSurat: rab.nomorRab,
         keteranganSurat: `Persetujuan LPJ - ${rab.namaKegiatan}`,
         signer
       });
-      await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { status: 'SELESAI', closedById: req.user.id, closedAt: new Date(), lpjQrDocumentId: selectedVerificationId || verification.id } });
-      await audit(tx, { entityType: 'RAB', entityId: rab.id, action: 'LPJ_DITUTUP', oldValue: { status: rab.status }, newValue: { status: 'SELESAI', ...summary }, userId: req.user.id });
+      await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { status: 'SELESAI', closedById: req.user.id, closedAt: new Date(), lpjQrDocumentId: verification.id } });
+      await audit(tx, { entityType: 'RAB', entityId: rab.id, action: 'LPJ_DITUTUP', oldValue: { status: rab.status }, newValue: { status: 'SELESAI', ...summary, signerSourceId: signerSource?.id?.toString() || null }, userId: req.user.id });
     });
     res.json({ success: true, message: 'LPJ telah diverifikasi dan RAB ditutup' });
   } catch (error) {
@@ -740,19 +732,18 @@ const signCompletedLpj = async (req, res) => {
     if (!rab) return fail(res, 404, 'RAB tidak ditemukan');
     if (rab.status !== 'SELESAI') return fail(res, 409, 'Fitur ini hanya untuk melengkapi tanda tangan LPJ yang sudah selesai');
     if (rab.lpjQrDocumentId) return fail(res, 409, 'LPJ sudah memiliki tanda tangan elektronik');
-    const selectedVerificationId = await resolveLpjVerificationDocument({
+    const signerSource = await resolveLpjSignerSource({
       id: req.body.lpjQrDocumentId,
-      token: req.body.lpjQrDocumentToken,
-      currentRabId: rab.id
+      token: req.body.lpjQrDocumentToken
     });
-    const signer = selectedVerificationId ? null : getSignerData(req.body);
+    const signer = getSignerData(signerSource || req.body);
     const updated = await prisma.$transaction(async (tx) => {
-      const verification = selectedVerificationId ? null : await createVerificationDocument(tx, {
+      const verification = await createVerificationDocument(tx, {
         nomorSurat: rab.nomorRab,
         keteranganSurat: `Persetujuan LPJ - ${rab.namaKegiatan}`,
         signer
       });
-      const lpjQrDocumentId = selectedVerificationId || verification.id;
+      const lpjQrDocumentId = verification.id;
       const row = await tx.rencanaAnggaran.update({
         where: { id: rab.id },
         data: { lpjQrDocumentId },
@@ -763,7 +754,7 @@ const signCompletedLpj = async (req, res) => {
         entityId: rab.id,
         action: 'TANDA_TANGAN_LPJ_DILENGKAPI',
         oldValue: { status: rab.status, lpjQrDocumentId: null },
-        newValue: { status: rab.status, lpjQrDocumentId: lpjQrDocumentId.toString() },
+        newValue: { status: rab.status, lpjQrDocumentId: lpjQrDocumentId.toString(), signerSourceId: signerSource?.id?.toString() || null },
         userId: req.user.id
       });
       return row;
