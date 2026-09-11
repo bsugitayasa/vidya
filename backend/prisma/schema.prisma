@@ -53,15 +53,16 @@ model ProgramAjahan {
 }
 
 model SisyaProgram {
-  id              Int           @id @default(autoincrement())
-  sisyaId         Int
-  programAjahanId Int
-  isPasangan      Boolean       @default(false)
-  puniaProgram    Int
-  nomorRegistrasi String?
-  createdAt       DateTime      @default(now())
-  programAjahan   ProgramAjahan @relation(fields: [programAjahanId], references: [id])
-  sisya           Sisya         @relation(fields: [sisyaId], references: [id])
+  id                Int           @id @default(autoincrement())
+  sisyaId           Int
+  programAjahanId   Int
+  isPasangan        Boolean       @default(false)
+  isPendidikanKilat Boolean       @default(false)
+  puniaProgram      Int
+  nomorRegistrasi   String?
+  createdAt         DateTime      @default(now())
+  programAjahan     ProgramAjahan @relation(fields: [programAjahanId], references: [id])
+  sisya             Sisya         @relation(fields: [sisyaId], references: [id])
 
   @@unique([sisyaId, programAjahanId])
 }

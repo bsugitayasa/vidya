@@ -35,6 +35,14 @@ const getStats = async (req, res) => {
     
     const totalPunia = result._sum.totalPunia || 0;
 
+    // Total pembayaran terverifikasi memakai basis yang sama dengan estimasi punia.
+    // Sisya pasangan hanya dihitung pada record induk agar nilai gabungan tidak terduplikasi.
+    const paidResult = await prisma.sisya.aggregate({
+      where: { ...activeFilter, partnerId: null },
+      _sum: { totalTerbayar: true },
+    });
+    const totalPuniaTerbayar = paidResult._sum.totalTerbayar || 0;
+
     // Gender Stats (Filtered by Program if provided)
     const genderFilter = { ...activeFilter };
     if (programId && programId !== 'all') {
@@ -134,6 +142,10 @@ const getStats = async (req, res) => {
         menungguVerifikasi,
         belumLunas,
         totalEstimasiPunia: totalPunia,
+        totalPuniaTerbayar,
+        persentaseRealisasiPunia: totalPunia > 0
+          ? Math.min(100, Math.round((totalPuniaTerbayar / totalPunia) * 1000) / 10)
+          : 0,
         chartData,
         locationStats,
         genderStats: {
