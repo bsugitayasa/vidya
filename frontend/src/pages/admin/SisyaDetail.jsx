@@ -275,8 +275,9 @@ export default function SisyaDetail() {
       return {
         ...item,
         isPendidikanKilat: enabled,
-        isPasangan: enabled ? false : item.isPasangan,
-        puniaProgram: enabled ? item.puniaProgram : (program?.puniaNormal || 0)
+        puniaProgram: enabled
+          ? item.puniaProgram
+          : ((item.isPasangan && program?.puniaPasangan) ? program.puniaPasangan : (program?.puniaNormal || 0))
       };
     }));
   };
@@ -522,7 +523,7 @@ export default function SisyaDetail() {
 
       const programData = sisya.programSisyas.map(sp => [
         sp.programAjahan.nama,
-        sp.isPasangan ? 'Termasuk Pasangan' : 'Individu',
+        [sp.isPendidikanKilat ? 'Pendidikan Kilat / Kelas Percepatan' : 'Kelas Reguler', sp.isPasangan ? 'Termasuk Pasangan' : 'Individu'].join(' • '),
         sp.nomorRegistrasi || '-',
         formatRupiah(sp.puniaProgram)
       ]);
@@ -1113,7 +1114,7 @@ export default function SisyaDetail() {
                     <div>
                       <span className="font-bold block">{sp.programAjahan.nama}</span>
                       <span className="text-xs text-muted">
-                        {sp.isPendidikanKilat ? 'Pendidikan Kilat / Kelas Percepatan' : (sp.isPasangan ? 'Termasuk Pasangan' : 'Kelas Reguler • Individu')}
+                        {[sp.isPendidikanKilat ? 'Pendidikan Kilat / Kelas Percepatan' : 'Kelas Reguler', sp.isPasangan ? 'Termasuk Pasangan' : 'Individu'].join(' • ')}
                       </span>
                       <div className="mt-1 flex items-center gap-2">
                         <span className="text-[10px] font-mono bg-white/50 px-1.5 py-0.5 rounded border border-black/5">
@@ -1700,7 +1701,7 @@ export default function SisyaDetail() {
                   const selectedProg = selectedPrograms.find(p => p.programAjahanId === prog.id);
                   const isKawikon = prog.kode === 'KAWIKON';
                   const isPendidikanKilat = isKawikon && selectedProg?.isPendidikanKilat;
-                  const isPas = !isPendidikanKilat && selectedProg?.isPasangan && prog.isPasanganTersedia;
+                  const isPas = selectedProg?.isPasangan && prog.isPasanganTersedia;
                   const price = isPendidikanKilat
                     ? Number(selectedProg?.puniaProgram || 0)
                     : ((isPas && prog.puniaPasangan) ? prog.puniaPasangan : prog.puniaNormal);
@@ -1752,7 +1753,7 @@ export default function SisyaDetail() {
                                 </label>
                               )}
 
-                              {isPendidikanKilat ? (
+                              {isPendidikanKilat && (
                                 <label className="block text-xs">
                                   <span className="mb-1 block font-bold text-text">Target Punia Khusus</span>
                                   <div className="flex items-center overflow-hidden rounded-lg border border-amber-200 bg-white focus-within:ring-2 focus-within:ring-amber-400/30">
@@ -1768,22 +1769,24 @@ export default function SisyaDetail() {
                                   </div>
                                   <span className="mt-1 block text-[10px] text-muted">Pembayaran terverifikasi tetap dipertahankan; status pelunasan dihitung ulang terhadap target ini.</span>
                                 </label>
-                              ) : (
-                                <label className="flex items-center gap-2 text-xs cursor-pointer">
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(isPas)}
-                                    onChange={() => toggleProgramPasangan(prog.id)}
-                                    className="rounded border-muted/40 text-primary focus:ring-primary h-3.5 w-3.5"
-                                  />
-                                  <span className="text-muted">
-                                    Termasuk Pasangan
-                                    {prog.puniaPasangan && (
-                                      <span className="font-mono ml-1">({formatRupiah(prog.puniaPasangan)})</span>
-                                    )}
-                                  </span>
-                                </label>
                               )}
+                              <label className="flex items-center gap-2 rounded-lg border border-blue-100 bg-blue-50/60 p-2.5 text-xs cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(isPas)}
+                                  onChange={() => toggleProgramPasangan(prog.id)}
+                                  className="rounded border-blue-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                                />
+                                <span className="text-blue-800">
+                                  <strong>Termasuk Pasangan</strong>
+                                  {!isPendidikanKilat && prog.puniaPasangan && (
+                                    <span className="font-mono ml-1">({formatRupiah(prog.puniaPasangan)})</span>
+                                  )}
+                                  {isPendidikanKilat && (
+                                    <span className="mt-0.5 block text-[10px] font-normal text-blue-700">Status pasangan tetap tersimpan; target punia mengikuti nominal khusus di atas.</span>
+                                  )}
+                                </span>
+                              </label>
                             </div>
                           )}
                         </div>
