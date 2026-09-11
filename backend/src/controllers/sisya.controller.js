@@ -822,7 +822,7 @@ const updateProgramsSisya = async (req, res) => {
   try {
     const { id } = req.params;
     const { programs } = req.body;
-    // programs = [{ programAjahanId: number, isPasangan: boolean }, ...]
+    // programs = [{ programAjahanId, isPasangan, isPendidikanKilat, puniaProgram }, ...]
 
     if (!programs || !Array.isArray(programs) || programs.length === 0) {
       return res.status(400).json({ success: false, message: 'Minimal harus memilih 1 program ajahan' });
@@ -857,6 +857,20 @@ const updateProgramsSisya = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Beberapa program ajahan tidak ditemukan' });
     }
 
+    for (const programInput of programs) {
+      const dbProgram = dbPrograms.find(program => program.id === parseInt(programInput.programAjahanId));
+      if (programInput.isPendidikanKilat && dbProgram?.kode !== 'KAWIKON') {
+        return res.status(400).json({ success: false, message: 'Pendidikan kilat hanya tersedia untuk program Kawikon' });
+      }
+
+      if (programInput.isPendidikanKilat) {
+        const customPunia = Number(programInput.puniaProgram);
+        if (!Number.isSafeInteger(customPunia) || customPunia < 0 || customPunia > 2147483647) {
+          return res.status(400).json({ success: false, message: 'Nominal punia pendidikan kilat harus berupa angka bulat yang valid dan tidak boleh negatif' });
+        }
+      }
+    }
+
     // Build a map for quick lookup
     const dbProgramMap = {};
     for (const p of dbPrograms) {
@@ -887,14 +901,18 @@ const updateProgramsSisya = async (req, res) => {
           const existingSp = existingSisya.programSisyas.find(sp => sp.programAjahanId === progId);
           if (existingSp) {
             const dbProg = dbProgramMap[progId];
-            const newIsPasangan = prog.isPasangan && dbProg.isPasanganTersedia;
-            const newPunia = (newIsPasangan && dbProg.puniaPasangan) ? dbProg.puniaPasangan : dbProg.puniaNormal;
+            const isPendidikanKilat = dbProg.kode === 'KAWIKON' && Boolean(prog.isPendidikanKilat);
+            const newIsPasangan = !isPendidikanKilat && prog.isPasangan && dbProg.isPasanganTersedia;
+            const newPunia = isPendidikanKilat
+              ? Number(prog.puniaProgram)
+              : ((newIsPasangan && dbProg.puniaPasangan) ? dbProg.puniaPasangan : dbProg.puniaNormal);
 
-            if (existingSp.isPasangan !== newIsPasangan || existingSp.puniaProgram !== newPunia) {
+            if (existingSp.isPasangan !== newIsPasangan || existingSp.isPendidikanKilat !== isPendidikanKilat || existingSp.puniaProgram !== newPunia) {
               await tx.sisyaProgram.update({
                 where: { id: existingSp.id },
                 data: {
                   isPasangan: newIsPasangan,
+                  isPendidikanKilat,
                   puniaProgram: newPunia
                 }
               });
@@ -907,8 +925,11 @@ const updateProgramsSisya = async (req, res) => {
       for (const progId of toAddProgramIds) {
         const progInput = programs.find(p => parseInt(p.programAjahanId) === progId);
         const dbProg = dbProgramMap[progId];
-        const isPasangan = progInput.isPasangan && dbProg.isPasanganTersedia;
-        const punia = (isPasangan && dbProg.puniaPasangan) ? dbProg.puniaPasangan : dbProg.puniaNormal;
+        const isPendidikanKilat = dbProg.kode === 'KAWIKON' && Boolean(progInput.isPendidikanKilat);
+        const isPasangan = !isPendidikanKilat && progInput.isPasangan && dbProg.isPasanganTersedia;
+        const punia = isPendidikanKilat
+          ? Number(progInput.puniaProgram)
+          : ((isPasangan && dbProg.puniaPasangan) ? dbProg.puniaPasangan : dbProg.puniaNormal);
 
         // Generate nomor registrasi
         const programSequenceCount = await tx.sisyaProgram.count({
@@ -929,6 +950,7 @@ const updateProgramsSisya = async (req, res) => {
             sisyaId,
             programAjahanId: progId,
             isPasangan,
+            isPendidikanKilat,
             puniaProgram: punia,
             nomorRegistrasi
           }

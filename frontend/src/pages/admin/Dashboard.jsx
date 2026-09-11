@@ -14,6 +14,8 @@ export default function Dashboard() {
     menungguVerifikasi: 0,
     belumLunas: 0,
     totalEstimasiPunia: 0,
+    totalPuniaTerbayar: 0,
+    persentaseRealisasiPunia: 0,
     chartData: [],
     locationStats: [],
     genderStats: { lakiLaki: 0, perempuan: 0 },
@@ -52,6 +54,12 @@ export default function Dashboard() {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
   };
 
+  const percentage = (value, total) => total > 0
+    ? Math.round((Number(value || 0) / total) * 1000) / 10
+    : 0;
+
+  const formatPercentage = (value) => `${Number(value || 0).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`;
+
   const handleExportPdf = async () => {
     setIsExportingPdf(true);
     try {
@@ -66,6 +74,19 @@ export default function Dashboard() {
       setIsExportingPdf(false);
     }
   };
+
+  const genderTotal = stats.genderStats.lakiLaki + stats.genderStats.perempuan;
+  const recentTotal = stats.chartData.reduce((sum, item) => sum + Number(item.pendaftar || 0), 0);
+  const locationTotal = stats.locationStats.reduce((sum, item) => sum + Number(item.total || 0), 0);
+  const recentChartData = stats.chartData.map(item => ({
+    ...item,
+    percentage: percentage(item.pendaftar, recentTotal)
+  }));
+  const locationChartData = stats.locationStats.map(item => ({
+    ...item,
+    percentage: percentage(item.total, locationTotal),
+    displayLabel: `${item.total} • ${formatPercentage(percentage(item.total, locationTotal))}`
+  }));
 
   return (
     <div className="space-y-6">
@@ -121,15 +142,19 @@ export default function Dashboard() {
             <div className="pr-3">
               <p className="text-2xl font-black text-text">{stats.totalSisya}</p>
               <p className="text-[10px] font-bold text-muted uppercase tracking-wide mt-0.5">Sisya</p>
+              <span className="mt-2 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black text-blue-700">100% aktif</span>
             </div>
             <div className="pl-3">
               <p className="text-2xl font-black text-violet-600">{stats.totalKepesertaanProgram}</p>
               <p className="text-[10px] font-bold text-muted uppercase tracking-wide mt-0.5">Kepesertaan</p>
+              <span className="mt-2 inline-flex rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-black text-violet-700">
+                {formatPercentage(percentage(stats.totalKepesertaanProgram, stats.totalSisya))} rasio
+              </span>
             </div>
           </div>
           {stats.totalSisyaMultiProgram > 0 && (
             <p className="text-[10px] text-muted leading-relaxed mt-auto pt-3 border-t border-muted/10">
-              {stats.totalSisyaMultiProgram} sisya multi-program
+              {stats.totalSisyaMultiProgram} sisya multi-program ({formatPercentage(percentage(stats.totalSisyaMultiProgram, stats.totalSisya))})
               {stats.totalKepesertaanTambahan > 0 && ` • +${stats.totalKepesertaanTambahan} kepesertaan tambahan`}
             </p>
           )}
@@ -147,7 +172,12 @@ export default function Dashboard() {
             </div>
             <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider">Menunggu Verifikasi</h3>
           </div>
-          <p className="text-2xl font-black text-amber-600 mt-3">{stats.menungguVerifikasi}</p>
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <p className="text-2xl font-black text-amber-600">{stats.menungguVerifikasi}</p>
+            <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black text-amber-700 ring-1 ring-amber-200">
+              {formatPercentage(percentage(stats.menungguVerifikasi, stats.totalSisya))}
+            </span>
+          </div>
           <div className="mt-auto pt-4">
             <p className="text-[10px] text-muted mb-2">{stats.menungguVerifikasi} dari {stats.totalSisya} sisya</p>
             <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
@@ -168,7 +198,12 @@ export default function Dashboard() {
             </div>
             <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider">Belum Lunas</h3>
           </div>
-          <p className="text-2xl font-black text-rose-600 mt-3">{stats.belumLunas || 0}</p>
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <p className="text-2xl font-black text-rose-600">{stats.belumLunas || 0}</p>
+            <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-black text-rose-700 ring-1 ring-rose-200">
+              {formatPercentage(percentage(stats.belumLunas, stats.totalSisya))}
+            </span>
+          </div>
           <div className="mt-auto pt-4">
             <p className="text-[10px] text-muted mb-2">{stats.belumLunas || 0} dari {stats.totalSisya} sisya</p>
             <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
@@ -185,13 +220,16 @@ export default function Dashboard() {
             </div>
             <h3 className="text-[10px] font-bold text-muted uppercase tracking-wider">Estimasi Punia</h3>
           </div>
-          <p className="text-lg 2xl:text-xl leading-tight font-black text-emerald-600 break-all mt-3">
+          <p className="mt-3 min-w-0 text-lg 2xl:text-xl leading-tight font-black text-emerald-600 break-words">
             {formatRupiah(stats.totalEstimasiPunia)}
           </p>
+          <span className="mt-2 self-start rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700 ring-1 ring-emerald-200">
+            {formatPercentage(stats.persentaseRealisasiPunia)} terealisasi
+          </span>
           <div className="mt-auto pt-4">
-            <p className="text-[10px] text-muted mb-2">Akumulasi estimasi punia aktif</p>
+            <p className="text-[10px] text-muted mb-2">Terbayar {formatRupiah(stats.totalPuniaTerbayar)} dari estimasi</p>
             <div className="w-full bg-muted/10 h-1.5 rounded-full overflow-hidden">
-              <div className="bg-emerald-500 h-full w-full"></div>
+              <div className="bg-emerald-500 h-full transition-all duration-1000" style={{ width: `${stats.persentaseRealisasiPunia}%` }}></div>
             </div>
           </div>
         </div>
@@ -229,7 +267,7 @@ export default function Dashboard() {
                   <UserRound size={18} className="mr-2" />
                   <span>Laki-Laki</span>
                 </div>
-                <span className="text-2xl font-black">{stats.genderStats.lakiLaki}</span>
+                <div className="text-right"><span className="text-2xl font-black">{stats.genderStats.lakiLaki}</span><span className="ml-2 text-xs font-black text-blue-600">{formatPercentage(percentage(stats.genderStats.lakiLaki, genderTotal))}</span></div>
               </div>
               <div className="w-full bg-blue-50 h-4 rounded-full overflow-hidden">
                 <div
@@ -245,7 +283,7 @@ export default function Dashboard() {
                   <UserRoundSearch size={18} className="mr-2" />
                   <span>Perempuan</span>
                 </div>
-                <span className="text-2xl font-black">{stats.genderStats.perempuan}</span>
+                <div className="text-right"><span className="text-2xl font-black">{stats.genderStats.perempuan}</span><span className="ml-2 text-xs font-black text-rose-600">{formatPercentage(percentage(stats.genderStats.perempuan, genderTotal))}</span></div>
               </div>
               <div className="w-full bg-rose-50 h-4 rounded-full overflow-hidden">
                 <div
@@ -268,7 +306,7 @@ export default function Dashboard() {
           <div className="mb-6">
             <h3 className="text-lg font-bold font-heading text-primary">Pendaftar per Program</h3>
             <p className="text-xs text-muted mt-1">
-              {stats.totalKepesertaanProgram} kepesertaan dari {stats.totalSisya} sisya
+              {stats.totalKepesertaanProgram} kepesertaan dari {stats.totalSisya} sisya • persentase menunjukkan porsi dari total kepesertaan
               {stats.totalSisyaMultiProgram > 0 && ` • ${stats.totalSisyaMultiProgram} sisya mengikuti lebih dari satu program`}
             </p>
           </div>
@@ -287,12 +325,12 @@ export default function Dashboard() {
                 <div key={p.id} className="group">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-bold text-text group-hover:text-primary transition-colors">{p.nama}</span>
-                    <span className="text-sm font-black text-muted">{p.total} Sisya</span>
+                    <span className="text-sm font-black text-muted">{p.total} Sisya <span className="ml-1 rounded-full bg-muted/10 px-2 py-0.5 text-[10px] text-primary">{formatPercentage(percentage(p.total, stats.totalKepesertaanProgram))}</span></span>
                   </div>
                   <div className="w-full bg-muted/5 h-3 rounded-full overflow-hidden border border-muted/5">
                     <div
                       className={`h-full transition-all duration-1000 ease-out ${getProgramColor(p.nama)}`}
-                      style={{ width: `${(p.total / (stats.totalSisya || 1)) * 100}%` }}
+                      style={{ width: `${percentage(p.total, stats.totalKepesertaanProgram)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -328,9 +366,9 @@ export default function Dashboard() {
           <div style={{ height: Math.max(280, stats.locationStats.length * 42) }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={stats.locationStats}
+                data={locationChartData}
                 layout="vertical"
-                margin={{ top: 4, right: 42, left: 8, bottom: 4 }}
+                margin={{ top: 4, right: 88, left: 8, bottom: 4 }}
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
                 <XAxis
@@ -357,7 +395,7 @@ export default function Dashboard() {
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                 />
                 <Bar dataKey="total" name="Jumlah Sisya" fill="#7c3aed" radius={[0, 6, 6, 0]} barSize={22}>
-                  <LabelList dataKey="total" position="right" fill="#6b7280" fontSize={11} fontWeight={800} />
+                  <LabelList dataKey="displayLabel" position="right" fill="#6b7280" fontSize={11} fontWeight={800} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -373,7 +411,7 @@ export default function Dashboard() {
         <div className="h-72">
           {stats.chartData && stats.chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <BarChart data={recentChartData} margin={{ top: 25, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis
                   dataKey="date"
@@ -394,9 +432,10 @@ export default function Dashboard() {
                   itemStyle={{ fontSize: '12px', fontWeight: '600' }}
                 />
                 <Bar dataKey="pendaftar" fill="#c2410c" radius={[6, 6, 0, 0]} name="Jumlah Pendaftar">
-                  {stats.chartData.map((entry, index) => (
+                  {recentChartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={index === stats.chartData.length - 1 ? '#c2410c' : '#ea580c'} />
                   ))}
+                  <LabelList dataKey="percentage" position="top" formatter={(value) => formatPercentage(value)} fill="#9a3412" fontSize={10} fontWeight={800} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
