@@ -902,7 +902,7 @@ const updateProgramsSisya = async (req, res) => {
           if (existingSp) {
             const dbProg = dbProgramMap[progId];
             const isPendidikanKilat = dbProg.kode === 'KAWIKON' && Boolean(prog.isPendidikanKilat);
-            const newIsPasangan = !isPendidikanKilat && prog.isPasangan && dbProg.isPasanganTersedia;
+            const newIsPasangan = Boolean(prog.isPasangan) && dbProg.isPasanganTersedia;
             const newPunia = isPendidikanKilat
               ? Number(prog.puniaProgram)
               : ((newIsPasangan && dbProg.puniaPasangan) ? dbProg.puniaPasangan : dbProg.puniaNormal);
@@ -926,7 +926,7 @@ const updateProgramsSisya = async (req, res) => {
         const progInput = programs.find(p => parseInt(p.programAjahanId) === progId);
         const dbProg = dbProgramMap[progId];
         const isPendidikanKilat = dbProg.kode === 'KAWIKON' && Boolean(progInput.isPendidikanKilat);
-        const isPasangan = !isPendidikanKilat && progInput.isPasangan && dbProg.isPasanganTersedia;
+        const isPasangan = Boolean(progInput.isPasangan) && dbProg.isPasanganTersedia;
         const punia = isPendidikanKilat
           ? Number(progInput.puniaProgram)
           : ((isPasangan && dbProg.puniaPasangan) ? dbProg.puniaPasangan : dbProg.puniaNormal);
@@ -1128,8 +1128,14 @@ const linkPartner = async (req, res) => {
       });
       const totalTerbayar = allVerified.reduce((acc, curr) => acc + curr.nominal, 0);
 
-      // Keduanya sekarang berbagi tagihan 1.500.000 untuk Kawikon (Pasangan)
-      const combinedPunia = 1500000;
+      // Pendidikan kilat tetap dapat berstatus pasangan. Jika target khusus sudah
+      // ditetapkan sebelum penautan, pertahankan target tersebut sebagai tagihan bersama.
+      const acceleratedTargets = [kawikonA, kawikonB]
+        .filter(program => program.isPendidikanKilat)
+        .map(program => Number(program.puniaProgram));
+      const combinedPunia = acceleratedTargets.length > 0
+        ? Math.max(...acceleratedTargets)
+        : 1500000;
       
       let newStatus = 'MENUNGGU_PEMBAYARAN';
       
@@ -1171,13 +1177,19 @@ const linkPartner = async (req, res) => {
       if (!kawikonA.isPasangan) {
         await tx.sisyaProgram.update({
           where: { id: kawikonA.id },
-          data: { isPasangan: true, puniaProgram: 1500000 }
+          data: {
+            isPasangan: true,
+            ...(kawikonA.isPendidikanKilat ? {} : { puniaProgram: 1500000 })
+          }
         });
       }
       if (!kawikonB.isPasangan) {
         await tx.sisyaProgram.update({
           where: { id: kawikonB.id },
-          data: { isPasangan: true, puniaProgram: 1500000 }
+          data: {
+            isPasangan: true,
+            ...(kawikonB.isPendidikanKilat ? {} : { puniaProgram: 1500000 })
+          }
         });
       }
 
