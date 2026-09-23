@@ -541,6 +541,12 @@ const deleteRecommendationDocument = (req, res) => deleteRegistrationDocument(re
   errorContext: 'Delete Recommendation Document'
 });
 
+const deletePhoto = (req, res) => deleteRegistrationDocument(req, res, {
+  field: 'fileFotoPath',
+  label: 'Foto Sisya',
+  errorContext: 'Delete Sisya Photo'
+});
+
 const removeUploadedFile = async (storedPath, errorContext) => {
   if (!storedPath) return;
   const filename = path.basename(storedPath);
@@ -609,6 +615,21 @@ const uploadRecommendationDocument = (req, res) => replaceRegistrationDocument(r
   label: 'Surat Rekomendasi',
   errorContext: 'Upload Recommendation Document'
 });
+
+const uploadPhoto = async (req, res) => {
+  const uploadedPath = req.file ? `/uploads/${req.file.filename}` : null;
+  const extension = path.extname(req.file?.originalname || '').toLowerCase();
+  const validMimeTypes = new Set(['image/jpeg', 'image/jpg', 'image/png']);
+  if (req.file && (!validMimeTypes.has(req.file.mimetype) || !['.jpg', '.jpeg', '.png'].includes(extension))) {
+    await removeUploadedFile(uploadedPath, 'Upload Sisya Photo');
+    return res.status(400).json({ success: false, message: 'Foto Sisya harus berformat JPG, JPEG, atau PNG' });
+  }
+  return replaceRegistrationDocument(req, res, {
+    field: 'fileFotoPath',
+    label: 'Foto Sisya',
+    errorContext: 'Upload Sisya Photo'
+  });
+};
 
 const getAttendanceExport = async (req, res) => {
   try {
@@ -1212,8 +1233,10 @@ module.exports = {
   serveFile,
   uploadIdentityDocument,
   uploadRecommendationDocument,
+  uploadPhoto,
   deleteIdentityDocument,
   deleteRecommendationDocument,
+  deletePhoto,
   servePublicRegistrationFile,
   lengkapiBerkas,
   updateStatus,

@@ -78,10 +78,16 @@ router.delete('/:id/dokumen-identitas', requireAuth, requireSuperAdmin, sisyaCon
 // DELETE /api/sisya/:id/surat-rekomendasi (SUPER_ADMIN only)
 router.delete('/:id/surat-rekomendasi', requireAuth, requireSuperAdmin, sisyaController.deleteRecommendationDocument);
 
+// DELETE /api/sisya/:id/foto (SUPER_ADMIN only)
+router.delete('/:id/foto', requireAuth, requireSuperAdmin, sisyaController.deletePhoto);
+
 // PATCH /api/sisya/:id/dokumen-identitas (SUPER_ADMIN only)
 router.patch('/:id/dokumen-identitas', requireAuth, requireSuperAdmin, upload.single('fileIdentitas'), sisyaController.uploadIdentityDocument);
 
 // PATCH /api/sisya/:id/surat-rekomendasi (SUPER_ADMIN only)
 router.patch('/:id/surat-rekomendasi', requireAuth, requireSuperAdmin, upload.single('fileRekomendasi'), sisyaController.uploadRecommendationDocument);
+
+// PATCH /api/sisya/:id/foto (SUPER_ADMIN only)
+router.patch('/:id/foto', requireAuth, requireSuperAdmin, upload.single('fileFoto'), sisyaController.uploadPhoto);
 
 module.exports = router;
