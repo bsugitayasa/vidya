@@ -381,8 +381,9 @@ export default function SisyaDetail() {
       return;
     }
     const extension = file.name.split('.').pop()?.toLowerCase();
-    if (!['jpg', 'jpeg', 'png', 'pdf'].includes(extension)) {
-      toast.error('Format dokumen harus JPG, JPEG, PNG, atau PDF');
+    const allowedExtensions = documentToUpload?.allowedExtensions || ['jpg', 'jpeg', 'png', 'pdf'];
+    if (!allowedExtensions.includes(extension)) {
+      toast.error(`Format ${documentToUpload?.label || 'dokumen'} harus ${allowedExtensions.map(item => item.toUpperCase()).join(', ')}`);
       setRegistrationDocumentFile(null);
       return;
     }
@@ -876,16 +877,45 @@ export default function SisyaDetail() {
                 )}
               </div>
 
-              {fotoUrl && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mb-4 h-8 text-[10px] font-bold uppercase tracking-wider"
-                  onClick={() => handleDownload(fotoUrl, 'Foto', sisya.fileFotoPath)}
-                >
-                  <Download size={14} className="mr-1" /> Download Foto
-                </Button>
-              )}
+              <div className="mb-4 flex flex-wrap justify-center gap-2">
+                {fotoUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[10px] font-bold uppercase tracking-wider"
+                    onClick={() => handleDownload(fotoUrl, 'Foto', sisya.fileFotoPath)}
+                  >
+                    <Download size={14} className="mr-1" /> Download
+                  </Button>
+                )}
+                {isSuperAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[10px] font-bold uppercase tracking-wider border-primary/20 bg-primary/5 text-primary hover:bg-primary/10"
+                    onClick={() => setDocumentToUpload({
+                      endpoint: 'foto',
+                      fieldName: 'fileFoto',
+                      label: 'Foto Sisya',
+                      replacing: Boolean(sisya.fileFotoPath),
+                      allowedExtensions: ['jpg', 'jpeg', 'png'],
+                      accept: '.jpg,.jpeg,.png,image/jpeg,image/png'
+                    })}
+                  >
+                    <Upload size={14} className="mr-1" /> {sisya.fileFotoPath ? 'Ganti' : 'Upload'}
+                  </Button>
+                )}
+                {isSuperAdmin && sisya.fileFotoPath && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[10px] font-bold uppercase tracking-wider border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
+                    onClick={() => setDocumentToDelete({ endpoint: 'foto', label: 'Foto Sisya' })}
+                  >
+                    <Trash2 size={14} className="mr-1" /> Hapus
+                  </Button>
+                )}
+              </div>
               <h3 className="text-xl font-bold">{sisya.namaLengkap}</h3>
               <p className="text-sm text-muted mb-4">{sisya.email}</p>
 
@@ -1614,7 +1644,7 @@ export default function SisyaDetail() {
             </div>
             <div className="space-y-4 p-5">
               <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
-                Dokumen untuk <span className="font-bold">{sisya.namaLengkap}</span>. Format JPG, PNG, atau PDF dengan ukuran maksimal 20 MB.
+                {documentToUpload.label} untuk <span className="font-bold">{sisya.namaLengkap}</span>. Format {(documentToUpload.allowedExtensions || ['jpg', 'png', 'pdf']).map(item => item.toUpperCase()).join(', ')} dengan ukuran maksimal 20 MB.
               </div>
               {documentToUpload.replacing && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
@@ -1625,7 +1655,7 @@ export default function SisyaDetail() {
                 <span className="text-xs font-bold uppercase tracking-wider text-muted">Pilih Berkas</span>
                 <Input
                   type="file"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  accept={documentToUpload.accept || '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf'}
                   disabled={isUploadingDocument}
                   onChange={(event) => handleRegistrationDocumentFile(event.target.files?.[0])}
                 />

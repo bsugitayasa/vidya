@@ -132,6 +132,17 @@ export default function RabDetail() {
     let headerLogo = null;
     try { headerLogo = new Image(); headerLogo.src='/logo.png'; await new Promise((resolve,reject)=>{headerLogo.onload=resolve;headerLogo.onerror=reject;}); } catch { headerLogo = null; }
     const shorten = (value, limit = 105) => String(value || '').length > limit ? `${String(value).slice(0, limit - 3)}...` : String(value || '');
+    const sortedExpenses = [...(rab.pengeluarans || [])].sort((left, right) => {
+      const dateDifference = new Date(left.tanggal).getTime() - new Date(right.tanggal).getTime();
+      return dateDifference || Number(left.id || 0) - Number(right.id || 0);
+    });
+    const expenseGroups = sortedExpenses.reduce((groups, expense) => {
+      const label = formatDate(expense.tanggal);
+      const latest = groups.at(-1);
+      if (latest?.label === label) latest.rows.push(expense);
+      else groups.push({ label, rows: [expense] });
+      return groups;
+    }, []);
     const drawHeader = (title, subtitle) => {
       doc.setFillColor(20, 83, 45); doc.rect(0, 0, 210, 32, 'F');
       if (headerLogo) doc.addImage(headerLogo,'PNG',14,6,20,20);
@@ -159,8 +170,16 @@ export default function RabDetail() {
     autoTable(doc,{startY:y,margin:{top:38,bottom:20},theme:'grid',head:[['Dana Disetujui','Dana Masuk','Realisasi','Dikembalikan','Sisa Kas']],body:[[formatRupiah(rab.totalDisetujui),formatRupiah(rab.ringkasan.danaMasuk),formatRupiah(rab.ringkasan.pengeluaranTerverifikasi),formatRupiah(rab.ringkasan.danaDikembalikan),formatRupiah(rab.ringkasan.sisaKas)]],headStyles:{fillColor:[22,101,52],fontSize:8},styles:{fontSize:8,halign:'right'}});
     y=doc.lastAutoTable.finalY+7; if(y>258){doc.addPage();y=42;} doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.text('Rincian Anggaran dan Realisasi',14,y);
     autoTable(doc,{startY:y+3,margin:{top:38,bottom:20},head:[['No','Uraian','Kategori','Disetujui','Realisasi','Sisa']],body:rab.items.map((item,i)=>{const real=rab.pengeluarans.filter(e=>e.itemAnggaranId===item.id&&e.status==='VERIFIKASI').reduce((t,e)=>t+Number(e.nominal),0);return[i+1,item.uraian,item.kategori?.nama||'-',formatRupiah(item.jumlahDisetujui),formatRupiah(real),formatRupiah(Number(item.jumlahDisetujui)-real)];}),headStyles:{fillColor:[30,41,59]},styles:{fontSize:7.5},columnStyles:{0:{cellWidth:9},1:{cellWidth:55},2:{cellWidth:32},3:{halign:'right'},4:{halign:'right'},5:{halign:'right'}}});
-    y=doc.lastAutoTable.finalY+7; if(y>258){doc.addPage();y=42;} doc.setFontSize(11); doc.text('Detail Pengeluaran',14,y);
-    autoTable(doc,{startY:y+3,margin:{top:38,bottom:20},head:[['No','Tanggal','Kategori / Uraian','Penerima','No. Bukti','Status','Nominal']],body:rab.pengeluarans.map((e,i)=>[i+1,formatDate(e.tanggal),`${e.kategori.nama}\n${e.uraian}`,e.penerima||'-',e.nomorBukti||'-',e.status,formatRupiah(e.nominal)]),headStyles:{fillColor:[30,41,59]},styles:{fontSize:7},columnStyles:{0:{cellWidth:8},1:{cellWidth:20},2:{cellWidth:48},3:{cellWidth:28},4:{cellWidth:22},5:{cellWidth:28},6:{halign:'right'}}});
+    y=doc.lastAutoTable.finalY+7; if(y>258){doc.addPage();y=42;} doc.setFontSize(11); doc.text('Detail Pengeluaran per Tanggal',14,y);
+    let expenseNumber = 1;
+    const expenseRows = expenseGroups.flatMap((group) => {
+      const subtotal = group.rows.reduce((total, row) => total + Number(row.nominal || 0), 0);
+      return [
+        [{ content:`Tanggal: ${group.label}  |  ${group.rows.length} transaksi  |  Subtotal ${formatRupiah(subtotal)}`, colSpan:6, styles:{fillColor:[226,232,240],textColor:[30,41,59],fontStyle:'bold',fontSize:7.5,cellPadding:2.2} }],
+        ...group.rows.map((expense) => [expenseNumber++,`${expense.kategori?.nama || '-'}\n${expense.uraian}`,expense.penerima||'-',expense.nomorBukti||'-',expense.status,formatRupiah(expense.nominal)])
+      ];
+    });
+    autoTable(doc,{startY:y+3,margin:{top:38,bottom:20},rowPageBreak:'avoid',head:[['No','Kategori / Uraian','Penerima','No. Bukti','Status','Nominal']],body:expenseRows.length?expenseRows:[[{content:'Belum ada pengeluaran',colSpan:6,styles:{halign:'center',textColor:[100,116,139]}}]],headStyles:{fillColor:[30,41,59]},styles:{fontSize:7,cellPadding:1.7,overflow:'linebreak'},columnStyles:{0:{cellWidth:9,halign:'center'},1:{cellWidth:62},2:{cellWidth:31},3:{cellWidth:25},4:{cellWidth:31},5:{cellWidth:31,halign:'right'}}});
     if (isLpj) {
       const additionalIncome = rab.pencairans.filter((row) => row.jenisSumber && row.jenisSumber !== 'BENDAHARA');
       y = doc.lastAutoTable.finalY + 7;

@@ -12,7 +12,7 @@ async function main() {
     const base = `http://127.0.0.1:${server.address().port}/api/sisya/2147483647`;
     const makeToken = (role) => jwt.sign({ id: 1, email: 'smoke@test.local', role }, process.env.JWT_SECRET, { expiresIn: '5m' });
 
-    for (const endpoint of ['dokumen-identitas', 'surat-rekomendasi']) {
+    for (const endpoint of ['dokumen-identitas', 'surat-rekomendasi', 'foto']) {
       const adminResponse = await fetch(`${base}/${endpoint}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${makeToken('ADMIN')}` }

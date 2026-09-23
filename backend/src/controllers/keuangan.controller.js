@@ -869,12 +869,42 @@ const exportExcel = async (req, res) => {
       { header: 'Uraian', key: 'uraian', width: 42 }, { header: 'Penerima', key: 'penerima', width: 24 }, { header: 'Metode', key: 'metode', width: 15 },
       { header: 'No. Bukti', key: 'bukti', width: 20 }, { header: 'Status', key: 'status', width: 22 }, { header: 'Nominal', key: 'nominal', width: 22 }
     ];
-    rab.pengeluarans.forEach((row, index) => detail.addRow({ no: index + 1, tanggal: new Date(row.tanggal), kategori: row.kategori.nama, uraian: row.uraian, penerima: row.penerima || '-', metode: row.metode, bukti: row.nomorBukti || '-', status: row.status, nominal: Number(row.nominal) }));
+    const sortedExpenses = [...(rab.pengeluarans || [])].sort((left, right) => {
+      const dateDifference = new Date(left.tanggal).getTime() - new Date(right.tanggal).getTime();
+      return dateDifference || Number(left.id || 0) - Number(right.id || 0);
+    });
+    const expenseGroups = sortedExpenses.reduce((groups, expense) => {
+      const key = new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Makassar', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date(expense.tanggal));
+      const latest = groups.at(-1);
+      if (latest?.key === key) latest.rows.push(expense);
+      else groups.push({ key, rows: [expense] });
+      return groups;
+    }, []);
+    let expenseNumber = 1;
+    expenseGroups.forEach((group) => {
+      const subtotal = group.rows.reduce((total, row) => total + Number(row.nominal || 0), 0);
+      const groupRow = detail.addRow([`Tanggal: ${group.key} | ${group.rows.length} transaksi`, '', '', '', '', '', '', 'Subtotal', subtotal]);
+      detail.mergeCells(groupRow.number, 1, groupRow.number, 7);
+      groupRow.height = 23;
+      groupRow.font = { bold: true, color: { argb: 'FF1E293B' } };
+      groupRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+      groupRow.alignment = { vertical: 'middle' };
+      groupRow.getCell(8).alignment = { horizontal: 'right', vertical: 'middle' };
+      groupRow.getCell(9).numFmt = '[$Rp-id-ID] #,##0';
+      groupRow.getCell(9).alignment = { horizontal: 'right', vertical: 'middle' };
+
+      group.rows.forEach((row) => {
+        const detailRow = detail.addRow({ no: expenseNumber++, tanggal: new Date(row.tanggal), kategori: row.kategori.nama, uraian: row.uraian, penerima: row.penerima || '-', metode: row.metode, bukti: row.nomorBukti || '-', status: row.status, nominal: Number(row.nominal) });
+        detailRow.outlineLevel = 1;
+        detailRow.alignment = { vertical: 'top', wrapText: true };
+      });
+    });
     detail.getColumn('tanggal').numFmt = 'dd/mm/yyyy';
     detail.getColumn('nominal').numFmt = '[$Rp-id-ID] #,##0';
     detail.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
     detail.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF166534' } };
-    detail.autoFilter = { from: 'A1', to: 'I1' };
+    detail.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
+    detail.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: '1:1' };
     const receipts = workbook.addWorksheet('Dana Masuk');
     const budget = workbook.addWorksheet('Rincian Anggaran');
     budget.addRow(['Uraian', 'Kategori', 'Volume', 'Satuan', 'Harga Satuan', 'Diajukan', 'Disetujui', 'Realisasi']);
