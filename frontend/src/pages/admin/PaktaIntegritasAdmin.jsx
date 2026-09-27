@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, CheckCircle2, ClipboardCopy, Download, ExternalLink, FilePlus2, FileSignature, Loader2, RefreshCw, Search, ShieldCheck, Users, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardCopy, Download, Eraser, ExternalLink, FilePlus2, FileSignature, Loader2, RefreshCw, Search, ShieldCheck, UserPlus, Users, XCircle } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
@@ -41,7 +41,19 @@ export default function PaktaIntegritasAdmin() {
   const [publishTargetId, setPublishTargetId] = useState(null);
   const [revokeTarget, setRevokeTarget] = useState(null);
   const [revokeReason, setRevokeReason] = useState('');
+  const [adminEntryOpen, setAdminEntryOpen] = useState(false);
+  const [sisyaQuery, setSisyaQuery] = useState('');
+  const [sisyaResults, setSisyaResults] = useState([]);
+  const [selectedSisya, setSelectedSisya] = useState(null);
+  const [searchingSisya, setSearchingSisya] = useState(false);
+  const [adminAccepted, setAdminAccepted] = useState({});
+  const [adminReadAgreement, setAdminReadAgreement] = useState(false);
+  const [adminHasSignature, setAdminHasSignature] = useState(false);
   const qrRef = useRef(null);
+  const adminCanvasRef = useRef(null);
+  const adminDrawing = useRef(false);
+  const sisyaSearchTimer = useRef(null);
+  const sisyaSearchSequence = useRef(0);
 
   const activeTemplate = useMemo(() => templates.find((item) => item.status === 'AKTIF'), [templates]);
 
@@ -84,6 +96,69 @@ export default function PaktaIntegritasAdmin() {
   const addClause = () => setForm({ ...form, klausul: [...form.klausul, { id: `klausul-${Date.now()}`, title: '', text: '' }] });
 
   const copyLink = async (path) => { await navigator.clipboard.writeText(`${window.location.origin}${path}`); toast.success('Tautan disalin'); };
+  const initializeAdminCanvas = () => {
+    const canvas = adminCanvasRef.current;
+    if (!canvas) return;
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * ratio; canvas.height = rect.height * ratio;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(ratio, ratio); ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e293b';
+  };
+  const openAdminEntry = () => {
+    setAdminEntryOpen(true); setSisyaQuery(''); setSisyaResults([]); setSelectedSisya(null);
+    setAdminAccepted({}); setAdminReadAgreement(false); setAdminHasSignature(false);
+  };
+  const closeAdminEntry = () => {
+    if (busy) return;
+    if (sisyaSearchTimer.current) clearTimeout(sisyaSearchTimer.current);
+    setAdminEntryOpen(false); setSisyaQuery(''); setSisyaResults([]); setSelectedSisya(null);
+  };
+  const searchSisya = (value) => {
+    setSisyaQuery(value); setSelectedSisya(null); setAdminAccepted({}); setAdminReadAgreement(false); setAdminHasSignature(false);
+    if (sisyaSearchTimer.current) clearTimeout(sisyaSearchTimer.current);
+    if (value.trim().length < 2) { setSisyaResults([]); setSearchingSisya(false); return; }
+    const sequence = ++sisyaSearchSequence.current;
+    setSearchingSisya(true);
+    sisyaSearchTimer.current = setTimeout(async () => {
+      try {
+        const res = await api.get('/sisya', { params: { search: value.trim(), limit: 10, sortBy: 'namaLengkap', sortOrder: 'asc' } });
+        if (sequence === sisyaSearchSequence.current) setSisyaResults(res.data.data || []);
+      } catch (err) {
+        if (sequence === sisyaSearchSequence.current) toast.error(err.response?.data?.message || 'Gagal mencari Sisya');
+      } finally {
+        if (sequence === sisyaSearchSequence.current) setSearchingSisya(false);
+      }
+    }, 350);
+  };
+  const chooseSisya = (sisya) => {
+    setSelectedSisya(sisya); setSisyaQuery(sisya.namaLengkap); setSisyaResults([]);
+    setAdminAccepted({}); setAdminReadAgreement(false); setAdminHasSignature(false);
+    setTimeout(initializeAdminCanvas, 0);
+  };
+  const adminPoint = (event) => { const rect = adminCanvasRef.current.getBoundingClientRect(); return { x: event.clientX - rect.left, y: event.clientY - rect.top }; };
+  const startAdminDraw = (event) => { adminDrawing.current = true; const point = adminPoint(event); const ctx = adminCanvasRef.current.getContext('2d'); ctx.beginPath(); ctx.moveTo(point.x, point.y); adminCanvasRef.current.setPointerCapture(event.pointerId); };
+  const drawAdminSignature = (event) => { if (!adminDrawing.current) return; const point = adminPoint(event); const ctx = adminCanvasRef.current.getContext('2d'); ctx.lineTo(point.x, point.y); ctx.stroke(); setAdminHasSignature(true); };
+  const stopAdminDraw = () => { adminDrawing.current = false; };
+  const clearAdminSignature = () => { const canvas = adminCanvasRef.current; if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); setAdminHasSignature(false); };
+  const submitAdminEntry = async () => {
+    const clauses = activeTemplate?.klausul || [];
+    if (!selectedSisya) return toast.warning('Pilih Sisya terlebih dahulu');
+    if (!adminReadAgreement || clauses.some((clause) => !adminAccepted[clause.id]) || !adminHasSignature) return toast.warning('Setujui seluruh pernyataan dan bubuhkan tanda tangan terlebih dahulu');
+    setBusy(true);
+    try {
+      const res = await api.post('/pakta-integritas/assignments/admin-sign', {
+        sisyaId: selectedSisya.id,
+        namaPenandatangan: selectedSisya.namaLengkap,
+        acceptedClauseIds: clauses.map((item) => item.id),
+        readAgreement: adminReadAgreement,
+        signatureData: adminCanvasRef.current.toDataURL('image/png')
+      });
+      toast.success(res.data.message); setAdminEntryOpen(false); setSelectedSisya(null); setPreview(res.data.data);
+      await loadAssignments();
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal menyimpan Pakta Integritas dari admin'); }
+    finally { setBusy(false); }
+  };
   const regenerate = async (item) => { setBusy(true); try { await api.post(`/pakta-integritas/assignments/${item.id}/regenerate`); toast.success('Akses pakta sisya diaktifkan kembali melalui tautan umum'); await loadAssignments(); } catch (err) { toast.error(err.response?.data?.message || 'Gagal mengaktifkan pakta'); } finally { setBusy(false); } };
   const revoke = (item) => {
     setRevokeTarget(item);
@@ -120,10 +195,32 @@ export default function PaktaIntegritasAdmin() {
     </div>}
 
     {tab === 'monitoring' && <div className="space-y-5">
-      <section className={`${panel} p-5 sm:p-6`}><div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center"><div className="flex items-center gap-4"><div className="rounded-2xl border bg-white p-2"><QRCodeCanvas value={`${window.location.origin}/pakta-integritas`} size={92} level="H" includeMargin imageSettings={{ src: '/logo.png', height: 18, width: 18, excavate: true }}/></div><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-orange-600">Tautan untuk seluruh sisya</p><h2 className="mt-1 font-black text-slate-800">Portal Penandatanganan Pakta</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">Bagikan satu tautan ini kepada seluruh sisya. Sistem mengenali sisya melalui nomor pendaftaran dan tanggal lahir, lalu membuat dokumen unik secara otomatis.</p><p className="mt-2 break-all rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600">{window.location.origin}/pakta-integritas</p></div></div><div className="flex w-full gap-2 md:w-auto"><button onClick={() => copyLink('/pakta-integritas')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white"><ClipboardCopy size={17}/> Salin Tautan</button><a href="/pakta-integritas" target="_blank" className="rounded-xl border border-slate-200 p-3 text-slate-600"><ExternalLink size={18}/></a></div></div>{!activeTemplate && <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Portal belum dapat digunakan karena belum ada template aktif.</p>}</section>
+      <section className={`${panel} p-5 sm:p-6`}><div className="flex flex-col items-start justify-between gap-5 md:flex-row md:items-center"><div className="flex items-center gap-4"><div className="rounded-2xl border bg-white p-2"><QRCodeCanvas value={`${window.location.origin}/pakta-integritas`} size={92} level="H" includeMargin imageSettings={{ src: '/logo.png', height: 18, width: 18, excavate: true }}/></div><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-orange-600">Tautan untuk seluruh sisya</p><h2 className="mt-1 font-black text-slate-800">Portal Penandatanganan Pakta</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">Bagikan satu tautan ini kepada seluruh sisya. Sistem mengenali sisya melalui nomor pendaftaran dan tanggal lahir, lalu membuat dokumen unik secara otomatis.</p><p className="mt-2 break-all rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-600">{window.location.origin}/pakta-integritas</p></div></div><div className="flex w-full flex-wrap gap-2 md:w-auto md:justify-end"><button onClick={openAdminEntry} disabled={!activeTemplate} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-slate-800 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><UserPlus size={17}/> Input dari Admin</button><button onClick={() => copyLink('/pakta-integritas')} className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white"><ClipboardCopy size={17}/> Salin Tautan</button><a href="/pakta-integritas" target="_blank" className="rounded-xl border border-slate-200 p-3 text-slate-600"><ExternalLink size={18}/></a></div></div>{!activeTemplate && <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">Portal dan input admin belum dapat digunakan karena belum ada template aktif.</p>}</section>
       <section className={`${panel} overflow-hidden`}><div className="grid gap-3 border-b border-slate-100 p-4 lg:grid-cols-5"><div className="relative"><Search className="absolute left-3 top-3 text-slate-400" size={16}/><input className={`${input} pl-9`} placeholder="Nama / no. pendaftaran" value={filter.search} onChange={(e) => setFilter({ ...filter, search: e.target.value })}/></div><select className={input} value={filter.status} onChange={(e) => setFilter({ ...filter, status: e.target.value })}><option value="">Semua status</option>{Object.keys(badge).map((status) => <option key={status}>{status}</option>)}</select><select className={input} value={filter.templateId} onChange={(e) => setFilter({ ...filter, templateId: e.target.value })}><option value="">Semua versi</option>{templates.map((t) => <option key={t.id} value={t.id}>Versi {t.versi} · {t.status}</option>)}</select><select className={input} value={filter.programId} onChange={(e) => setFilter({ ...filter, programId: e.target.value })}><option value="">Semua program</option>{programs.map((p) => <option key={p.id} value={p.id}>{p.nama}</option>)}</select><button onClick={loadAssignments} className="rounded-xl bg-slate-800 px-4 py-2.5 text-sm font-bold text-white">Terapkan Filter</button></div><div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Sisya</th><th className="px-5 py-3">Dokumen</th><th className="px-5 py-3">Status</th><th className="px-5 py-3">Waktu</th><th className="px-5 py-3 text-right">Aksi</th></tr></thead><tbody className="divide-y divide-slate-100">{assignments.map((item) => <tr key={item.id}><td className="px-5 py-4"><p className="font-bold text-slate-800">{item.sisya.namaLengkap}</p><p className="text-xs text-slate-500">{item.sisya.nomorPendaftaran}</p></td><td className="px-5 py-4"><p className="max-w-64 truncate text-xs font-semibold text-slate-700">{item.nomorDokumen}</p><p className="text-[11px] text-slate-400">Versi {item.template.versi}</p></td><td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${badge[item.status] || 'bg-slate-100'}`}>{item.status.replaceAll('_', ' ')}</span></td><td className="px-5 py-4 text-xs text-slate-500">{item.signedAt ? new Date(item.signedAt).toLocaleString('id-ID') : `Tenggat ${new Date(item.expiresAt).toLocaleDateString('id-ID')}`}</td><td className="px-5 py-4"><div className="flex justify-end gap-1"><button onClick={() => view(item.id)} title="Lihat detail" className="rounded-lg p-2 text-blue-600 hover:bg-blue-50"><ExternalLink size={16}/></button>{isSuper && ['MENUNGGU','KEDALUWARSA','DIBATALKAN'].includes(item.status) && <button onClick={() => regenerate(item)} title="Buat tautan baru" className="rounded-lg p-2 text-orange-600 hover:bg-orange-50"><RefreshCw size={16}/></button>}{isSuper && !['DIBATALKAN','DIGANTIKAN'].includes(item.status) && <button onClick={() => revoke(item)} title="Batalkan" className="rounded-lg p-2 text-red-600 hover:bg-red-50"><XCircle size={16}/></button>}</div></td></tr>)}</tbody></table>{!assignments.length && <p className="p-10 text-center text-sm text-slate-400">Belum ada data Pakta Integritas.</p>}</div></section>
     </div>}
 
+    {adminEntryOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-3 sm:p-5">
+      <div className="max-h-[94vh] w-full max-w-4xl overflow-auto rounded-3xl bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white/95 p-5 backdrop-blur"><div><p className="text-[10px] font-black uppercase tracking-[.2em] text-orange-600">Input dari halaman admin</p><h2 className="mt-1 text-lg font-black text-slate-800">Pakta Integritas Sisya</h2><p className="mt-1 text-xs text-slate-500">Pilih Sisya, konfirmasi seluruh pernyataan, lalu bubuhkan tanda tangan.</p></div><button disabled={busy} onClick={closeAdminEntry} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"><XCircle/></button></div>
+        <div className="space-y-6 p-5 sm:p-7">
+          <div>
+            <label className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">Cari Nama atau No. Pendaftaran Sisya</label>
+            <div className="relative"><Search className="absolute left-3.5 top-3 text-slate-400" size={17}/><input autoFocus className={`${input} pl-10`} value={sisyaQuery} onChange={(event) => searchSisya(event.target.value)} placeholder="Ketik minimal 2 karakter..."/>{searchingSisya && <Loader2 className="absolute right-3 top-3 animate-spin text-orange-500" size={17}/>}</div>
+            {!!sisyaResults.length && <div className="mt-2 max-h-64 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-lg">{sisyaResults.map((sisya) => <button key={sisya.id} type="button" onClick={() => chooseSisya(sisya)} className="flex w-full items-start justify-between gap-4 border-b border-slate-100 px-4 py-3 text-left last:border-0 hover:bg-orange-50"><div><p className="font-bold text-slate-800">{sisya.namaLengkap}</p><p className="mt-0.5 text-xs text-slate-500">{sisya.nomorPendaftaran} · {sisya.noHp}</p></div><p className="max-w-52 text-right text-[11px] leading-5 text-slate-500">{sisya.programSisyas?.map((item) => item.programAjahan.nama).join(', ') || 'Belum ada program'}</p></button>)}</div>}
+            {sisyaQuery.trim().length >= 2 && !searchingSisya && !sisyaResults.length && !selectedSisya && <p className="mt-2 rounded-xl bg-slate-50 p-3 text-xs text-slate-500">Tidak ada Sisya aktif yang sesuai dengan pencarian.</p>}
+          </div>
+
+          {selectedSisya && <>
+            <div className="grid gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:grid-cols-2"><FieldValue label="Nama Sisya" value={selectedSisya.namaLengkap}/><FieldValue label="No. Pendaftaran" value={selectedSisya.nomorPendaftaran}/><FieldValue label="Program Ajahan" value={selectedSisya.programSisyas?.map((item) => item.programAjahan.nama).join(', ')}/><FieldValue label="Pakta Aktif" value={`${activeTemplate?.judul} · Versi ${activeTemplate?.versi}`}/></div>
+            <div><p className="text-sm leading-6 text-slate-600">{activeTemplate?.pembuka}</p><p className="mt-2 text-xs font-semibold text-slate-500">Referensi: {activeTemplate?.referensiPedoman}</p></div>
+            <div className="space-y-3"><div className="flex items-center justify-between gap-3"><h3 className="text-xs font-black uppercase tracking-wider text-slate-500">Pernyataan Persetujuan</h3><button type="button" onClick={() => setAdminAccepted(Object.fromEntries((activeTemplate?.klausul || []).map((item) => [item.id, true])))} className="text-xs font-bold text-orange-600">Setujui Semua</button></div>{activeTemplate?.klausul?.map((clause, index) => <label key={clause.id} className={`flex cursor-pointer gap-3 rounded-2xl border p-4 transition ${adminAccepted[clause.id] ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 hover:border-orange-200'}`}><input type="checkbox" className="mt-1 h-4 w-4 accent-emerald-600" checked={Boolean(adminAccepted[clause.id])} onChange={(event) => setAdminAccepted({ ...adminAccepted, [clause.id]: event.target.checked })}/><span><span className="font-bold text-slate-800">{index + 1}. {clause.title}</span><span className="mt-1 block text-sm leading-6 text-slate-600">{clause.text}</span></span></label>)}</div>
+            <label className={`flex cursor-pointer gap-3 rounded-2xl border p-4 ${adminReadAgreement ? 'border-orange-300 bg-orange-50' : 'border-slate-200'}`}><input type="checkbox" className="mt-1 h-4 w-4 accent-orange-600" checked={adminReadAgreement} onChange={(event) => setAdminReadAgreement(event.target.checked)}/><span className="text-sm font-semibold leading-6 text-slate-700">Saya memastikan naskah telah dibaca dan disetujui oleh Sisya yang dipilih, serta tanda tangan dibubuhkan dengan sepengetahuan Sisya. Aktivitas ini akan dicatat sebagai input dari admin.</span></label>
+            <div><div className="mb-2 flex items-center justify-between"><label className="text-sm font-bold text-slate-700">Tanda tangan Sisya</label><button type="button" onClick={clearAdminSignature} className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-red-600"><Eraser size={14}/> Hapus</button></div><canvas ref={adminCanvasRef} onPointerDown={startAdminDraw} onPointerMove={drawAdminSignature} onPointerUp={stopAdminDraw} onPointerCancel={stopAdminDraw} onPointerLeave={stopAdminDraw} className="h-48 w-full touch-none rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50"/></div>
+            <div className="flex flex-col-reverse gap-2 border-t pt-5 sm:flex-row sm:justify-end"><button disabled={busy} onClick={closeAdminEntry} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-600 disabled:opacity-50">Batal</button><button disabled={busy || !adminReadAgreement || !adminHasSignature || (activeTemplate?.klausul || []).some((item) => !adminAccepted[item.id])} onClick={submitAdminEntry} className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{busy ? <Loader2 className="animate-spin" size={17}/> : <FileSignature size={17}/>} Simpan Pakta Integritas</button></div>
+          </>}
+        </div>
+      </div>
+    </div>}
     {preview && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"><div className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-3xl bg-white"><div className="sticky top-0 flex items-center justify-between border-b bg-white p-5"><div><h2 className="font-black text-slate-800">Detail Pakta Integritas</h2><p className="text-xs text-slate-500">{preview.nomorDokumen}</p></div><button onClick={() => setPreview(null)} className="p-2 text-slate-500"><XCircle/></button></div><div className="space-y-5 p-6"><div className="grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-2"><FieldValue label="Nama" value={preview.sisya?.namaLengkap}/><FieldValue label="No. Pendaftaran" value={preview.sisya?.nomorPendaftaran}/><FieldValue label="Program" value={preview.programSnapshot?.map((p) => p.nama).join(', ')}/><FieldValue label="Status" value={preview.status?.replaceAll('_',' ')}/></div><p className="text-sm leading-6 text-slate-600">{preview.contentSnapshot?.pembuka}</p><div className="space-y-3">{preview.contentSnapshot?.klausul?.map((item, index) => <div key={item.id} className="rounded-xl border p-4"><p className="font-bold text-slate-800">{index + 1}. {item.title}</p><p className="mt-1 text-sm leading-6 text-slate-600">{item.text}</p></div>)}</div>{preview.signatureData && <div className="grid gap-4 rounded-xl border p-4 sm:grid-cols-[1fr_auto]"><div><p className="text-xs font-bold uppercase text-slate-400">Ditandatangani oleh</p><p className="mt-1 font-black text-slate-800">{preview.namaPenandatangan}</p><p className="text-xs text-slate-500">{new Date(preview.signedAt).toLocaleString('id-ID')}</p><img src={preview.signatureData} className="mt-2 h-24 max-w-64 object-contain object-left"/></div><div ref={qrRef} className="text-center"><QRCodeCanvas value={`${window.location.origin}/verifikasi-pakta/${preview.verificationCode}`} size={125} level="H" includeMargin imageSettings={{ src: '/logo.png', height: 24, width: 24, excavate: true }}/><p className="font-mono text-xs font-bold">{preview.verificationCode}</p></div></div>}{preview.status === 'DITANDATANGANI' && <button onClick={downloadPreview} className="inline-flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-bold text-white"><Download size={17}/> Unduh PDF</button>}</div></div></div>}
     <ConfirmDialog
       open={Boolean(publishTargetId)}

@@ -17,6 +17,7 @@ router.get('/templates', controller.getTemplates);
 router.get('/stats', controller.getStats);
 router.get('/assignments', controller.getAssignments);
 router.get('/assignments/:id', controller.getAdminDocument);
+router.post('/assignments/admin-sign', controller.signPaktaFromAdmin);
 router.post('/templates', requireSuperAdmin, controller.createTemplate);
 router.put('/templates/:id', requireSuperAdmin, controller.updateTemplate);
 router.post('/templates/:id/publish', requireSuperAdmin, controller.publishTemplate);

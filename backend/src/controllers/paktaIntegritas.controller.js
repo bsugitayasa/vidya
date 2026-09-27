@@ -396,6 +396,91 @@ const verifyIdentity = async (req, res) => {
   }
 };
 
+const validateSignaturePayload = (item, body) => {
+  const name = String(body.namaPenandatangan || '').trim().replace(/\s+/g, ' ');
+  if (normalize(name) !== normalize(item.sisya.namaLengkap)) return { error: 'Nama penandatangan harus sesuai dengan nama lengkap sisya' };
+  const clauses = Array.isArray(item.contentSnapshot?.klausul) ? item.contentSnapshot.klausul : [];
+  const accepted = Array.isArray(body.acceptedClauseIds) ? [...new Set(body.acceptedClauseIds.map(String))] : [];
+  if (!body.readAgreement || clauses.some((clause) => !accepted.includes(String(clause.id)))) return { error: 'Seluruh pernyataan Pakta Integritas wajib disetujui' };
+  const signature = String(body.signatureData || '');
+  if (!/^data:image\/(png|jpeg);base64,/.test(signature) || signature.length > 900000) return { error: 'Tanda tangan belum tersedia atau ukurannya tidak valid' };
+  return { name, clauses, signature };
+};
+
+const persistSignature = async ({ item, body, req, actorType, actorUserId = null, auditAction }) => {
+  const validation = validateSignaturePayload(item, body);
+  if (validation.error) return { error: validation.error };
+  const { name, clauses, signature } = validation;
+  const signedAt = new Date();
+  const documentHash = sha256(JSON.stringify({ number: item.nomorDokumen, sisya: item.sisyaId, content: item.contentSnapshot, programs: item.programSnapshot }));
+  const consentSnapshot = clauses.map((clause) => ({ id: clause.id, accepted: true }));
+  const evidenceHash = sha256(JSON.stringify({ documentHash, signedAt: signedAt.toISOString(), name, consentSnapshot, signatureHash: sha256(signature) }));
+  const ip = req.ip || req.socket?.remoteAddress || '';
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.paktaSisya.updateMany({
+      where: { id: item.id, status: 'MENUNGGU' },
+      data: { status: 'DITANDATANGANI', namaPenandatangan: name, consentSnapshot, signatureData: signature, signedAt, ipHash: sha256(`${process.env.JWT_SECRET}:${ip}`), userAgent: safeUserAgent(req.headers['user-agent']), documentHash, evidenceHash }
+    });
+    if (result.count !== 1) throw new Error('ALREADY_SIGNED');
+    await tx.paktaAudit.create({ data: { paktaSisyaId: item.id, action: auditAction, actorType, actorUserId, metadata: { evidenceHash } } });
+    return tx.paktaSisya.findUnique({ where: { id: item.id }, include: { sisya: true, template: true } });
+  });
+  return { updated };
+};
+
+const signPaktaFromAdmin = async (req, res) => {
+  try {
+    if (!(await isFeatureEnabled())) return res.status(503).json({ success: false, message: 'Penandatanganan Pakta Integritas sedang dinonaktifkan' });
+    const sisyaId = Number(req.body.sisyaId);
+    if (!sisyaId) return res.status(400).json({ success: false, message: 'Pilih sisya terlebih dahulu' });
+    const [sisya, template] = await Promise.all([
+      prisma.sisya.findFirst({
+        where: { id: sisyaId, status: { not: 'TIDAK_AKTIF' } },
+        include: { programSisyas: { include: { programAjahan: { select: { id: true, kode: true, nama: true } } } } }
+      }),
+      prisma.paktaTemplate.findFirst({ where: { status: 'AKTIF', tanggalBerlaku: { lte: new Date() } }, orderBy: { versi: 'desc' } })
+    ]);
+    if (!sisya) return res.status(404).json({ success: false, message: 'Sisya aktif tidak ditemukan' });
+    if (!template) return res.status(404).json({ success: false, message: 'Belum ada Pakta Integritas aktif' });
+
+    let item = await prisma.paktaSisya.findUnique({
+      where: { sisyaId_templateId: { sisyaId: sisya.id, templateId: template.id } },
+      include: { sisya: true, template: true }
+    });
+    if (!item) {
+      const rawToken = randomToken();
+      try {
+        const created = await prisma.paktaSisya.create({
+          data: { ...buildAssignment(sisya, template, req, rawToken), expiresAt: new Date('2099-12-31T23:59:59.000Z') }
+        });
+        await prisma.paktaAudit.create({ data: { paktaSisyaId: created.id, action: 'DIBUAT_DARI_ADMIN', actorType: 'ADMIN', actorUserId: actorId(req) } });
+      } catch (error) {
+        if (error.code !== 'P2002') throw error;
+      }
+      item = await prisma.paktaSisya.findUnique({
+        where: { sisyaId_templateId: { sisyaId: sisya.id, templateId: template.id } },
+        include: { sisya: true, template: true }
+      });
+    }
+    if (item.status === 'KEDALUWARSA') {
+      item = await prisma.paktaSisya.update({
+        where: { id: item.id },
+        data: { status: 'MENUNGGU', expiresAt: new Date('2099-12-31T23:59:59.000Z') },
+        include: { sisya: true, template: true }
+      });
+    }
+    if (item.status === 'DITANDATANGANI') return res.status(409).json({ success: false, message: 'Sisya sudah menandatangani Pakta Integritas versi aktif' });
+    if (['DIBATALKAN', 'DIGANTIKAN'].includes(item.status)) return res.status(409).json({ success: false, message: 'Pakta tidak dapat diproses. Aktifkan kembali akses pakta terlebih dahulu.' });
+
+    const result = await persistSignature({ item, body: req.body, req, actorType: 'ADMIN', actorUserId: actorId(req), auditAction: 'DITANDATANGANI_DARI_ADMIN' });
+    if (result.error) return res.status(400).json({ success: false, message: result.error });
+    res.status(201).json({ success: true, message: 'Pakta Integritas berhasil diinput dan ditandatangani dari halaman admin', data: publicPayload(result.updated, true) });
+  } catch (error) {
+    console.error('Admin Sign Pakta Error:', error);
+    res.status(error.message === 'ALREADY_SIGNED' ? 409 : 500).json({ success: false, message: error.message === 'ALREADY_SIGNED' ? 'Pakta sudah ditandatangani' : 'Gagal menyimpan Pakta Integritas dari admin' });
+  }
+};
+
 const signPakta = async (req, res) => {
   try {
     if (!(await isFeatureEnabled())) return res.status(503).json({ success: false, message: 'Penandatanganan Pakta Integritas sedang dinonaktifkan' });
@@ -404,25 +489,9 @@ const signPakta = async (req, res) => {
     if (proof.type !== 'pakta-sign') return res.status(401).json({ success: false, message: 'Sesi verifikasi tidak valid' });
     const item = await prisma.paktaSisya.findUnique({ where: { id: Number(proof.assignmentId) }, include: { sisya: true, template: true } });
     if (!item || item.tokenHash !== proof.tokenHash || item.status !== 'MENUNGGU' || item.expiresAt < new Date()) return res.status(409).json({ success: false, message: 'Pakta sudah diproses atau tautan tidak lagi aktif' });
-    const name = String(req.body.namaPenandatangan || '').trim().replace(/\s+/g, ' ');
-    if (normalize(name) !== normalize(item.sisya.namaLengkap)) return res.status(400).json({ success: false, message: 'Nama penandatangan harus sesuai dengan nama lengkap sisya' });
-    const clauses = Array.isArray(item.contentSnapshot?.klausul) ? item.contentSnapshot.klausul : [];
-    const accepted = Array.isArray(req.body.acceptedClauseIds) ? [...new Set(req.body.acceptedClauseIds.map(String))] : [];
-    if (!req.body.readAgreement || clauses.some((clause) => !accepted.includes(String(clause.id)))) return res.status(400).json({ success: false, message: 'Seluruh pernyataan Pakta Integritas wajib disetujui' });
-    const signature = String(req.body.signatureData || '');
-    if (!/^data:image\/(png|jpeg);base64,/.test(signature) || signature.length > 900000) return res.status(400).json({ success: false, message: 'Tanda tangan belum tersedia atau ukurannya tidak valid' });
-    const signedAt = new Date();
-    const documentHash = sha256(JSON.stringify({ number: item.nomorDokumen, sisya: item.sisyaId, content: item.contentSnapshot, programs: item.programSnapshot }));
-    const consentSnapshot = clauses.map((clause) => ({ id: clause.id, accepted: true }));
-    const evidenceHash = sha256(JSON.stringify({ documentHash, signedAt: signedAt.toISOString(), name, consentSnapshot, signatureHash: sha256(signature) }));
-    const ip = req.ip || req.socket?.remoteAddress || '';
-    const updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.paktaSisya.updateMany({ where: { id: item.id, status: 'MENUNGGU' }, data: { status: 'DITANDATANGANI', namaPenandatangan: name, consentSnapshot, signatureData: signature, signedAt, ipHash: sha256(`${process.env.JWT_SECRET}:${ip}`), userAgent: safeUserAgent(req.headers['user-agent']), documentHash, evidenceHash } });
-      if (result.count !== 1) throw new Error('ALREADY_SIGNED');
-      await tx.paktaAudit.create({ data: { paktaSisyaId: item.id, action: 'DITANDATANGANI', actorType: 'SISYA', metadata: { evidenceHash } } });
-      return tx.paktaSisya.findUnique({ where: { id: item.id }, include: { sisya: true, template: true } });
-    });
-    res.status(201).json({ success: true, message: 'Pakta Integritas berhasil ditandatangani', data: publicPayload(updated, true) });
+    const result = await persistSignature({ item, body: req.body, req, actorType: 'SISYA', auditAction: 'DITANDATANGANI' });
+    if (result.error) return res.status(400).json({ success: false, message: result.error });
+    res.status(201).json({ success: true, message: 'Pakta Integritas berhasil ditandatangani', data: publicPayload(result.updated, true) });
   } catch (error) {
     console.error('Sign Pakta Error:', error);
     res.status(error.message === 'ALREADY_SIGNED' ? 409 : 500).json({ success: false, message: error.message === 'ALREADY_SIGNED' ? 'Pakta sudah ditandatangani' : 'Gagal menyimpan tanda tangan' });
@@ -441,4 +510,4 @@ const verifyPublicDocument = async (req, res) => {
   }
 };
 
-module.exports = { DEFAULT_CLAUSES, getTemplates, createTemplate, updateTemplate, publishTemplate, getAssignments, getStats, generateAssignments, regenerateAssignment, revokeAssignment, getAdminDocument, getPublicPakta, verifyIdentityGeneral, verifyIdentity, signPakta, verifyPublicDocument };
+module.exports = { DEFAULT_CLAUSES, validateSignaturePayload, getTemplates, createTemplate, updateTemplate, publishTemplate, getAssignments, getStats, generateAssignments, regenerateAssignment, revokeAssignment, getAdminDocument, getPublicPakta, verifyIdentityGeneral, verifyIdentity, signPakta, signPaktaFromAdmin, verifyPublicDocument };
