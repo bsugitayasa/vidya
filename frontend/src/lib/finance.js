@@ -2,6 +2,12 @@ export const formatRupiah = (value) => new Intl.NumberFormat('id-ID', {
   style: 'currency', currency: 'IDR', maximumFractionDigits: 0
 }).format(Number(value || 0));
 
+export const formatAccountingRupiah = (value) => {
+  const amount = Number(value || 0);
+  const formatted = formatRupiah(Math.abs(amount));
+  return amount < 0 ? `(${formatted})` : formatted;
+};
+
 export const formatDate = (value) => value ? new Intl.DateTimeFormat('id-ID', {
   day: '2-digit', month: 'short', year: 'numeric'
 }).format(new Date(value)) : '-';
