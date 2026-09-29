@@ -481,8 +481,7 @@ const addExpense = async (req, res) => {
     const nominal = asMoney(req.body.nominal);
     if (nominal <= 0 || !req.body.kategoriId || !req.body.akunKasId || !req.body.uraian?.trim() || !req.body.metode) return fail(res, 400, 'Data pengeluaran belum lengkap');
     const summary = summarizeRab(rab);
-    if (nominal > summary.kasTersediaUntukInput) return fail(res, 409, 'Nominal pengeluaran melebihi kas yang tersedia');
-    if (nominal > summarizeAccount(rab, req.body.akunKasId).kasTersediaUntukInput) return fail(res, 409, 'Dana RAB pada akun kas yang dipilih tidak mencukupi');
+    const projectedCash = summary.kasTersediaUntukInput - nominal;
     let allowOverBudget = req.body.allowOverBudget === true || req.body.allowOverBudget === 'true';
     if (allowOverBudget && !isTreasurer(req.user)) return fail(res, 403, 'Hanya Bendahara yang dapat memberi pengecualian anggaran');
     if (allowOverBudget && !req.body.overrideReason?.trim()) return fail(res, 400, 'Alasan pengecualian anggaran wajib diisi');
@@ -495,10 +494,16 @@ const addExpense = async (req, res) => {
     const result = await prisma.$transaction(async (tx) => {
       const row = await tx.pengeluaranRab.create({ data: { rabId: rab.id, itemAnggaranId: req.body.itemAnggaranId ? asInt(req.body.itemAnggaranId) : null, kategoriId: asInt(req.body.kategoriId), akunKasId: asInt(req.body.akunKasId), tanggal: new Date(req.body.tanggal || Date.now()), uraian: req.body.uraian.trim(), penerima: req.body.penerima || null, nominal, metode: req.body.metode, nomorBukti: req.body.nomorBukti || null, buktiPath: safeFilePath(req.file), keterangan: req.body.keterangan || null, allowOverBudget, overrideReason: req.body.overrideReason || null, createdById: req.user.id } });
       if (!['PERLU_REVISI', 'DALAM_PENYESUAIAN'].includes(rab.status)) await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { status: 'REALISASI' } });
-      await audit(tx, { entityType: 'PENGELUARAN', entityId: row.id, action: 'DICATAT', newValue: { rabId: rab.id, nominal, status: row.status }, reason: req.body.overrideReason, userId: req.user.id });
+      await audit(tx, { entityType: 'PENGELUARAN', entityId: row.id, action: 'DICATAT', newValue: { rabId: rab.id, nominal, status: row.status, kasTersediaSebelum: summary.kasTersediaUntukInput, proyeksiSisaKas: projectedCash }, reason: req.body.overrideReason, userId: req.user.id });
       return row;
     });
-    res.status(201).json({ success: true, message: 'Pengeluaran dicatat dan menunggu verifikasi Bendahara', data: result });
+    res.status(201).json({
+      success: true,
+      message: projectedCash < 0 ? 'Pengeluaran dicatat. Proyeksi sisa kas menjadi negatif dan menunggu verifikasi Bendahara.' : 'Pengeluaran dicatat dan menunggu verifikasi Bendahara',
+      data: result,
+      warning: projectedCash < 0 ? 'Pengeluaran melampaui kas tersedia. Tambahkan dana masuk atau lakukan penyesuaian sebelum LPJ ditutup.' : null,
+      projectedCash
+    });
   } catch (error) {
     console.error('Add Expense Error:', error);
     fail(res, 400, error.message || 'Gagal mencatat pengeluaran');
@@ -517,9 +522,7 @@ const updateExpense = async (req, res) => {
     const nominal = asMoney(req.body.nominal);
     if (nominal <= 0 || !req.body.kategoriId || !req.body.akunKasId || !req.body.uraian?.trim() || !req.body.metode) return fail(res, 400, 'Data pengeluaran belum lengkap');
     const summary = summarizeRab(expense.rab);
-    if (nominal > summary.kasTersediaUntukInput + Number(expense.nominal)) return fail(res, 409, 'Nominal pengeluaran melebihi kas yang tersedia');
-    const accountAvailable = summarizeAccount(expense.rab, req.body.akunKasId).kasTersediaUntukInput + (expense.akunKasId === asInt(req.body.akunKasId) ? Number(expense.nominal) : 0);
-    if (nominal > accountAvailable) return fail(res, 409, 'Dana pada akun kas yang dipilih tidak mencukupi');
+    const projectedCash = summary.kasTersediaUntukInput + Number(expense.nominal) - nominal;
 
     const itemAnggaranId = req.body.itemAnggaranId ? asInt(req.body.itemAnggaranId) : null;
     const allowOverBudget = req.body.allowOverBudget === true || req.body.allowOverBudget === 'true';
@@ -557,7 +560,7 @@ const updateExpense = async (req, res) => {
     };
     const updated = await prisma.$transaction(async (tx) => {
       const row = await tx.pengeluaranRab.update({ where: { id: expense.id }, data });
-      await audit(tx, { entityType: 'PENGELUARAN', entityId: expense.id, action: 'DIPERBARUI_SAAT_VERIFIKASI', oldValue, newValue: { rabId: expense.rabId, ...data, tanggal: data.tanggal.toISOString() }, reason: data.overrideReason, userId: req.user.id });
+      await audit(tx, { entityType: 'PENGELUARAN', entityId: expense.id, action: 'DIPERBARUI_SAAT_VERIFIKASI', oldValue, newValue: { rabId: expense.rabId, ...data, tanggal: data.tanggal.toISOString(), proyeksiSisaKas: projectedCash }, reason: data.overrideReason, userId: req.user.id });
       return row;
     });
     res.json({ success: true, message: 'Detail pengeluaran berhasil diperbarui', data: updated });
@@ -573,13 +576,12 @@ const verifyExpense = async (req, res) => {
     if (!expense) return fail(res, 404, 'Pengeluaran tidak ditemukan');
     if (expense.status !== 'MENUNGGU_VERIFIKASI') return fail(res, 409, 'Pengeluaran sudah diproses');
     const summary = summarizeRab(expense.rab);
-    if (Number(expense.nominal) > summary.sisaKas) return fail(res, 409, 'Kas tersedia tidak mencukupi untuk memverifikasi pengeluaran ini');
-    if (Number(expense.nominal) > summarizeAccount(expense.rab, expense.akunKasId).sisaKas) return fail(res, 409, 'Dana pada akun kas pengeluaran tidak mencukupi');
+    const remainingCash = summary.sisaKas - Number(expense.nominal);
     await prisma.$transaction(async (tx) => {
       await tx.pengeluaranRab.update({ where: { id: expense.id }, data: { status: 'VERIFIKASI', verifiedById: req.user.id, verifiedAt: new Date(), rejectedReason: null } });
-      await audit(tx, { entityType: 'PENGELUARAN', entityId: expense.id, action: 'DIVERIFIKASI', oldValue: { status: expense.status }, newValue: { rabId: expense.rabId, status: 'VERIFIKASI', nominal: Number(expense.nominal) }, userId: req.user.id });
+      await audit(tx, { entityType: 'PENGELUARAN', entityId: expense.id, action: 'DIVERIFIKASI', oldValue: { status: expense.status, sisaKas: summary.sisaKas }, newValue: { rabId: expense.rabId, status: 'VERIFIKASI', nominal: Number(expense.nominal), sisaKas: remainingCash }, userId: req.user.id });
     });
-    res.json({ success: true, message: 'Pengeluaran berhasil diverifikasi' });
+    res.json({ success: true, message: remainingCash < 0 ? 'Pengeluaran berhasil diverifikasi. Sisa kas menjadi negatif.' : 'Pengeluaran berhasil diverifikasi', warning: remainingCash < 0 ? 'Saldo kas RAB negatif. Catat tambahan dana masuk sebelum LPJ ditutup.' : null, remainingCash });
   } catch (error) {
     console.error('Verify Expense Error:', error);
     fail(res, 500, 'Gagal memverifikasi pengeluaran');
@@ -859,7 +861,7 @@ const exportExcel = async (req, res) => {
     sheet.addRow([]);
     [['Anggaran Disetujui', Number(rab.totalDisetujui)], ['Dana Masuk', summary.danaMasuk], ['Pengeluaran Terverifikasi', summary.pengeluaranTerverifikasi], ['Dana Dikembalikan', summary.danaDikembalikan], ['Sisa Kas', summary.sisaKas], ['Sisa Anggaran', summary.sisaAnggaran]].forEach((row) => {
       const excelRow = sheet.addRow([row[0], '', row[1]]);
-      excelRow.getCell(3).numFmt = '[$Rp-id-ID] #,##0';
+      excelRow.getCell(3).numFmt = '[$Rp-id-ID] #,##0;([$Rp-id-ID] #,##0)';
     });
     sheet.eachRow((row, rowNumber) => { if (rowNumber > 1) row.alignment = { vertical: 'middle' }; });
 

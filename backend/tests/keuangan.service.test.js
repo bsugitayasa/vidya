@@ -42,3 +42,16 @@ test('transaksi yang dibatalkan dan ditolak tidak memengaruhi saldo', () => {
   assert.equal(result.sisaKas, 0);
   assert.equal(result.sisaAnggaran, 2_000_000);
 });
+
+test('realisasi boleh menghasilkan sisa kas negatif untuk menunjukkan defisit', () => {
+  const result = summarizeRab({
+    totalDisetujui: 5_000_000,
+    pencairans: [{ nominal: 3_000_000, status: 'AKTIF' }],
+    pengeluarans: [{ nominal: 4_250_000, status: 'VERIFIKASI' }],
+    pengembalians: []
+  });
+
+  assert.equal(result.sisaKas, -1_250_000);
+  assert.equal(result.kasTersediaUntukInput, -1_250_000);
+  assert.equal(result.sisaAnggaran, 750_000);
+});
