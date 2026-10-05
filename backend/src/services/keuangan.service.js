@@ -76,6 +76,8 @@ const summarizeAccount = (rab, akunKasId) => summarizeRab({ ...rab,
   pengembalians: (rab.pengembalians || []).filter(r => r.akunKasId === Number(akunKasId))
 });
 
+const requiresCashReturn = (summary) => Number(summary?.sisaKas || 0) > 0;
+
 const withSummary = (rab) => ({
   ...rab,
   rabQrDocumentId: rab.rabQrDocumentId?.toString() || null,
@@ -106,6 +108,7 @@ module.exports = {
   money,
   summarizeRab,
   summarizeAccount,
+  requiresCashReturn,
   withSummary,
   audit,
   financeRoles,
