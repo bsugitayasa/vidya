@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const ExcelJS = require('exceljs');
-const { rabInclude, withSummary, summarizeRab, summarizeAccount, audit, treasurerRoles } = require('../services/keuangan.service');
+const { rabInclude, withSummary, summarizeRab, summarizeAccount, requiresCashReturn, audit, treasurerRoles } = require('../services/keuangan.service');
 const { assertUnusedQr } = require('./rekonsiliasi.controller');
 
 const { prisma } = require('../services/finance-db');
@@ -706,7 +706,7 @@ const closeRab = async (req, res) => {
     const summary = summarizeRab(rab);
     if (summary.pengeluaranMenunggu > 0) return fail(res, 409, 'Masih ada pengeluaran yang menunggu verifikasi');
     if (summary.penerimaanMenunggu > 0 || rab.perubahanAnggarans.some(r => r.status === 'MENUNGGU_VERIFIKASI')) return fail(res, 409, 'Masih ada penerimaan atau penyesuaian menunggu verifikasi');
-    if (summary.sisaKas !== 0) return fail(res, 409, `Sisa kas Rp ${summary.sisaKas.toLocaleString('id-ID')} harus dikembalikan sebelum LPJ ditutup`);
+    if (requiresCashReturn(summary)) return fail(res, 409, `Sisa kas Rp ${summary.sisaKas.toLocaleString('id-ID')} harus dikembalikan sebelum LPJ ditutup`);
     const signerSource = await resolveLpjSignerSource({
       id: req.body.lpjQrDocumentId,
       token: req.body.lpjQrDocumentToken
@@ -721,7 +721,7 @@ const closeRab = async (req, res) => {
       await tx.rencanaAnggaran.update({ where: { id: rab.id }, data: { status: 'SELESAI', closedById: req.user.id, closedAt: new Date(), lpjQrDocumentId: verification.id } });
       await audit(tx, { entityType: 'RAB', entityId: rab.id, action: 'LPJ_DITUTUP', oldValue: { status: rab.status }, newValue: { status: 'SELESAI', ...summary, signerSourceId: signerSource?.id?.toString() || null }, userId: req.user.id });
     });
-    res.json({ success: true, message: 'LPJ telah diverifikasi dan RAB ditutup' });
+    res.json({ success: true, message: summary.sisaKas < 0 ? `LPJ telah diverifikasi dan ditutup dengan defisit kas Rp ${Math.abs(summary.sisaKas).toLocaleString('id-ID')}` : 'LPJ telah diverifikasi dan RAB ditutup' });
   } catch (error) {
     console.error('Close RAB Error:', error);
     fail(res, 400, error.message || 'Gagal menutup LPJ');

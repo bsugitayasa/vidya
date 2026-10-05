@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { summarizeRab } = require('../src/services/keuangan.service');
+const { summarizeRab, requiresCashReturn } = require('../src/services/keuangan.service');
 
 test('menghitung dana masuk, realisasi, pengembalian, sisa kas, dan sisa anggaran', () => {
   const result = summarizeRab({
@@ -54,4 +54,10 @@ test('realisasi boleh menghasilkan sisa kas negatif untuk menunjukkan defisit', 
   assert.equal(result.sisaKas, -1_250_000);
   assert.equal(result.kasTersediaUntukInput, -1_250_000);
   assert.equal(result.sisaAnggaran, 750_000);
+});
+
+test('pengembalian kas hanya diwajibkan untuk saldo positif saat LPJ ditutup', () => {
+  assert.equal(requiresCashReturn({ sisaKas: 500_000 }), true);
+  assert.equal(requiresCashReturn({ sisaKas: 0 }), false);
+  assert.equal(requiresCashReturn({ sisaKas: -500_000 }), false);
 });
