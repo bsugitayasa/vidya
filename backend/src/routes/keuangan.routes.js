@@ -22,9 +22,9 @@ router.get('/verification-documents', controller.listVerificationDocuments);
 router.get('/kategori', controller.listCategories);
 router.get('/akun-kas', controller.listAccounts);
 router.post('/kategori', requireTreasurer, atomicFinanceWrite(controller.saveCategory));
-router.patch('/kategori/:id', requireTreasurer, atomicFinanceWrite(controller.saveCategory));
+router.patch('/kategori/:id', requireSuperAdmin, atomicFinanceWrite(controller.saveCategory));
 router.post('/akun-kas', requireTreasurer, atomicFinanceWrite(controller.saveAccount));
-router.patch('/akun-kas/:id', requireTreasurer, atomicFinanceWrite(controller.saveAccount));
+router.patch('/akun-kas/:id', requireSuperAdmin, atomicFinanceWrite(controller.saveAccount));
 
 router.get('/rab', controller.listRab);
 router.post('/rab', upload.single('dokumen'), atomicFinanceWrite(controller.createRab));
