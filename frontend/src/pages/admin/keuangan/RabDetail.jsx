@@ -7,6 +7,7 @@ import autoTable from 'jspdf-autotable';
 import { QRCodeCanvas } from 'qrcode.react';
 import api from '../../../lib/axios';
 import { formatAccountingRupiah, formatDate, formatRupiah, StatusRabBadge } from '../../../lib/finance';
+import { exportFinanceSummaryPdf } from '../../../lib/financeSummaryPdf';
 import useAuthStore from '../../../store/authStore';
 import useFileUrl from '../../../hooks/useFileUrl';
 import PenyesuaianRab from './PenyesuaianRab';
@@ -269,6 +270,14 @@ export default function RabDetail() {
     doc.save(`${isLpj?'LPJ':'RAB'}-${rab.nomorRab.replaceAll('/','-')}-Revisi-${rab.revision}.pdf`);
     if (attachmentFailures) toast.warning(`${attachmentFailures} berkas lampiran tidak dapat dimuat ke PDF.`);
   };
+  const exportSummaryPdf = async () => {
+    try {
+      await exportFinanceSummaryPdf(rab);
+    } catch (error) {
+      console.error('Export Finance Summary PDF Error:', error);
+      toast.error('Gagal membuat laporan summary PDF');
+    }
+  };
 
   if (!rab) return <div className="flex min-h-[50vh] items-center justify-center text-slate-400">Memuat detail RAB...</div>;
   const open = (name, defaults={}) => { setForm(defaults); setModal(name); };
@@ -325,7 +334,7 @@ export default function RabDetail() {
 
   return <div className="space-y-6">
     {isArchive && <div className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Arsip LPJ revisi {rab.revision} — hanya baca. <Link className="font-bold underline" to={`/admin/keuangan/rab/${id}`}>Kembali ke versi terkini</Link></div>}
-    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><Link to="/admin/keuangan/rab" className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-emerald-700"><ArrowLeft size={16}/> Kembali ke RAB</Link><div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-black text-slate-800">{rab.namaKegiatan}</h1><StatusRabBadge status={rab.status}/></div><p className="mt-1 text-sm text-slate-500">{rab.nomorRab} · {rab.programAjahan?.nama||'Kegiatan Umum'} · Revisi {rab.revision}</p>{rab.nomorReferensi&&<p className="mt-1 text-xs font-semibold text-emerald-700">Referensi surat: {rab.nomorReferensi}</p>}</div><div className="flex flex-wrap gap-2"><button onClick={exportPdf} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700"><Download size={17}/> PDF</button><button onClick={downloadExcel} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700"><FileSpreadsheet size={17}/> Excel</button></div></div>
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between"><div><Link to="/admin/keuangan/rab" className="mb-3 inline-flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-emerald-700"><ArrowLeft size={16}/> Kembali ke RAB</Link><div className="flex flex-wrap items-center gap-3"><h1 className="text-3xl font-black text-slate-800">{rab.namaKegiatan}</h1><StatusRabBadge status={rab.status}/></div><p className="mt-1 text-sm text-slate-500">{rab.nomorRab} · {rab.programAjahan?.nama||'Kegiatan Umum'} · Revisi {rab.revision}</p>{rab.nomorReferensi&&<p className="mt-1 text-xs font-semibold text-emerald-700">Referensi surat: {rab.nomorReferensi}</p>}</div><div className="flex flex-wrap gap-2"><button onClick={exportSummaryPdf} className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white"><FileText size={17}/> PDF Summary</button><button onClick={exportPdf} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700"><Download size={17}/> PDF Detail</button><button onClick={downloadExcel} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700"><FileSpreadsheet size={17}/> Excel</button></div></div>
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5"><Summary icon={FileCheck2} label="Anggaran Disetujui" value={rab.totalDisetujui} tone="bg-blue-50 text-blue-600"/><Summary icon={Banknote} label="Dana Masuk" value={rab.ringkasan.danaMasuk} tone="bg-cyan-50 text-cyan-600"/><Summary icon={Receipt} label="Realisasi" value={rab.ringkasan.pengeluaranTerverifikasi} tone="bg-violet-50 text-violet-600"/><Summary icon={RotateCcw} label="Dikembalikan" value={rab.ringkasan.danaDikembalikan} tone="bg-amber-50 text-amber-600"/><Summary icon={Wallet} label="Sisa Kas" value={rab.ringkasan.sisaKas} tone="bg-emerald-50 text-emerald-600"/></div>
 
     <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm"><div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-bold text-slate-800">Alur Persetujuan</h2><p className="text-xs text-slate-500">Aksi yang tersedia menyesuaikan status dan role Anda.</p></div><div className="flex flex-wrap gap-2">
